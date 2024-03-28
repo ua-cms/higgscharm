@@ -10,7 +10,7 @@ dataset_config = DatasetConfig(
     key="Events",
     year="2022EE",
     is_mc=True,
-    xsec=1.,
+    xsec=None,
     filenames=(
         "MC_defaultAK4_1.root",
         "MC_defaultAK4_2.root",
