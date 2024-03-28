@@ -34,8 +34,8 @@ def build_full_dataset(year: str) -> None:
     """
     builds and save a full fileset for a year
     """
-    main_dir = Path.home()
-    dataset_path = f"{main_dir}/higgscharm/analysis/configs/dataset/{year}/"
+    main_dir = Path.cwd()
+    dataset_path = f"{main_dir}/analysis/configs/dataset/{year}/"
     dataset_names = [
         f.split("/")[-1].replace(".py", "")
         for f in glob.glob(f"{dataset_path}*.py", recursive=True)
