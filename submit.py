@@ -1,28 +1,26 @@
 import dask
 import pickle
 import argparse
-from analysis.processors.ctag_eff import CTaggingEfficiencyProcessor 
+from analysis.processors.ctag_eff import CTaggingEfficiencyProcessor
 from coffea.nanoevents import NanoEventsFactory, PFNanoAODSchema
-
 
 
 def main(args):
     events = NanoEventsFactory.from_root(
-        {args.sample: "Events"}, 
+        {args.sample: "Events"},
         schemaclass=PFNanoAODSchema,
-        metadata={"dataset": args.dataset_name}
+        metadata={"dataset": args.dataset_name},
     ).events()
 
-    processors = {
-        "ctag_eff": CTaggingEfficiencyProcessor
-    }
-    p = processors[args.processor]()
+    processors = {"ctag_eff": CTaggingEfficiencyProcessor}
+    p = processors[args.processor](tagger=args.tagger, wp=args.wp)
     out = p.process(events)
     (computed,) = dask.compute(out)
 
-    with open(f"{args.output_path}/{args.dataset_name}_{args.nfile}.pkl", "wb") as handle:
+    with open(
+        f"{args.output_path}/{args.dataset_name}_{args.nfile}.pkl", "wb"
+    ) as handle:
         pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        
 
 
 if __name__ == "__main__":
@@ -68,6 +66,20 @@ if __name__ == "__main__":
         type=str,
         default="",
         help="nfile",
+    )
+    parser.add_argument(
+        "--tagger",
+        dest="tagger",
+        type=str,
+        default="pnet",
+        help="tagger {pnet, part, deepjet}",
+    )
+    parser.add_argument(
+        "--wp",
+        dest="wp",
+        type=str,
+        default="tight",
+        help="working point {loose, medium, tight}",
     )
     args = parser.parse_args()
     main(args)

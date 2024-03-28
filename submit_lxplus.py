@@ -100,7 +100,9 @@ def main(args):
                 f"--output_path {args['output_path']} "
                 f"--dataset_name {dataset_name} "
                 f"--sample {root_file} "
-                f"--nfile {str(i)}"
+                f"--nfile {str(i)} "
+                f"--tagger {args['tagger']} "
+                f"--wp {args['wp']}"
             )
             submit_condor(args)
             
@@ -127,6 +129,20 @@ if __name__ == "__main__":
         type=str,
         default="2022EE",
         help="year of the data {2022EE, 2022, 2023}",
+    )
+    parser.add_argument(
+        "--tagger",
+        dest="tagger",
+        type=str,
+        default="pnet",
+        help="tagger {pnet, part, deepjet}",
+    )
+    parser.add_argument(
+        "--wp",
+        dest="wp",
+        type=str,
+        default="tight",
+        help="working point {loose, medium, tight}",
     )
     args = parser.parse_args()
     main(args)
