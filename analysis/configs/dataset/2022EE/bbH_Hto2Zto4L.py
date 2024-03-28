@@ -17,7 +17,6 @@ dataset_config = DatasetConfig(
         "MC_defaultAK4_3.root",
         "MC_defaultAK4_4.root",
         "MC_defaultAK4_5.root",
-        "MC_defaultAK4_5.root",
         "MC_defaultAK4_6.root",
         "MC_defaultAK4_7.root",
         "MC_defaultAK4_8.root",
@@ -27,5 +26,6 @@ dataset_config = DatasetConfig(
         "MC_defaultAK4_12.root",
         "MC_defaultAK4_13.root",
         "MC_defaultAK4_14.root",
+        "MC_defaultAK4_15.root",
     )
 )
