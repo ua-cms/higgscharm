@@ -10,9 +10,10 @@ from coffea.nanoevents.methods.vector import LorentzVector
 
 
 class CTaggingEfficiencyProcessor(processor.ProcessorABC):
-    def __init__(self, wp="tight", tagger="pnet"):
+    def __init__(self, wp="tight", tagger="pnet", flavor="c"):
         self.wp = wp
         self.tagger = tagger
+        self.flavor = flavor
 
     def process(self, events):
         dataset = events.metadata["dataset"]
@@ -30,38 +31,58 @@ class CTaggingEfficiencyProcessor(processor.ProcessorABC):
         phasespace_cuts = (abs(events.Jet.eta) < 2.5) & (events.Jet.pt > 20.0)
         jets = events.Jet[phasespace_cuts]
 
-        # https://indico.cern.ch/event/1304360/contributions/5518916/attachments/2692786/4673101/230731_BTV.pdf
         working_points_mask = {
-            "deepjet": {
-                "loose": (jets.btagDeepFlavCvB > 0.206)
-                & (jets.btagDeepFlavCvL > 0.042),
-                "medium": (jets.btagDeepFlavCvB > 0.298)
-                & (jets.btagDeepFlavCvL > 0.108),
-                "tight": (jets.btagDeepFlavCvB > 0.241)
-                & (jets.btagDeepFlavCvL > 0.305),
+            # https://indico.cern.ch/event/1304360/contributions/5518916/attachments/2692786/4673101/230731_BTV.pdf
+            "c": {
+                "deepjet": {
+                    "loose": (jets.btagDeepFlavCvB > 0.206)
+                    & (jets.btagDeepFlavCvL > 0.042),
+                    "medium": (jets.btagDeepFlavCvB > 0.298)
+                    & (jets.btagDeepFlavCvL > 0.108),
+                    "tight": (jets.btagDeepFlavCvB > 0.241)
+                    & (jets.btagDeepFlavCvL > 0.305),
+                },
+                "pnet": {
+                    "loose": (jets.btagPNetCvB > 0.182) & (jets.btagPNetCvL > 0.054),
+                    "medium": (jets.btagPNetCvB > 0.304) & (jets.btagPNetCvL > 0.160),
+                    "tight": (jets.btagPNetCvB > 0.258) & (jets.btagPNetCvL > 0.491),
+                },
+                "part": {
+                    "loose": (jets.btagRobustParTAK4CvB > 0.067)
+                    & (jets.btagRobustParTAK4CvL > 0.0390),
+                    "medium": (jets.btagRobustParTAK4CvB > 0.128)
+                    & (jets.btagRobustParTAK4CvL > 0.117),
+                    "tight": (jets.btagRobustParTAK4CvB > 0.095)
+                    & (jets.btagRobustParTAK4CvL > 0.358),
+                },
             },
-            "pnet": {
-                "loose": (jets.btagPNetCvB > 0.182) & (jets.btagPNetCvL > 0.054),
-                "medium": (jets.btagPNetCvB > 0.304) & (jets.btagPNetCvL > 0.160),
-                "tight": (jets.btagPNetCvB > 0.258) & (jets.btagPNetCvL > 0.491),
-            },
-            "part": {
-                "loose": (jets.btagRobustParTAK4CvB > 0.067)
-                & (jets.btagRobustParTAK4CvL > 0.0390),
-                "medium": (jets.btagRobustParTAK4CvB > 0.128)
-                & (jets.btagRobustParTAK4CvL > 0.117),
-                "tight": (jets.btagRobustParTAK4CvB > 0.095)
-                & (jets.btagRobustParTAK4CvL > 0.358),
-            },
+            # https://indico.cern.ch/event/1304360/contributions/5518915/attachments/2692528/4678901/BTagPerf_230808_Summer22WPs.pdf
+            "b": {
+                "deepjet": {
+                    "loose": jets.btagDeepFlavB > 0.0583,
+                    "medium": jets.btagDeepFlavB > 0.3086,
+                    "tight": jets.btagDeepFlavB > 0.7183,
+                },
+                "pnet": {
+                    "loose": jets.btagDeepFlavB > 0.047,
+                    "medium": jets.btagDeepFlavB > 0.245,
+                    "tight": jets.btagDeepFlavB > 0.6734,
+                },
+                "part": {
+                    "loose": jets.btagDeepFlavB > 0.0849,
+                    "medium": jets.btagDeepFlavB > 0.4319,
+                    "tight": jets.btagDeepFlavB > 0.8482,
+                },
+            }
         }
-        passctag = working_points_mask[self.tagger][self.wp]
+        pass_wp = working_points_mask[self.flavor][self.tagger][self.wp]
 
         eff_histogram.fill(
             dataset=dataset,
             pt=ak.flatten(jets.pt),
             eta=ak.flatten(jets.eta),
             flavor=ak.values_astype(ak.flatten(jets.hadronFlavour), "int32"),
-            pass_wp=ak.flatten(passctag),
+            pass_wp=ak.flatten(pass_wp),
         )
 
         return {"histograms": eff_histogram}

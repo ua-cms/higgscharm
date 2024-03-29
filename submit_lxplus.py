@@ -102,7 +102,8 @@ def main(args):
                 f"--sample {root_file} "
                 f"--nfile {str(i)} "
                 f"--tagger {args['tagger']} "
-                f"--wp {args['wp']}"
+                f"--wp {args['wp']} "
+                f"--flavor {args['flavor']}"
             )
             submit_condor(args)
             
@@ -143,6 +144,13 @@ if __name__ == "__main__":
         type=str,
         default="tight",
         help="working point {loose, medium, tight}",
+    )
+    parser.add_argument(
+        "--flavor",
+        dest="flavor",
+        type=str,
+        default="c",
+        help="Hadron flavor {c, b}",
     )
     args = parser.parse_args()
     main(args)

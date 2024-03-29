@@ -13,7 +13,7 @@ def main(args):
     ).events()
 
     processors = {"ctag_eff": CTaggingEfficiencyProcessor}
-    p = processors[args.processor](tagger=args.tagger, wp=args.wp)
+    p = processors[args.processor](tagger=args.tagger, wp=args.wp, flavor=args.flavor)
     out = p.process(events)
     (computed,) = dask.compute(out)
 
@@ -80,6 +80,13 @@ if __name__ == "__main__":
         type=str,
         default="tight",
         help="working point {loose, medium, tight}",
+    )
+    parser.add_argument(
+        "--flavor",
+        dest="flavor",
+        type=str,
+        default="c",
+        help="Hadron flavor {c, b}",
     )
     args = parser.parse_args()
     main(args)
