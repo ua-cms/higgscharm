@@ -28,7 +28,7 @@ def move_X509() -> str:
 
 
 def submit_condor(args: dict) -> None:
-    """build condor and executable files, and submit condor job"""
+    """build condor and executable files. Submit condor job"""
     main_dir = Path.cwd()
     condor_dir = Path(f"{main_dir}/condor")
     
@@ -89,7 +89,7 @@ def main(args):
         if args["dataset_name"]:
             if dataset_name != args["dataset_name"]:
                 continue
-        for i, root_file in enumerate(filesets[dataset_name]["files"]):
+        for i, root_file in enumerate(filesets[dataset_name]["files"], start=1):
             args["dataset_name"] = dataset_name
             args["nfile"] = i
             
