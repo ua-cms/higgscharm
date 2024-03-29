@@ -1,7 +1,7 @@
 from analysis.configs.dataset_config import DatasetConfig
 
 dataset_config = DatasetConfig(
-    name="DYto2L_2Jets_0J",
+    name="DYto2L_2Jets_1J",
     path=(
         "root://maite.iihe.ac.be:1094//store/user/daocampo/PFNano_Run3/"
         "mc_summer22EE_MINIAODv4/DYto2L-2Jets_MLL-50_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/"
