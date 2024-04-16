@@ -4,6 +4,7 @@ import pickle
 import argparse
 from coffea.nanoevents import NanoEventsFactory, PFNanoAODSchema
 from analysis.processors.tag_eff import TaggingEfficiencyProcessor
+from analysis.processors.signal import SignalProcessor
 
 
 def main(args):
@@ -17,8 +18,15 @@ def main(args):
     ).events()
 
     # set processor
-    processors = {"tag_eff": TaggingEfficiencyProcessor}
-    p = processors[args.processor](tagger=args.tagger, wp=args.wp, flavor=args.flavor)
+    processors = {
+        "signal": SignalProcessor(),
+        "tag_eff": TaggingEfficiencyProcessor(
+            tagger=args.tagger, 
+            flavor=args.flavor,
+            wp=args.wp, 
+        ),
+    }
+    p = processors[args.processor]
 
     # compute and save output
     to_compute = p.process(events)
