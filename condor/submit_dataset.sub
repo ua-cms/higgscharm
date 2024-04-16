@@ -1,0 +1,9 @@
+executable            = DIRECTORY/dataset_runnables/YEAR/JOBNAME.sh
+arguments             = $(ClusterId)$(ProcId)
+output                = DIRECTORY/logs/dataset_runnables/YEAR/JOBNAME.$(ClusterId).$(ProcId).out
+error                 = DIRECTORY/logs/dataset_runnables/YEAR/JOBNAME.$(ClusterId).$(ProcId).err
+log                   = DIRECTORY/logs/dataset_runnables/YEAR/JOBNAME.$(ClusterId).$(ProcId).log
+
++JobFlavour           = JOBFLAVOR
++SingularityImage     = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.10"
+queue 1
