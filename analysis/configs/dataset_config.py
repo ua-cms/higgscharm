@@ -11,6 +11,8 @@ class DatasetConfig(Config):
         year: The year of the dataset
         is_mc: Is the dataset MC or not
         xsec: The cross section of the dataset
+        partitions: number of partitions when building the dataset
+        stepsize: step size to use in the dataset preprocessing
         filenames: Filenames of the ROOT files.
     """
 
@@ -22,15 +24,24 @@ class DatasetConfig(Config):
         year: str,
         is_mc: bool,
         xsec: float,
-        filenames: tuple[str],
+        partitions: int,
+        stepsize: int,
+        filenames: tuple,
     ) -> None:
         if path[-1] != "/":
             raise ValueError(f"Dataset path has to end with '/'. Got: {path}")
 
         super().__init__(name=name)
 
+        self.name = name
         self.path = path
         self.key = key
-        self.filenames = filenames
+        self.year = year
         self.is_mc = is_mc
         self.xsec = xsec
+        self.partitions = partitions
+        self.stepsize = stepsize
+        self.filenames = filenames
+
+    def __repr__(self):
+        return f"DatasetConfig({self.name}, {self.year}, {self.stepsize})"
