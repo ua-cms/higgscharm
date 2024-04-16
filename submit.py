@@ -33,8 +33,8 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        default="ctag_eff",
-        help="processor to be used {ctag_eff}",
+        default="tag_eff",
+        help="processor to be used {tag_eff}",
     )
     parser.add_argument(
         "--dataset_name",
