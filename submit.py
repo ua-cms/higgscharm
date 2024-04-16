@@ -7,7 +7,7 @@ from analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from coffea.dataset_tools import apply_to_fileset, max_chunks
 
 def main(args):
-    processors = {"ctag_eff": CTaggingEfficiencyProcessor}
+    processors = {"tag_eff": TaggingEfficiencyProcessor}
     p = processors[args.processor](tagger=args.tagger, wp=args.wp, flavor=args.flavor)
 
     with open(args.dataset_runnable) as f:
