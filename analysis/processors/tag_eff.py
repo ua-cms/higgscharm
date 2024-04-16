@@ -9,7 +9,7 @@ from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 
 
-class CTaggingEfficiencyProcessor(processor.ProcessorABC):
+class TaggingEfficiencyProcessor(processor.ProcessorABC):
     def __init__(self, wp="tight", tagger="pnet", flavor="c"):
         self.wp = wp
         self.tagger = tagger
