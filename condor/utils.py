@@ -70,7 +70,7 @@ def submit_condor(args: dict, is_dataset: bool = False) -> None:
     condor_template_file.close()
 
     # make executable file
-    x509_path = "X"#move_X509() 
+    x509_path = move_X509() 
     sh_template_file = open(f"{condor_dir}/submit.sh")
     local_sh = f"{local_condor_path}/{jobname}.sh"
     sh_file = open(local_sh, "w")
@@ -84,5 +84,5 @@ def submit_condor(args: dict, is_dataset: bool = False) -> None:
 
     # submit jobs
     print(f"submitting {jobname}")
-    #subprocess.run(["condor_submit", local_condor])
+    subprocess.run(["condor_submit", local_condor])
     

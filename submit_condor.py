@@ -2,7 +2,7 @@ import os
 import argparse
 import subprocess
 from pathlib import Path 
-from condor.utils import move_X509, submit_condor
+from condor.utils import submit_condor
 from analysis.configs import load_config
 from analysis.filesets.utils import build_full_dataset
 
