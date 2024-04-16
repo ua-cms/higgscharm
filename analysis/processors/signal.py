@@ -7,7 +7,8 @@ import hist.dask as hda
 import dask_awkward as dak
 from coffea import processor
 from collections import defaultdict
-from coffea.nanoevents.methods import vector, candidate
+from coffea.nanoevents.methods import candidate
+from coffea.nanoevents.methods.vector import LorentzVector
 
 
 @numba.njit
