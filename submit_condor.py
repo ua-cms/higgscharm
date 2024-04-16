@@ -1,45 +1,69 @@
 import os
 import argparse
 import subprocess
-from pathlib import Path 
+from pathlib import Path
 from condor.utils import submit_condor
 from analysis.configs import load_config
 from analysis.filesets.utils import build_full_dataset
 
 
+def get_filesets(dataset_name: str, year: str) -> dict:
+    """
+    returns dataset runnables paths in a dictionary of the form {<dataset partition name>: <dataset partition path>}
+    
+    Parameters:
+        dataset_name:
+            name of the dataset
+        year:
+            era year
+    """
+    main_dir = Path.cwd()
+    fileset_path = Path(f"{main_dir}/analysis/filesets/dataset_runnables/{year}")
+    file_list = glob.glob(f"{fileset_path}/{dataset_name}*.json")
+    filesets = {}
+    for file in file_list:
+        file_name = file.split("/")[-1].replace(".json", "")
+        if file_name.startswith(dataset_name):
+            filesets[file_name] = file
+    if len(filesets) != 1:
+        # sort the dictionary keys based on the number after the "_" in ascending order
+        sorted_keys = sorted(filesets.keys(), key=lambda x: int(x.split("_")[-1]))
+        # create an ordered dictionary using the sorted keys
+        ordered_filesets = OrderedDict((key, filesets[key]) for key in sorted_keys)
+        return ordered_filesets
+    return filesets
+
+
 def main(args):
     args = vars(args)
-    
+
     output_path = Path(Path.cwd() / "outputs" / args["processor"] / args["year"])
+    if args["processor"] == "tag_eff":
+        output_path = Path(output_path / args["tagger"] / args["flavor"] / args["wp"])
     if not output_path.exists():
         output_path.mkdir(parents=True)
     args["output_path"] = str(output_path)
-    
-    filesets = build_full_dataset(args["year"])
 
-    for dataset_name in filesets:
-        if args["dataset_name"]:
-            if dataset_name != args["dataset_name"]:
-                continue
-        for i, root_file in enumerate(filesets[dataset_name]["files"], start=1):
-            args["dataset_name"] = dataset_name
-            args["nfile"] = i
-            
-            args["cmd"] = (
-                "python3 submit.py "
-                f"--processor {args['processor']} "
-                f"--year {args['year']} "
-                f"--output_path {args['output_path']} "
-                f"--dataset_name {dataset_name} "
-                f"--sample {root_file} "
-                f"--nfile {str(i)} "
-                f"--tagger {args['tagger']} "
-                f"--wp {args['wp']} "
-                f"--flavor {args['flavor']}"
-            )
-            submit_condor(args)
-            
-    
+    # get dataset runnable
+
+    filesets = get_filesets(args["dataset_name"], args["year"])
+
+    for dataset_name, fileset_path in filesets.items():
+        args["dataset_name"] = dataset_name
+        args["cmd"] = (
+            "python3 submit.py "
+            f"--processor {args['processor']} "
+            f"--year {args['year']} "
+            f"--output_path {args['output_path']} "
+            f"--fileset_path {fileset_path} "
+            f"--dataset_name {dataset_name} "
+            f"--tagger {args['tagger']} "
+            f"--wp {args['wp']} "
+            f"--flavor {args['flavor']}"
+        )
+        submit_condor(args)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
