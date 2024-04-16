@@ -1,10 +1,11 @@
 import os
+import glob
 import argparse
 import subprocess
 from pathlib import Path
+from collections import OrderedDict
 from condor.utils import submit_condor
 from analysis.configs import load_config
-from analysis.filesets.utils import build_full_dataset
 
 
 def get_filesets(dataset_name: str, year: str) -> dict:
