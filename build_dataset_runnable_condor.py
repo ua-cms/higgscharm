@@ -22,12 +22,12 @@ def main(args):
         for dataset_name in dataset_names:
             args["dataset_name"] = dataset_name
             args["cmd"] = (
-                f"python3 build_dataset_runnables.py --dataset_name {dataset_name}"
+                f"python3 build_dataset_runnable.py --dataset_name {dataset_name}"
             )
             submit_condor(args, is_dataset=True)
     else:
         args["cmd"] = (
-            f"python3 build_dataset_runnables.py --dataset_name {args['dataset_name']}"
+            f"python3 build_dataset_runnable.py --dataset_name {args['dataset_name']}"
         )
         submit_condor(args, is_dataset=True)
 
