@@ -71,7 +71,7 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        default="ctag_eff",
+        default="",
         help="processor to be used {ctag_eff}",
     )
     parser.add_argument(
