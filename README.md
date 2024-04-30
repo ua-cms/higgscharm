@@ -6,7 +6,7 @@ Python package for analyzing H+c events. The package uses a columnar framework t
 - [Processors](#Processors)
 
 
-### Data/MC-filesets
+### Data/MC filesets
 
 Coffea relies mainly on uproot to provide access to ROOT files for analysis. The ROOT files can be preprocessed with uproot and dask-awkward to extract the fileset. A fileset is a collection of metadata about the file location, file name, chunks splitting, that can be used directly to configure the uproot reading. 
 
