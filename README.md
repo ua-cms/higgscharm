@@ -27,7 +27,7 @@ You can also submit condor jobs to build the filesets:
 voms-proxy-init --voms cms
 
 # run the 'build_dataset_runnable_condor' script
-python build_dataset_runnable_condor.py.py --dataset_name <dataset name> --year <year>
+python3 build_dataset_runnable_condor.py --dataset_name <dataset name> --year <year>
 ```
 Use `--dataset_name all` to submit jobs for all datasets defined at `analysis/configs/dataset/<year>`. 
 
@@ -39,12 +39,12 @@ The preprocessed datasets will be saved to `analysis/filesets/dataset_runnables/
 Processors are coffea’s way of encapsulating an analysis. The available processors are:
 * `signal`: Use to select a candidate higgs and one c-tagged jet. Output parquet files. 
 ```
-python submit_condor.py --processor signal --dataset_name <dataset name>
+python3 submit_condor.py --processor signal --dataset_name <dataset name>
 ```    
 
 * `tag_eff`: Use to fill histograms subsequently used to compute the efficiency maps of some tagger for a particular hadronic flavor and a particular working point
 ```
-python submit_condor.py --processor tag_eff --dataset_name <dataset name> --tagger <tagger> --flavor <hadron flavor> --wp <working point>
+python3 submit_condor.py --processor tag_eff --dataset_name <dataset name> --tagger <tagger> --flavor <hadron flavor> --wp <working point>
 ```
 where the available options are 
 
@@ -54,5 +54,5 @@ where the available options are
 
 * `taggers`: Use to get CvsL and CvsB distributions for the DeepJet, ParticleNet and RobustParticleTransformer taggers
 ```
-python submit_condor.py --processor taggers --dataset_name <dataset name>
+python3 submit_condor.py --processor taggers --dataset_name <dataset name>
 ```
