@@ -3,12 +3,15 @@ import hist
 import dask
 import numpy as np
 import awkward as ak
-import hist.dask as hda
 import dask_awkward as dak
 from coffea import processor
 from collections import defaultdict
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
+
+
+def normalize(array):
+    return ak.fill_none(ak.flatten(array), -99)
 
 
 @numba.njit
@@ -28,6 +31,7 @@ def find_4lep_kernel(events_leptons, builder):
                 # A leading muon with pT > 20 GeV
                 # A subleading muon with pT > 10 GeV
                 # Remaining muons satisfy pT > 5 GeV
+
                 if leptons[i0].pt < 20:
                     continue
                 if leptons[i1].pt < 10:
@@ -47,7 +51,6 @@ def find_4lep_kernel(events_leptons, builder):
                         builder.index(3).integer(i3)
                         builder.end_tuple()
         builder.end_list()
-
     return builder
 
 
@@ -55,39 +58,20 @@ def find_4lep(events_leptons):
     if ak.backend(events_leptons) == "typetracer":
         # here we fake the output of find_4lep_kernel since
         # operating on length-zero data returns the wrong layout!
-        ak.typetracer.length_zero_if_typetracer(events_leptons.charge) # force touching of the necessary data
-        return ak.Array(ak.Array([[(0,0,0,0)]]).layout.to_typetracer(forget_length=True))
+
+        ak.typetracer.length_zero_if_typetracer(
+            events_leptons.charge
+        )  # force touching of the necessary data
+        return ak.Array(
+            ak.Array([[(0, 0, 0, 0)]]).layout.to_typetracer(forget_length=True)
+        )
     return find_4lep_kernel(events_leptons, ak.ArrayBuilder()).snapshot()
 
 
 class SignalProcessor(processor.ProcessorABC):
     def process(self, events):
-        dataset_axis = hist.axis.StrCategory([], growth=True, name="dataset", label="Primary dataset")
-        mass_h_axis = hist.axis.Regular(50, 10, 150, name="mass", label=r"$m(H)$ [GeV]")
-        mass_z1_axis = hist.axis.Regular(50, 10, 150, name="mass", label=r"$m(Z)$ [GeV]")
-        mass_z2_axis = hist.axis.Regular(50, 10, 150, name="mass", label=r"$m(Z^*)$ [GeV]")
-        lepton_pt_axis = hist.axis.Regular(50, 0, 300, name="pt", label=r"$p_T(\mu)$ [GeV]")
-        higgs_pt_axis = hist.axis.Regular(50, 0, 300, name="pt", label=r"$p_T(H)$ [GeV]")
+        dataset = events.metadata["dataset"]
 
-        h_nMuons = hda.Hist(
-            dataset_axis,
-            hda.hist.hist.axis.IntCategory(range(6), name="nMuons", label="Number of good muons"),
-            storage="weight", label="Counts",
-        )
-        h_m4mu = hda.hist.Hist(dataset_axis, mass_h_axis, storage="weight", label="Counts")
-        h_pt4mu = hda.hist.Hist(dataset_axis, higgs_pt_axis, storage="weight", label="Counts")
-        h_mZ1 = hda.hist.Hist(dataset_axis, mass_z1_axis, storage="weight", label="Counts")
-        h_mZ2 = hda.hist.Hist(dataset_axis, mass_z2_axis, storage="weight", label="Counts")
-        h_ptZ1mu1 = hda.hist.Hist(dataset_axis, lepton_pt_axis, storage="weight", label="Counts")
-        h_ptZ1mu2 = hda.hist.Hist(dataset_axis, lepton_pt_axis, storage="weight", label="Counts")
-
-        cutflow = defaultdict(int)
-
-        dataset = events.metadata['dataset']
-        
-        # -----------------------------
-        # HIGGS SELECTION
-        # -----------------------------
         # impose some quality and minimum pt cuts on the muons
         muons = events.Muon
         muons = muons[
@@ -99,93 +83,109 @@ class SignalProcessor(processor.ProcessorABC):
             & (muons.sip3d < 4)
             & (muons.mediumId)
         ]
+        # impose some quality and minimum pt cuts on the jets
+        jets = events.Jet
+        jets = jets[
+            (jets.pt >= 30)
+            & (np.abs(jets.eta) < 2.5)
+            & (jets.jetId == 6)
+            & (ak.all(jets.metric_table(muons) > 0.4, axis=-1))
+        ]
+        # selec c-tagged jets (ParticleNet tight WP)
+        cjets = jets[(jets.btagPNetCvB > 0.258) & (jets.btagPNetCvL > 0.491)]
+
         # build Lorentz vectors
-        muons = ak.zip({
-            "pt": muons.pt,
-            "eta": muons.eta,
-            "phi": muons.phi,
-            "mass": muons.mass,
-            "charge": muons.charge,
-        }, with_name="PtEtaPhiMCandidate", behavior=candidate.behavior)
-        
+        muons = ak.zip(
+            {
+                "pt": muons.pt,
+                "eta": muons.eta,
+                "phi": muons.phi,
+                "mass": muons.mass,
+                "charge": muons.charge,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+
         # make sure they are sorted by transverse momentum
         muons = muons[ak.argsort(muons.pt, axis=1)]
-
-        cutflow['all events'] = ak.num(muons, axis=0)
-        cutflow['at least 4 good muons'] += ak.sum(ak.num(muons) >= 4)
-        h_nMuons.fill(dataset=dataset, nMuons=ak.num(muons))
-
-        # reduce first axis: skip events without enough muons
-        muons = muons[ak.num(muons) >= 4]
 
         # find all candidates with helper function
         fourmuon = dak.map_partitions(find_4lep, muons)
         fourmuon = [muons[fourmuon[idx]] for idx in "0123"]
-        
-        fourmuon = ak.zip({
-            "z1": ak.zip({
-                "lep1": fourmuon[0],
-                "lep2": fourmuon[1],
-                "p4": fourmuon[0] + fourmuon[1],
-            }),
-            "z2": ak.zip({
-                "lep1": fourmuon[2],
-                "lep2": fourmuon[3],
-                "p4": fourmuon[2] + fourmuon[3],
-            }),
-        })
+        fourmuon = ak.zip(
+            {
+                "z1": ak.zip(
+                    {
+                        "lep1": fourmuon[0],
+                        "lep2": fourmuon[1],
+                        "p4": fourmuon[0] + fourmuon[1],
+                    }
+                ),
+                "z2": ak.zip(
+                    {
+                        "lep1": fourmuon[2],
+                        "lep2": fourmuon[3],
+                        "p4": fourmuon[2] + fourmuon[3],
+                    }
+                ),
+            }
+        )
 
-        cutflow['at least one candidate'] += ak.sum(ak.num(fourmuon) > 0)
-        
-        # require minimum deltaR
-        fourmuon = fourmuon[LorentzVector.delta_r(fourmuon.z1.p4, fourmuon.z2.p4) > 0.02]
-
-        # require minimum dimuon mass
-        z1_mass_window = (fourmuon.z1.p4.mass < 120.) & (fourmuon.z1.p4.mass > 12.)
-        z2_mass_window = (fourmuon.z2.p4.mass < 120.) & (fourmuon.z2.p4.mass > 12.)
+        # require minimum dimuon mass and minimum dimuon deltaR
+        z1_mass_window = (
+            (LorentzVector.delta_r(fourmuon.z1.lep1, fourmuon.z1.lep2) > 0.02)
+            & (fourmuon.z1.p4.mass < 120.0)
+            & (fourmuon.z1.p4.mass > 12.0)
+        )
+        z2_mass_window = (
+            (LorentzVector.delta_r(fourmuon.z2.lep1, fourmuon.z2.lep2) > 0.02)
+            & (fourmuon.z2.p4.mass < 120.0)
+            & (fourmuon.z2.p4.mass > 12.0)
+        )
         fourmuon = fourmuon[z1_mass_window & z2_mass_window]
-        cutflow['minimum dimuon mass'] += ak.sum(ak.num(fourmuon) > 0)
 
         # choose permutation with z1 mass closest to nominal Z boson mass
         bestz1 = ak.singletons(ak.argmin(abs(fourmuon.z1.p4.mass - 91.1876), axis=1))
-        fourmuon = ak.flatten(fourmuon[bestz1])
-        
-        # fill histograms
-        h_m4mu.fill(
-            dataset=dataset,
-            mass=(fourmuon.z1.p4 + fourmuon.z2.p4).mass,
-        )
-        h_pt4mu.fill(
-            dataset=dataset,
-            pt=(fourmuon.z1.p4 + fourmuon.z2.p4).pt,
-        )
-        h_mZ1.fill(
-            dataset=dataset,
-            mass=fourmuon.z1.p4.mass,
-        )
-        h_mZ2.fill(
-            dataset=dataset,
-            mass=fourmuon.z2.p4.mass,
-        )
-        h_ptZ1mu1.fill(
-            dataset=dataset,
-            pt=fourmuon.z1.lep1.pt,
-        )
-        h_ptZ1mu2.fill(
-            dataset=dataset,
-            pt=fourmuon.z1.lep2.pt,
-        )
-        
-        return {
-            'mass_z1': h_mZ1,
-            'mass_z2': h_mZ2,
-            'pt_z1_mu1': h_ptZ1mu1,
-            'pt_z1_mu2': h_ptZ1mu2,
-            'mass_h': h_m4mu,
-            'nMuons': h_nMuons,
-            'pt_h': h_pt4mu,
-            'cutflow': {dataset: cutflow},
+        fourmuon = fourmuon[bestz1]
+
+        # select events with 4 muons, one c-tagged jet and one higgs candidate
+        four_muons = ak.num(muons) == 4
+        one_cjet = ak.num(cjets) == 1
+        one_higgs = ak.num((fourmuon.z1.p4 + fourmuon.z2.p4)) == 1
+        region_selection = four_muons & one_cjet & one_higgs
+
+        # get gen-weights
+        weights = ak.singletons(events.genWeight)
+
+        # save output
+        out_dict = {
+            "higgs_pt": (fourmuon.z1.p4 + fourmuon.z2.p4).pt[region_selection],
+            "higgs_mass": (fourmuon.z1.p4 + fourmuon.z2.p4).mass[region_selection],
+            "cjet_pt": cjets.pt[region_selection],
+            "cjet_eta": cjets.eta[region_selection],
+            "cjet_phi": cjets.phi[region_selection],
+            "z1_mass": fourmuon.z1.p4.mass[region_selection],
+            "z2_mass": fourmuon.z2.p4.mass[region_selection],
+            "z1_mu1_pt": fourmuon.z1.lep1.pt[region_selection],
+            "z1_mu2_pt": fourmuon.z1.lep2.pt[region_selection],
+            "z2_mu1_pt": fourmuon.z2.lep1.pt[region_selection],
+            "z2_mu2_pt": fourmuon.z2.lep2.pt[region_selection],
+            "cjet_higgs_deltaphi": LorentzVector.delta_phi(
+                ak.pad_none(cjets[region_selection], 1),
+                ak.pad_none((fourmuon.z1.p4 + fourmuon.z2.p4)[region_selection], 1),
+            ),
+            "weights": weights[region_selection],
         }
+        out_dict = {f: normalize(out_dict[f]) for f in out_dict}
+        out_dict.update(
+            {
+                "sumw": ak.full_like(
+                    normalize(weights[region_selection]), ak.sum(weights)
+                )
+            }
+        )
+        return out_dict
 
     def postprocess(self, accumulator):
         pass

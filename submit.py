@@ -2,9 +2,11 @@ import json
 import dask
 import pickle
 import argparse
+import dask_awkward as dak
 from coffea.nanoevents import NanoEventsFactory, PFNanoAODSchema
 from analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from analysis.processors.signal import SignalProcessor
+from analysis.processors.taggers import JetTaggersPlots
 
 
 def main(args):
@@ -17,24 +19,36 @@ def main(args):
         metadata={"dataset": args.dataset_name},
     ).events()
 
-    # set processor
+    # set processor and get out collections
     processors = {
         "signal": SignalProcessor(),
         "tag_eff": TaggingEfficiencyProcessor(
-            tagger=args.tagger, 
+            tagger=args.tagger,
             flavor=args.flavor,
-            wp=args.wp, 
+            wp=args.wp,
         ),
+        "taggers": JetTaggersPlots(),
     }
     p = processors[args.processor]
+    out_collections = p.process(events)
+    
+    # set output path
+    save_path = f"{args.output_path}/{args.dataset_name}"
 
-    # compute and save output
-    to_compute = p.process(events)
-    (computed,) = dask.compute(to_compute)
-    with open(
-        f"{args.output_path}/{args.dataset_name}.pkl", "wb"
-    ) as handle:
-        pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    if args.processor == "tag_eff":
+        # save out collectios to pickle files
+        (computed,) = dask.compute(out_collections)
+        with open(f"{save_path}.pkl", "wb") as handle:
+            pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    else:
+        # save out collectios to parquet files
+        placeholder_dict = {
+            feature: out_collections[feature] for feature in out_collections
+        }
+        to_compute = dak.to_parquet(
+            ak.zip(placeholder_dict, depth_limit=1), save_path, compute=False
+        )
+        dask.compute(to_compute)
 
 
 if __name__ == "__main__":
