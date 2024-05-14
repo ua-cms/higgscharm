@@ -11,12 +11,6 @@ from analysis.configs import load_config
 def get_filesets(dataset_name: str, year: str) -> dict:
     """
     returns dataset runnables paths in a dictionary of the form {<dataset partition name>: <dataset partition path>}
-    
-    Parameters:
-        dataset_name:
-            name of the dataset
-        year:
-            era year
     """
     main_dir = Path.cwd()
     fileset_path = Path(f"{main_dir}/analysis/filesets/dataset_runnables/{year}")
@@ -37,20 +31,20 @@ def get_filesets(dataset_name: str, year: str) -> dict:
 
 def main(args):
     args = vars(args)
-
+    
+    # set outputh path
     output_path = Path(Path.cwd() / "outputs" / args["processor"] / args["year"])
     if args["processor"] == "tag_eff":
         output_path = Path(output_path / args["tagger"] / args["flavor"] / args["wp"])
     if not output_path.exists():
         output_path.mkdir(parents=True)
     args["output_path"] = str(output_path)
-
-    # get dataset runnable
-
+    
+    # get filests and submit condor jobs
     filesets = get_filesets(args["dataset_name"], args["year"])
-
     for dataset_name, fileset_path in filesets.items():
         args["dataset_name"] = dataset_name
+        # set command to be run
         args["cmd"] = (
             "python3 submit.py "
             f"--processor {args['processor']} "
@@ -72,7 +66,7 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="",
-        help="processor to be used {ctag_eff}",
+        help="processor to be used {signal, tag_eff, taggers, zplusjet}",
     )
     parser.add_argument(
         "--dataset_name",
