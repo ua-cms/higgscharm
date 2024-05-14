@@ -2,6 +2,7 @@ import json
 import dask
 import pickle
 import argparse
+import awkward as ak
 import dask_awkward as dak
 from coffea.nanoevents import NanoEventsFactory, PFNanoAODSchema
 from analysis.processors.tag_eff import TaggingEfficiencyProcessor
