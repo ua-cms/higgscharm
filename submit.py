@@ -7,7 +7,7 @@ from coffea.nanoevents import NanoEventsFactory, PFNanoAODSchema
 from analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from analysis.processors.signal import SignalProcessor
 from analysis.processors.taggers import JetTaggersPlots
-
+from analysis.processors.zplusjet import ZPlusJetProcessor
 
 def main(args):
     # load fileset and get PFNano events array
@@ -28,14 +28,14 @@ def main(args):
             wp=args.wp,
         ),
         "taggers": JetTaggersPlots(),
+        "zplusjet": ZPlusJetProcessor(),
     }
     p = processors[args.processor]
     out_collections = p.process(events)
     
     # set output path
     save_path = f"{args.output_path}/{args.dataset_name}"
-
-    if args.processor == "tag_eff":
+    if args.processor in ["tag_eff", "zplusjet"]:
         # save out collectios to pickle files
         (computed,) = dask.compute(out_collections)
         with open(f"{save_path}.pkl", "wb") as handle:
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="tag_eff",
-        help="processor to be used {tag_eff}",
+        help="processor to be used {signal, tag_eff, taggers, zplusjet}",
     )
     parser.add_argument(
         "--dataset_name",
