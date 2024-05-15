@@ -100,7 +100,6 @@ class ZPlusJetProcessor(processor.ProcessorABC):
     def process(self, events):
         # copy histogram map
         histograms = copy.deepcopy(self.histograms)
-
         # impose some quality and minimum pt cuts on the muons
         muons = events.Muon
         muons = muons[
@@ -119,7 +118,6 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
         # selec c-tagged jets using ParticleNet tight WP
         cjets = jets[(jets.btagPNetCvB > 0.258) & (jets.btagPNetCvL > 0.491)]
-
         # build Lorentz vectors for muons
         muons = ak.zip(
             {
@@ -155,10 +153,9 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             & (dimuon.z.p4.mass > 12.0)
         )
         dimuon = dimuon[z_mass_window]
-        
         # select events with:
-        #    2 muons,
-        #    one c-tagged jet,
+        #    2 muons
+        #    one c-tagged jet
         #    one Z candidate
         #    at least one good vertex
         two_muons = ak.num(muons) == 2
@@ -167,13 +164,8 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         atleast_one_goodvertex = events.PV.npvsGood > 0
         region_selection = two_muons & one_cjet & one_z & atleast_one_goodvertex
 
-        # get region weights
-        weights = ak.singletons(events.genWeight)
-        region_weights = weights[region_selection]
-
         # define feature map with non-flat arrays
         feature_dict = {
-            "weights": weights[region_selection],
             # c-jet
             "cjet_pt": cjets.pt[region_selection],
             "cjet_eta": cjets.eta[region_selection],
@@ -198,13 +190,19 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                 "npvs": events.PV.npvsGood[region_selection],
             },
         )
+        
+        # get region weights
+        weights = events.genWeight
+        region_weights = weights[region_selection]
+        
         # fill histograms
         for feature in histograms:
             fill_args = {
                 feature: feature_dict[feature],
-                "weight": feature_dict["weights"],
+                "weight": region_weights,
             }
             histograms[feature].fill(**fill_args)
+            
         return {"histograms": histograms, "sumw": ak.sum(weights)}
 
     def postprocess(self, accumulator):

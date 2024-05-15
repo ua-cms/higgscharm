@@ -1,8 +1,10 @@
-import numba
 import hist
 import dask
+import copy
+import numba
 import numpy as np
 import awkward as ak
+import hist.dask as hda
 import dask_awkward as dak
 from coffea import processor
 from collections import defaultdict
@@ -31,7 +33,6 @@ def find_4lep_kernel(events_leptons, builder):
                 # A leading muon with pT > 20 GeV
                 # A subleading muon with pT > 10 GeV
                 # Remaining muons satisfy pT > 5 GeV
-
                 if leptons[i0].pt < 20:
                     continue
                 if leptons[i1].pt < 10:
@@ -58,7 +59,6 @@ def find_4lep(events_leptons):
     if ak.backend(events_leptons) == "typetracer":
         # here we fake the output of find_4lep_kernel since
         # operating on length-zero data returns the wrong layout!
-
         ak.typetracer.length_zero_if_typetracer(
             events_leptons.charge
         )  # force touching of the necessary data
@@ -69,9 +69,51 @@ def find_4lep(events_leptons):
 
 
 class SignalProcessor(processor.ProcessorABC):
-    def process(self, events):
-        dataset = events.metadata["dataset"]
+    def __init__(self):
+        # set histogram axes
+        higgs_mass_axis = hist.axis.Regular(
+            120, 10, 150, name="higgs_mass", label=r"$m(H)$ [GeV]"
+        )
+        higgs_pt_axis = hist.axis.Regular(
+            40, 0, 300, name="higgs_pt", label=r"$p_T(H)$ [GeV]"
+        )
+        z1_mass_axis = hist.axis.Regular(
+            100, 10, 150, name="z1_mass", label=r"$m(Z)$ [GeV]"
+        )
+        z2_mass_axis = hist.axis.Regular(
+            50, 10, 150, name="z2_mass", label=r"$m(Z^*)$ [GeV]"
+        )
+        jet_pt_axis = hist.axis.Regular(
+            30, 30, 150, name="cjet_pt", label=r"Jet $p_T$ [GeV]"
+        )
+        jet_eta_axis = hist.axis.Regular(
+            bins=50, start=-2.5, stop=2.5, name="cjet_eta", label="Jet $\eta$"
+        )
+        jet_phi_axis = hist.axis.Regular(
+            bins=50, start=-np.pi, stop=np.pi, name="cjet_phi", label="Jet $\phi$"
+        )
+        deltaphi_axis = hist.axis.Regular(
+            bins=50,
+            start=-np.pi,
+            stop=np.pi,
+            name="cjet_higgs_deltaphi",
+            label="$\Delta\phi$(Jet, H)",
+        )
+        # set histogram map
+        self.histograms = {
+            "z1_mass": hda.hist.Hist(z1_mass_axis, hist.storage.Weight()),
+            "z2_mass": hda.hist.Hist(z2_mass_axis, hist.storage.Weight()),
+            "higgs_mass": hda.hist.Hist(higgs_mass_axis, hist.storage.Weight()),
+            "higgs_pt": hda.hist.Hist(higgs_pt_axis, hist.storage.Weight()),
+            "cjet_pt": hda.hist.Hist(jet_pt_axis, hist.storage.Weight()),
+            "cjet_eta": hda.hist.Hist(jet_eta_axis, hist.storage.Weight()),
+            "cjet_phi": hda.hist.Hist(jet_phi_axis, hist.storage.Weight()),
+            "cjet_higgs_deltaphi": hda.hist.Hist(deltaphi_axis, hist.storage.Weight()),
+        }
 
+    def process(self, events):
+        # copy histogram map
+        histograms = copy.deepcopy(self.histograms)
         # impose some quality and minimum pt cuts on the muons
         muons = events.Muon
         muons = muons[
@@ -85,12 +127,9 @@ class SignalProcessor(processor.ProcessorABC):
         ]
         # impose some quality and minimum pt cuts on the jets
         jets = events.Jet
-        jets = jets[
-            (jets.pt >= 30)
-            & (np.abs(jets.eta) < 2.5)
-            & (jets.jetId == 6)
-            & (ak.all(jets.metric_table(muons) > 0.4, axis=-1))
-        ]
+        jets = jets[(jets.pt >= 30) & (np.abs(jets.eta) < 2.5) & (jets.jetId == 6)]
+        # cross-cleaning of jets with respect to muons
+        jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
         # selec c-tagged jets (ParticleNet tight WP)
         cjets = jets[(jets.btagPNetCvB > 0.258) & (jets.btagPNetCvL > 0.491)]
 
@@ -106,10 +145,8 @@ class SignalProcessor(processor.ProcessorABC):
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
-
         # make sure they are sorted by transverse momentum
         muons = muons[ak.argsort(muons.pt, axis=1)]
-
         # find all candidates with helper function
         fourmuon = dak.map_partitions(find_4lep, muons)
         fourmuon = [muons[fourmuon[idx]] for idx in "0123"]
@@ -131,7 +168,6 @@ class SignalProcessor(processor.ProcessorABC):
                 ),
             }
         )
-
         # require minimum dimuon mass and minimum dimuon deltaR
         z1_mass_window = (
             (LorentzVector.delta_r(fourmuon.z1.lep1, fourmuon.z1.lep2) > 0.02)
@@ -144,22 +180,17 @@ class SignalProcessor(processor.ProcessorABC):
             & (fourmuon.z2.p4.mass > 12.0)
         )
         fourmuon = fourmuon[z1_mass_window & z2_mass_window]
-
         # choose permutation with z1 mass closest to nominal Z boson mass
         bestz1 = ak.singletons(ak.argmin(abs(fourmuon.z1.p4.mass - 91.1876), axis=1))
         fourmuon = fourmuon[bestz1]
-
         # select events with 4 muons, one c-tagged jet and one higgs candidate
         four_muons = ak.num(muons) == 4
         one_cjet = ak.num(cjets) == 1
         one_higgs = ak.num((fourmuon.z1.p4 + fourmuon.z2.p4)) == 1
         region_selection = four_muons & one_cjet & one_higgs
 
-        # get gen-weights
-        weights = ak.singletons(events.genWeight)
-
-        # save output
-        out_dict = {
+        # define feature map with non-flat arrays
+        feature_dict = {
             "higgs_pt": (fourmuon.z1.p4 + fourmuon.z2.p4).pt[region_selection],
             "higgs_mass": (fourmuon.z1.p4 + fourmuon.z2.p4).mass[region_selection],
             "cjet_pt": cjets.pt[region_selection],
@@ -175,17 +206,22 @@ class SignalProcessor(processor.ProcessorABC):
                 ak.pad_none(cjets[region_selection], 1),
                 ak.pad_none((fourmuon.z1.p4 + fourmuon.z2.p4)[region_selection], 1),
             ),
-            "weights": weights[region_selection],
         }
-        out_dict = {f: normalize(out_dict[f]) for f in out_dict}
-        out_dict.update(
-            {
-                "sumw": ak.full_like(
-                    normalize(weights[region_selection]), ak.sum(weights)
-                )
+        feature_dict = {f: normalize(feature_dict[f]) for f in feature_dict}
+
+        # get region weights
+        weights = events.genWeight
+        region_weights = weights[region_selection]
+        
+        # fill histograms
+        for feature in histograms:
+            fill_args = {
+                feature: feature_dict[feature],
+                "weight": region_weights,
             }
-        )
-        return out_dict
+            histograms[feature].fill(**fill_args)
+
+        return {"histograms": histograms, "sumw": ak.sum(weights)}
 
     def postprocess(self, accumulator):
         pass
