@@ -4,23 +4,16 @@ import pickle
 import argparse
 import awkward as ak
 import dask_awkward as dak
-from coffea.nanoevents import NanoEventsFactory, PFNanoAODSchema
+from coffea.nanoevents import PFNanoAODSchema
 from analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from analysis.processors.signal import SignalProcessor
 from analysis.processors.taggers import JetTaggersPlots
 from analysis.processors.zplusjet import ZPlusJetProcessor
+from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
+
 
 def main(args):
-    # load fileset and get PFNano events array
-    with open(args.fileset_path) as f:
-        fileset = json.load(f)[args.dataset_name]
-    events = NanoEventsFactory.from_root(
-        fileset["files"],
-        schemaclass=PFNanoAODSchema,
-        metadata={"dataset": args.dataset_name},
-    ).events()
-
-    # set processor and get out collections
+    # set processor
     processors = {
         "signal": SignalProcessor(),
         "tag_eff": TaggingEfficiencyProcessor(
@@ -31,25 +24,24 @@ def main(args):
         "taggers": JetTaggersPlots(),
         "zplusjet": ZPlusJetProcessor(),
     }
-    p = processors[args.processor]
-    out_collections = p.process(events)
-    
-    # set output path
+    processor = processors[args.processor]
+    # preprocesses fileset
+    dataset_runnable, dataset_updated = preprocess(
+        args.partition_fileset,
+        step_size=args.stepsize,
+        align_clusters=False,
+        files_per_batch=1,
+        save_form=False,
+    )
+    # process fileset
+    to_compute = apply_to_fileset(
+        processor, max_chunks(dataset_runnable), schemaclass=PFNanoAODSchema
+    )
+    (computed,) = dask.compute(to_compute)
+    # save output to a pickle file
     save_path = f"{args.output_path}/{args.dataset_name}"
-    if args.processor in ["tag_eff", "zplusjet"]:
-        # save out collectios to pickle files
-        (computed,) = dask.compute(out_collections)
-        with open(f"{save_path}.pkl", "wb") as handle:
-            pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)
-    else:
-        # save out collectios to parquet files
-        placeholder_dict = {
-            feature: out_collections[feature] for feature in out_collections
-        }
-        to_compute = dak.to_parquet(
-            ak.zip(placeholder_dict, depth_limit=1), save_path, compute=False
-        )
-        dask.compute(to_compute)
+    with open(f"{save_path}.pkl", "wb") as handle:
+        pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
@@ -69,11 +61,10 @@ if __name__ == "__main__":
         help="dataset name",
     )
     parser.add_argument(
-        "--fileset_path",
-        dest="fileset_path",
-        type=str,
-        default="",
-        help="fileset path",
+        "--partition_fileset",
+        dest="partition_fileset",
+        type=json.loads,
+        help="partition_fileset needed to preprocess a fileset",
     )
     parser.add_argument(
         "--year",
@@ -109,6 +100,12 @@ if __name__ == "__main__":
         type=str,
         default="c",
         help="Hadron flavor {c, b}",
+    )
+    parser.add_argument(
+        "--stepsize",
+        dest="stepsize",
+        type=int,
+        help="stepsize",
     )
     args = parser.parse_args()
     main(args)
