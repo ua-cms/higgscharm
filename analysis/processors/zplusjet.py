@@ -1,19 +1,20 @@
-import hist
 import copy
 import numba
 import numpy as np
 import awkward as ak
-import hist.dask as hda
 import dask_awkward as dak
-from analysis.weights.muon import MuonWeights
-from analysis.weights.pileup import add_pileup_weight
-from analysis.corrections.jetvetomaps import jetvetomaps_mask
 from coffea import processor
 from coffea.lumi_tools import LumiMask
 from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
+from analysis.weights.muon import MuonWeights
+from analysis.weights.pileup import add_pileup_weight
+from analysis.histograms.zplusjet import histograms
+from analysis.configs.load_config import load_config_params
+from analysis.corrections.jetvetomaps import jetvetomaps_mask
+
 PFNanoAODSchema.warn_missing_crossrefs = False
 
 
@@ -51,7 +52,6 @@ def find_2lep(events_leptons):
     if ak.backend(events_leptons) == "typetracer":
         # here we fake the output of find_2lep_kernel since
         # operating on length-zero data returns the wrong layout!
-
         ak.typetracer.length_zero_if_typetracer(
             events_leptons.charge
         )  # force touching of the necessary data
@@ -60,62 +60,19 @@ def find_2lep(events_leptons):
 
 
 class ZPlusJetProcessor(processor.ProcessorABC):
-    def __init__(self):
-        # TO DO: make a config file to handle this
-        self.year = "2022EE"
-        self.muon_id_wp = "medium"
-        self.muon_pfiso_wp = "loose"
-        self.jet_tagger = "pnet"
-        self.jet_ctagging_wp = "tight"
-        # https://twiki.cern.ch/twiki/bin/view/CMS/MuonHLT2022#Recommended_trigger_paths_for_20
-        self.hlt_paths = ["IsoMu24", "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"]
-
-        # define histograms axes and set histogram map
-        z_mass_axis = hist.axis.Regular(
-            bins=100, start=10, stop=150, name="z_mass", label=r"$m(Z)$ [GeV]"
-        )
-        mu1_pt_axis = hist.axis.Regular(
-            bins=50, start=0, stop=300, name="mu1_pt", label=r"$p_T(\mu_1)$ [GeV]"
-        )
-        mu2_pt_axis = hist.axis.Regular(
-            bins=50, start=0, stop=300, name="mu2_pt", label=r"$p_T(\mu_2)$ [GeV]"
-        )
-        jet_pt_axis = hist.axis.Regular(
-            bins=30, start=30, stop=150, name="cjet_pt", label=r"Jet $p_T$ [GeV]"
-        )
-        jet_eta_axis = hist.axis.Regular(
-            bins=50, start=-2.5, stop=2.5, name="cjet_eta", label="Jet $\eta$"
-        )
-        jet_phi_axis = hist.axis.Regular(
-            bins=50, start=-np.pi, stop=np.pi, name="cjet_phi", label="Jet $\phi$"
-        )
-        deltaphi_axis = hist.axis.Regular(
-            bins=50,
-            start=-np.pi,
-            stop=np.pi,
-            name="cjet_z_deltaphi",
-            label="$\Delta\phi$(Jet, Z)",
-        )
-        n_jets_axis = hist.axis.IntCategory(categories=np.arange(0, 16), name="njets")
-        n_vertices_axis = hist.axis.IntCategory(
-            categories=np.arange(1, 60), name="npvs"
-        )
-        self.histograms = {
-            "z_mass": hda.hist.Hist(z_mass_axis, hist.storage.Weight()),
-            "mu1_pt": hda.hist.Hist(mu1_pt_axis, hist.storage.Weight()),
-            "mu2_pt": hda.hist.Hist(mu2_pt_axis, hist.storage.Weight()),
-            "cjet_pt": hda.hist.Hist(jet_pt_axis, hist.storage.Weight()),
-            "cjet_eta": hda.hist.Hist(jet_eta_axis, hist.storage.Weight()),
-            "cjet_phi": hda.hist.Hist(jet_phi_axis, hist.storage.Weight()),
-            "cjet_z_deltaphi": hda.hist.Hist(deltaphi_axis, hist.storage.Weight()),
-            "njets": hda.hist.Hist(n_jets_axis, hist.storage.Weight()),
-            "npvs": hda.hist.Hist(n_vertices_axis, hist.storage.Weight()),
-        }
+    def __init__(self, year: str = "2022EE"):
+        self.year = year
+        self.config = load_config_params(year)
+        self.histograms = histograms
+        
+        for k, v in self.config["zplusjet"].items():
+            self.config[k] = v
+        
 
     def process(self, events):
-        # check if sample is MC or Data
+        # check if dataset is MC or Data
         is_mc = hasattr(events, "genWeight")
-
+        
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
@@ -127,23 +84,23 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             # add pileup weights
             add_pileup_weight(
                 events=events,
-                weights_container=weights_container,
                 year=self.year,
                 variation="nominal",
+                weights_container=weights_container,
             )
             # add muon id and pfiso weights
             muon_weights = MuonWeights(
                 muons=events.Muon,
-                weights=weights_container,
                 year=self.year,
                 variation="nominal",
-                id_wp=self.muon_id_wp,
-                pfiso_wp=self.muon_pfiso_wp,
+                weights=weights_container,
+                id_wp=self.config["muon_id_wp"],
+                pfiso_wp=self.config["muon_pfiso_wp"],
             )
             muon_weights.add_id_weights()
             muon_weights.add_pfiso_weights()
         else:
-            weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
+            weights_container.add("genweight", ak.ones_like(events.genWeight))
             
         # --------------------------------------------------------------
         # Object selection
@@ -166,8 +123,8 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         muons = muons[
             (muons.pt > 10)
             & (np.abs(muons.eta) < 2.4)
-            & (muons_id_wps[self.muon_id_wp])
-            & (muons_pfiso_wps[self.muon_pfiso_wp])
+            & (muons_id_wps[self.config["muon_id_wp"]])
+            & (muons_pfiso_wps[self.config["muon_pfiso_wp"]])
             & (muons.dxy < 0.5)
             & (muons.dz < 1)
             & (muons.sip3d < 4)
@@ -180,7 +137,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         # apply veto maps
         jets = jets[jetvetomaps_mask(jets, self.year)]
         # selec c-tagged jets using ParticleNet tight WP
-        # # https://indico.cern.ch/event/1304360/contributions/5518916/attachments/2692786/4673101/230731_BTV.pdf
+        # https://indico.cern.ch/event/1304360/contributions/5518916/attachments/2692786/4673101/230731_BTV.pdf
         jets_ctagging_wps = {
             "deepjet": {
                 "loose": (jets.btagDeepFlavCvB > 0.206)
@@ -204,8 +161,8 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                 & (jets.btagRobustParTAK4CvL > 0.358),
             },
         }
-        cjets = jets[jets_ctagging_wps[self.jet_tagger][self.jet_ctagging_wp]]
-
+        cjets = jets[jets_ctagging_wps[self.config["tagger"]][self.config["tagger_wp"]]]
+        
         # build muons lorentz vectors
         muons = ak.zip(
             {
@@ -246,19 +203,15 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         # Event selection
         # --------------------------------------------------------------
         # get luminosity mask
-        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVRun3Analysis#DATA_AN2
-        lumimask_map = {
-            "2022EE": "analysis/data/Cert_Collisions2022_355100_362760_Golden.txt"
-        }
         if is_mc:
-            lumi_mask = ak.ones_like(events.PV.npvsGood)
+            lumi_mask = ak.ones_like(events.genWeight)
         else:
-            lumi_info = LumiMask(lumimask_map[self.year])
+            lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
             
         # get trigger mask
-        trigger_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
-        for hlt_path in self.hlt_paths:
+        trigger_mask = ak.zeros_like(events.genWeight, dtype="bool")
+        for hlt_path in self.config["hlt_paths"]:
             if hlt_path in events.HLT.fields:
                 trigger_mask = trigger_mask | events.HLT[hlt_path]
                 
@@ -275,10 +228,10 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         selection.add_multiple(selections)
         region_selection = selection.all(*(selections.keys()))
 
+        # --------------------------------------------------------------
+        # Histogram filling
+        # --------------------------------------------------------------
         if dak.sum(region_selection) > 0:
-            # --------------------------------------------------------------
-            # Histogram filling
-            # --------------------------------------------------------------
             # define feature map with non-flat arrays
             feature_dict = {
                 "cjet_pt": cjets.pt[region_selection],
