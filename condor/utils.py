@@ -29,22 +29,16 @@ def submit_condor(args: dict, is_dataset: bool = False) -> None:
     main_dir = Path.cwd()
     condor_dir = Path(f"{main_dir}/condor")
     
+    # set jobpath
+    jobpath = f'{args["processor"]}/{args["year"]}/{args["sample"]}'
+    
     # set jobname
-    jobname = ""
-    if "processor" in args:
-        jobname += f'{args["processor"]}_'
-    jobname += args["dataset_name"]
+    jobname = f'{args["processor"]}_{args["dataset_name"]}'
     if "nfile" in args:
         jobname += f'_{args["nfile"]}'
 
     # create logs directory
-    log_dir = f"{str(condor_dir)}/logs/"
-    if "processor" in args:
-        log_dir += args['processor']
-    else:
-        log_dir += "dataset_runnables"
-    log_dir += f"/{args['year']}"
-    log_dir = Path(log_dir)
+    log_dir = Path(f"{str(condor_dir)}/logs/{jobpath}")
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
         
@@ -60,6 +54,7 @@ def submit_condor(args: dict, is_dataset: bool = False) -> None:
     condor_file = open(local_condor, "w")
     for line in condor_template_file:
         line = line.replace("DIRECTORY", str(condor_dir))
+        line = line.replace("JOBPATH", jobpath)
         line = line.replace("JOBNAME", jobname)
         line = line.replace("YEAR", args["year"])
         line = line.replace("JOBFLAVOR", f'"longlunch"')
