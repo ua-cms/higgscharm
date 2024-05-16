@@ -30,7 +30,7 @@ def submit_condor(args: dict, is_dataset: bool = False) -> None:
     condor_dir = Path(f"{main_dir}/condor")
     
     # set jobpath
-    jobpath = f'{args["processor"]}/{args["year"]}/{args["sample"]}'
+    jobpath = f'{args["processor"]}/{args["year"]}/{args["dataset_name"]}'
     
     # set jobname
     jobname = f'{args["processor"]}_{args["dataset_name"]}'
