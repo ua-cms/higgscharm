@@ -1,0 +1,26 @@
+hlt_paths:
+- IsoMu24
+- Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+jec_config:
+  jec_data_tags:
+    Summer22EE_22Sep2023_RunE_V2:
+    - E
+  jec_levels_data:
+  - L1FastJet
+  - L2Relative
+  - L3Absolute
+  - L2L3Residual
+  jec_levels_mc:
+  - L1FastJet
+  - L2Relative
+  - L3Absolute
+  jec_tags: Summer22EE_22Sep2023_V2_MC
+  jer_tags: Summer22EE_22Sep2023_JRV1
+  runs:
+  - E
+lumimask: analysis/data/Cert_Collisions2022_355100_362760_Golden.txt
+zplusjet:
+  muon_id_wp: medium
+  muon_pfiso_wp: loose
+  tagger: pnet
+  tagger_wp: tight
