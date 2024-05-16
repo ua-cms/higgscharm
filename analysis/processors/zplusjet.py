@@ -12,7 +12,6 @@ from coffea.analysis_tools import Weights, PackedSelection
 from analysis.weights.muon import MuonWeights
 from analysis.weights.pileup import add_pileup_weight
 from analysis.histograms.zplusjet import histograms
-from analysis.configs.load_config import load_config_params
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
 PFNanoAODSchema.warn_missing_crossrefs = False
@@ -60,15 +59,11 @@ def find_2lep(events_leptons):
 
 
 class ZPlusJetProcessor(processor.ProcessorABC):
-    def __init__(self, year: str = "2022EE"):
+    def __init__(self, year: str, config: dict):
         self.year = year
-        self.config = load_config_params(year)
+        self.config = config
         self.histograms = histograms
         
-        for k, v in self.config["zplusjet"].items():
-            self.config[k] = v
-        
-
     def process(self, events):
         # check if dataset is MC or Data
         is_mc = hasattr(events, "genWeight")

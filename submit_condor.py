@@ -6,8 +6,8 @@ import subprocess
 from pathlib import Path
 from copy import deepcopy
 from condor.utils import submit_condor
-from analysis.configs.load_config import load_config
 from analysis.filesets.utils import build_single_fileset, divide_list
+from analysis.configs.load_config import load_config, load_config_params
 
 
 def main(args):
@@ -20,6 +20,12 @@ def main(args):
     if not output_path.exists():
         output_path.mkdir(parents=True)
     args["output_path"] = str(output_path)
+    
+    # get config file
+    config = load_config_params(args["year"])
+    for k, v in config[args["processor"]].items():
+        config[k] = v
+    del config[args["processor"]]
 
     # split dataset into batches
     dataset_config = load_config(
@@ -55,10 +61,11 @@ def main(args):
             f"--tagger {args['tagger']} "
             f"--wp {args['wp']} "
             f"--flavor {args['flavor']} "
-            # 'partition_fileset' dictionary must be passed as a string enclosed in single quotes,
+            # dictionaries must be passed as a string enclosed in single quotes,
             # with strings within the dictionary enclosed in double quotes.
             # we use json.dumps() to switch from single to double quotes within the dictionary
-            f"--partition_fileset '{json.dumps(partition_fileset)}'"
+            f"--partition_fileset '{json.dumps(partition_fileset)}' "
+            f"--config '{json.dumps(config)}'"
         )
         submit_condor(args)
 

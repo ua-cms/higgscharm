@@ -22,7 +22,10 @@ def main(args):
             wp=args.wp,
         ),
         "taggers": JetTaggersPlots(),
-        "zplusjet": ZPlusJetProcessor(),
+        "zplusjet": ZPlusJetProcessor(
+            year=args.year,
+            config=args.config
+        ),
     }
     processor = processors[args.processor]
     # preprocesses fileset
@@ -71,7 +74,7 @@ if __name__ == "__main__":
         dest="year",
         type=str,
         default="",
-        help="year of the data {2022EE, 2022, 2023}",
+        help="year of the data {2022EE}",
     )
     parser.add_argument(
         "--output_path",
@@ -106,6 +109,12 @@ if __name__ == "__main__":
         dest="stepsize",
         type=int,
         help="stepsize",
+    )
+    parser.add_argument(
+        "--config",
+        dest="config",
+        type=json.loads,
+        help="config file with processor parameters",
     )
     args = parser.parse_args()
     main(args)
