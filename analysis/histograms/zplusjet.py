@@ -29,7 +29,7 @@ deltaphi_axis = hist.axis.Regular(
     label="$\Delta\phi$(Jet, Z)",
 )
 n_jets_axis = hist.axis.IntCategory(categories=np.arange(0, 16), name="njets")
-n_vertices_axis = hist.axis.IntCategory(categories=np.arange(1, 60), name="npvs")
+n_vertices_axis = hist.axis.Regular(bins=60, start=0, stop=60, name="npvs")
 histograms = {
     "z_mass": hda.hist.Hist(z_mass_axis, hist.storage.Weight()),
     "mu1_pt": hda.hist.Hist(mu1_pt_axis, hist.storage.Weight()),
