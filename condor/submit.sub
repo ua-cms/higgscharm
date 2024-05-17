@@ -1,8 +1,8 @@
-executable            = DIRECTORY/JOBPATH/JOBNAME.sh
+executable            = EXECUTABLEPATH/JOBNAME.sh
 arguments             = $(ClusterId)$(ProcId)
-output                = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).out
-error                 = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).err
-log                   = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).log
+output                = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).out
+error                 = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).err
+log                   = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).log
 
 +JobFlavour           = JOBFLAVOR
 +SingularityImage     = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.10"

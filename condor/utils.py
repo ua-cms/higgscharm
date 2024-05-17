@@ -2,7 +2,6 @@ import os
 import subprocess
 from pathlib import Path
 
-
 def move_X509() -> str:
     """move x509 proxy file from /tmp to /afs/private. Returns the afs path"""
     try:
@@ -29,37 +28,30 @@ def submit_condor(args: dict, is_dataset: bool = False) -> None:
     main_dir = Path.cwd()
     condor_dir = Path(f"{main_dir}/condor")
     
-    # set jobpath
-    jobpath = f'{args["processor"]}/{args["year"]}/{args["dataset_name"]}'
-    
     # set jobname
     jobname = f'{args["processor"]}_{args["dataset_name"]}'
     if "nfile" in args:
         jobname += f'_{args["nfile"]}'
 
     # create logs directory
-    log_dir = Path(f"{str(condor_dir)}/logs/{jobpath}")
+    log_dir = condor_dir / "logs" / args["processor"] / args["year"] / args["dataset_name"]
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
         
     # creal local condor submit file
-    local_condor_path = Path(str(log_dir).replace("logs/", ""))
-    if not local_condor_path.exists():
-        local_condor_path.mkdir(parents=True)
-    local_condor = f"{local_condor_path}/{jobname}.sub"
+    exe_dir = condor_dir / args["processor"] / args["year"]
+    if not exe_dir.exists():
+        exe_dir.mkdir(parents=True)
+    local_condor = f"{exe_dir}/{jobname}.sub"
     
     # make condor file
-    submit_file = "submit_dataset.sub" if is_dataset else "submit.sub"
-    condor_template_file = open(f"{condor_dir}/{submit_file}")
+    condor_template_file = open(f"{condor_dir}/submit.sub")
     condor_file = open(local_condor, "w")
     for line in condor_template_file:
-        line = line.replace("DIRECTORY", str(condor_dir))
-        line = line.replace("JOBPATH", jobpath)
+        line = line.replace("EXECUTABLEPATH", str(exe_dir))
+        line = line.replace("LOGPATH", str(log_dir))
         line = line.replace("JOBNAME", jobname)
-        line = line.replace("YEAR", args["year"])
         line = line.replace("JOBFLAVOR", f'"longlunch"')
-        if "processor" in args:
-            line = line.replace("PROCESSOR", args["processor"])
         condor_file.write(line)
     condor_file.close()
     condor_template_file.close()
@@ -67,7 +59,7 @@ def submit_condor(args: dict, is_dataset: bool = False) -> None:
     # make executable file
     x509_path = move_X509() 
     sh_template_file = open(f"{condor_dir}/submit.sh")
-    local_sh = f"{local_condor_path}/{jobname}.sh"
+    local_sh = f"{exe_dir}/{jobname}.sh"
     sh_file = open(local_sh, "w")
     for line in sh_template_file:
         line = line.replace("MAINDIRECTORY", str(main_dir))

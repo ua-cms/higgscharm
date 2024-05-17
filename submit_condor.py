@@ -23,9 +23,10 @@ def main(args):
     
     # get config file
     config = load_config_params(args["year"])
-    for k, v in config[args["processor"]].items():
-        config[k] = v
-    del config[args["processor"]]
+    if args["processor"] in config:
+        for k, v in config[args["processor"]].items():
+            config[k] = v
+        del config[args["processor"]]
 
     # split dataset into batches
     dataset_config = load_config(
