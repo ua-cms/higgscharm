@@ -38,14 +38,14 @@ class MuonWeights:
         year: str = "2022EE",
         variation: str = "nominal",
         id_wp: str = "medium",
-        pfiso_wp: str = "loose",
+        iso_wp: str = "loose",
     ) -> None:
         self.muons = muons
         self.weights = weights
         self.year = year
         self.variation = variation
         self.id_wp = id_wp
-        self.pfiso_wp = pfiso_wp
+        self.iso_wp = iso_wp
 
         # get muon correction set
         self.cset = correctionlib.CorrectionSet.from_file(
@@ -57,11 +57,23 @@ class MuonWeights:
             "medium": muons.mediumId,
             "tight": muons.tightId,
         }
-        # set pfiso working points
-        self.pfiso_wps = {
-            "loose": muons.pfIsoId == 2,
-            "medium": muons.pfIsoId == 3,
-            "tight": muons.pfIsoId == 4,
+        # set iso working points
+        self.iso_wps = {
+            "loose": (
+                muons.pfRelIso04_all < 0.25
+                if hasattr(muons, "pfRelIso04_all")
+                else muons.pfRelIso03_all < 0.25
+            ),
+            "medium": (
+                muons.pfRelIso04_all < 0.20
+                if hasattr(muons, "pfRelIso04_all")
+                else muons.pfRelIso03_all < 0.20
+            ),
+            "tight": (
+                muons.pfRelIso04_all < 0.15
+                if hasattr(muons, "pfRelIso04_all")
+                else muons.pfRelIso03_all < 0.15
+            ),
         }
 
     def add_id_weights(self):
@@ -86,16 +98,16 @@ class MuonWeights:
                 weight=nominal_weights,
             )
 
-    def add_pfiso_weights(self):
+    def add_iso_weights(self):
         """
-        add muon pfiso weights to weights container
+        add muon iso weights to weights container
         """
         # get nominal scale factors
-        nominal_weights = self.get_pfiso_weights(variation="nominal")
+        nominal_weights = self.get_iso_weights(variation="nominal")
         if self.variation == "nominal":
             # get 'up' and 'down' weights
-            up_weights = self.get_pfiso_weights(variation="systup")
-            down_weights = self.get_pfiso_weights(variation="systdown")
+            up_weights = self.get_iso_weights(variation="systup")
+            down_weights = self.get_iso_weights(variation="systdown")
             # add nominal, up and down weights to weights container
             self.weights.add(
                 name=f"muon_iso",
@@ -148,16 +160,16 @@ class MuonWeights:
         )
         return weights
 
-    def get_pfiso_weights(self, variation):
+    def get_iso_weights(self, variation):
         """
-        Compute muon PFISO weights
+        Compute muon iso weights
         
         Parameters:
         -----------
             variation:
                 {nominal, systup, systdown}
         """
-        pfiso_corrections = {
+        iso_corrections = {
             "2022EE": {
                 "loose": {
                     "loose": "NUM_LoosePFIso_DEN_LooseID",
@@ -180,7 +192,7 @@ class MuonWeights:
         muon_pt_mask = self.muons.pt > 15
         muon_eta_mask = np.abs(self.muons.eta) < 2.399
         muon_id_mask = self.id_wps[self.id_wp]
-        muon_iso_mask = self.pfiso_wps[self.pfiso_wp]
+        muon_iso_mask = self.iso_wps[self.iso_wp]
         in_muon_mask = muon_pt_mask & muon_eta_mask & muon_id_mask & muon_iso_mask
         in_muons = self.muons.mask[in_muon_mask]
 
@@ -189,7 +201,7 @@ class MuonWeights:
         muon_eta = np.abs(ak.fill_none(in_muons.eta, 0.0))
 
         sf = dak.map_partitions(
-            self.cset[pfiso_corrections[self.year][self.pfiso_wp][self.id_wp]].evaluate,
+            self.cset[iso_corrections[self.year][self.iso_wp][self.id_wp]].evaluate,
             muon_eta,
             muon_pt,
             variation,

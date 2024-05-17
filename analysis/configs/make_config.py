@@ -19,7 +19,7 @@ config = {}
 config["zplusjet"] = {
     "2022EE": {
         "muon_id_wp": "medium",
-        "muon_pfiso_wp": "loose",
+        "muon_iso_wp": "loose",
         "tagger": "pnet",
         "tagger_wp": "tight",
     }

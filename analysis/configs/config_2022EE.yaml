@@ -21,6 +21,6 @@ jec_config:
 lumimask: analysis/data/Cert_Collisions2022_355100_362760_Golden.txt
 zplusjet:
   muon_id_wp: medium
-  muon_pfiso_wp: loose
+  muon_iso_wp: loose
   tagger: pnet
   tagger_wp: tight

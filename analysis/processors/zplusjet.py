@@ -90,10 +90,10 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                 variation="nominal",
                 weights=weights_container,
                 id_wp=self.config["muon_id_wp"],
-                pfiso_wp=self.config["muon_pfiso_wp"],
+                iso_wp=self.config["muon_iso_wp"],
             )
             muon_weights.add_id_weights()
-            muon_weights.add_pfiso_weights()
+            muon_weights.add_iso_weights()
         else:
             weights_container.add("genweight", ak.ones_like(events.genWeight))
             
@@ -107,19 +107,28 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             "medium": muons.mediumId,
             "tight": muons.tightId,
         }
-        muons_pfiso_wps = {
-            "veryloose": muons.pfIsoId == 1,
-            "loose": muons.pfIsoId == 2,
-            "medium": muons.pfIsoId == 3,
-            "tight": muons.pfIsoId == 4,
-            "verytight": muons.pfIsoId == 5,
-            "veryverytight": muons.pfIsoId == 6,
+        muons_iso_wps = {
+            "loose": (
+                muons.pfRelIso04_all < 0.25
+                if hasattr(muons, "pfRelIso04_all")
+                else muons.pfRelIso03_all < 0.25
+            ),
+            "medium": (
+                muons.pfRelIso04_all < 0.20
+                if hasattr(muons, "pfRelIso04_all")
+                else muons.pfRelIso03_all < 0.20
+            ),
+            "tight": (
+                muons.pfRelIso04_all < 0.15
+                if hasattr(muons, "pfRelIso04_all")
+                else muons.pfRelIso03_all < 0.15
+            ),
         }
         muons = muons[
             (muons.pt > 10)
             & (np.abs(muons.eta) < 2.4)
             & (muons_id_wps[self.config["muon_id_wp"]])
-            & (muons_pfiso_wps[self.config["muon_pfiso_wp"]])
+            & (muons_iso_wps[self.config["muon_iso_wp"]])
             & (muons.dxy < 0.5)
             & (muons.dz < 1)
             & (muons.sip3d < 4)
