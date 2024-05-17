@@ -1,6 +1,7 @@
 import os
 import glob
 import json
+import gzip
 import argparse
 import subprocess
 from pathlib import Path
@@ -12,22 +13,30 @@ from analysis.configs.load_config import load_config, load_config_params
 
 def main(args):
     args = vars(args)
-    
+
     # set output path
-    output_path = Path(Path.cwd() / "outputs" / args["processor"] / args["year"])
+    cwd = Path.cwd()
+    output_path = cwd / "outputs" / args["processor"] / args["year"]
     if args["processor"] == "tag_eff":
-        output_path = Path(output_path / args["tagger"] / args["flavor"] / args["wp"])
+        output_path = output_path / args["tagger"] / args["flavor"] / args["wp"]
     if not output_path.exists():
         output_path.mkdir(parents=True)
     args["output_path"] = str(output_path)
-    
+
+    # set preprocess fileset path
+    preprocess_file_path = (
+        cwd / "analysis" / "filesets" / args["year"] / args["dataset_name"]
+    )
+    if not preprocess_file_path.exists():
+        preprocess_file_path.mkdir(parents=True)
+        
     # get config file
     config = load_config_params(args["year"])
     if args["processor"] in config:
         for k, v in config[args["processor"]].items():
             config[k] = v
         del config[args["processor"]]
-
+        
     # split dataset into batches
     dataset_config = load_config(
         config_type="dataset", config_name=args["dataset_name"], year=args["year"]
@@ -50,7 +59,19 @@ def main(args):
             }
         dataset_runnable_key = [key for key in partition_fileset][0]
 
-        # set condor submission args
+        # check if preprocess dataset_runnable exist
+        dataset_runnable = {}
+        preprocess_files = [
+            f.split("/")[-1].replace(".json.gz", "")
+            for f in glob.glob(f"{preprocess_file_path}/*.json.gz")
+        ]
+        if dataset_runnable_key in preprocess_files:
+            with gzip.open(
+                f"{preprocess_file_path}/{dataset_runnable_key}.json.gz", "rt"
+            ) as f:
+                dataset_runnable = json.load(f)
+                
+        # set condor and submit args
         args["step_size"] = dataset_config.stepsize
         args["dataset_name"] = dataset_runnable_key
         args["cmd"] = (
@@ -62,11 +83,13 @@ def main(args):
             f"--tagger {args['tagger']} "
             f"--wp {args['wp']} "
             f"--flavor {args['flavor']} "
+            f"--preprocess_file_path {preprocess_file_path} "
             # dictionaries must be passed as a string enclosed in single quotes,
             # with strings within the dictionary enclosed in double quotes.
             # we use json.dumps() to switch from single to double quotes within the dictionary
+            f"--config '{json.dumps(config)}' "
+            f"--dataset_runnable '{json.dumps(dataset_runnable)}' "
             f"--partition_fileset '{json.dumps(partition_fileset)}' "
-            f"--config '{json.dumps(config)}'"
         )
         submit_condor(args)
 

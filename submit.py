@@ -1,5 +1,6 @@
 import json
 import dask
+import gzip
 import pickle
 import argparse
 import awkward as ak
@@ -13,7 +14,6 @@ from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
 
 
 def main(args):
-    # set processor
     processors = {
         "signal": SignalProcessor(),
         "tag_eff": TaggingEfficiencyProcessor(
@@ -22,23 +22,30 @@ def main(args):
             wp=args.wp,
         ),
         "taggers": JetTaggersPlots(),
-        "zplusjet": ZPlusJetProcessor(
-            year=args.year,
-            config=args.config
-        ),
+        "zplusjet": ZPlusJetProcessor(year=args.year, config=args.config),
     }
-    processor = processors[args.processor]
-    # preprocesses fileset
-    dataset_runnable, dataset_updated = preprocess(
-        args.partition_fileset,
-        step_size=args.stepsize,
-        align_clusters=False,
-        files_per_batch=1,
-        save_form=False,
-    )
+    # check if preprocess file exist, otherwise preprocees fileset
+    if args.dataset_runnable:
+        dataset_runnable = args.dataset_runnable
+    else:
+        dataset_runnable, _ = preprocess(
+            args.partition_fileset,
+            step_size=args.stepsize,
+            align_clusters=False,
+            files_per_batch=1,
+            save_form=False,
+        )
+        # save preprocess output
+        with gzip.open(
+            f"{args.preprocess_file_path}/{args.dataset_name}.json.gz", "wt"
+        ) as f:
+            f.write(json.dumps(dataset_runnable))
+            
     # process fileset
     to_compute = apply_to_fileset(
-        processor, max_chunks(dataset_runnable), schemaclass=PFNanoAODSchema
+        processors[args.processor],
+        max_chunks(dataset_runnable),
+        schemaclass=PFNanoAODSchema,
     )
     (computed,) = dask.compute(to_compute)
     # save output to a pickle file
@@ -115,6 +122,18 @@ if __name__ == "__main__":
         dest="config",
         type=json.loads,
         help="config file with processor parameters",
+    )
+    parser.add_argument(
+        "--dataset_runnable",
+        dest="dataset_runnable",
+        type=json.loads,
+        help="dataset runnable",
+    )
+    parser.add_argument(
+        "--preprocess_file_path",
+        dest="preprocess_file_path",
+        type=str,
+        help="preprocess_file_path",
     )
     args = parser.parse_args()
     main(args)
