@@ -63,15 +63,16 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         self.year = year
         self.config = config
         self.histograms = histograms
-        
+
     def process(self, events):
         # check if dataset is MC or Data
         is_mc = hasattr(events, "genWeight")
-        
+
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
         # initialize weights container
+
         weights_container = Weights(None, storeIndividual=True)
         if is_mc:
             # add genweights
@@ -95,8 +96,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             muon_weights.add_id_weights()
             muon_weights.add_iso_weights()
         else:
-            weights_container.add("genweight", ak.ones_like(events.genWeight))
-            
+            weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
         # --------------------------------------------------------------
         # Object selection
         # --------------------------------------------------------------
@@ -166,7 +166,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             },
         }
         cjets = jets[jets_ctagging_wps[self.config["tagger"]][self.config["tagger_wp"]]]
-        
+
         # build muons lorentz vectors
         muons = ak.zip(
             {
@@ -182,6 +182,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         # make sure they are sorted by transverse momentum
         muons = muons[ak.argsort(muons.pt, axis=1)]
         # find all dimuon candidates with helper function
+
         dimuon = dak.map_partitions(find_2lep, muons)
         dimuon = [muons[dimuon[idx]] for idx in "01"]
         dimuon = ak.zip(
@@ -208,13 +209,13 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         # --------------------------------------------------------------
         # get luminosity mask
         if is_mc:
-            lumi_mask = ak.ones_like(events.genWeight)
+            lumi_mask = ak.ones_like(events.PV.npvsGood)
         else:
             lumi_info = LumiMask(self.config["lumimask"])
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
             
         # get trigger mask
-        trigger_mask = ak.zeros_like(events.genWeight, dtype="bool")
+        trigger_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
         for hlt_path in self.config["hlt_paths"]:
             if hlt_path in events.HLT.fields:
                 trigger_mask = trigger_mask | events.HLT[hlt_path]
@@ -260,13 +261,33 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                 },
             )
             histograms = copy.deepcopy(self.histograms)
-            for feature in histograms:
-                fill_args = {
-                    feature: feature_dict[feature],
-                    "weight": weights_container.weight()[region_selection],
-                }
-                histograms[feature].fill(**fill_args)
-                
+            if is_mc:
+                # get event weight systematic variations for MC samples
+                variations = ["nominal"] + list(weights_container.variations)
+                for variation in variations:
+                    if variation == "nominal":
+                        region_weight = weights_container.weight()[region_selection]
+                    else:
+                        region_weight = weights_container.weight(modifier=variation)[
+                            region_selection
+                        ]
+                    for feature in histograms:
+                        fill_args = {
+                            feature: feature_dict[feature],
+                            "variation": variation,
+                            "weight": region_weight,
+                        }
+                        histograms[feature].fill(**fill_args)
+            else:
+                region_weight = weights_container.weight()[region_selection]
+                for feature in histograms:
+                    fill_args = {
+                        feature: feature_dict[feature],
+                        "variation": "nominal",
+                        "weight": region_weight,
+                    }
+                    histograms[feature].fill(**fill_args)
+                    
         return {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
 
     def postprocess(self, accumulator):
