@@ -12,6 +12,7 @@ from coffea.analysis_tools import Weights, PackedSelection
 from analysis.weights.muon import MuonWeights
 from analysis.weights.pileup import add_pileup_weight
 from analysis.histograms.zplusjet import histograms
+from analysis.corrections.jerc import get_jec_factory
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
 PFNanoAODSchema.warn_missing_crossrefs = False
@@ -67,12 +68,31 @@ class ZPlusJetProcessor(processor.ProcessorABC):
     def process(self, events):
         # check if dataset is MC or Data
         is_mc = hasattr(events, "genWeight")
+        
+        # --------------------------------------------------------------
+        # Object corrections
+        # --------------------------------------------------------------
+        # apply JEC/JER corrections
+        apply_jec = True
+        apply_jer = False
+        apply_junc = False
+        if is_mc:
+            apply_jer = True
+        jec_factory = get_jec_factory(
+            events, 
+            era=events.metadata["metadata"]["era"], 
+            year=self.year,
+            apply_jec=apply_jec,
+            apply_jer=apply_jer,
+            apply_junc=apply_junc
+        )
+        jets = events.Jet
+        events["Jet"] = jec_factory.build(jets)
 
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
         # initialize weights container
-
         weights_container = Weights(None, storeIndividual=True)
         if is_mc:
             # add genweights
@@ -97,6 +117,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             muon_weights.add_iso_weights()
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
+            
         # --------------------------------------------------------------
         # Object selection
         # --------------------------------------------------------------
@@ -167,7 +188,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         }
         cjets = jets[jets_ctagging_wps[self.config["tagger"]][self.config["tagger_wp"]]]
 
-        # build muons lorentz vectors
+        # build lorentz vectors for muons
         muons = ak.zip(
             {
                 "pt": muons.pt,
@@ -182,7 +203,6 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         # make sure they are sorted by transverse momentum
         muons = muons[ak.argsort(muons.pt, axis=1)]
         # find all dimuon candidates with helper function
-
         dimuon = dak.map_partitions(find_2lep, muons)
         dimuon = [muons[dimuon[idx]] for idx in "01"]
         dimuon = ak.zip(
