@@ -22,7 +22,7 @@ class DatasetConfig(Config):
         path: str,
         key: str,
         year: str,
-        is_mc: bool,
+        era: str,
         xsec: float,
         partitions: int,
         stepsize: int,
@@ -37,7 +37,7 @@ class DatasetConfig(Config):
         self.path = path
         self.key = key
         self.year = year
-        self.is_mc = is_mc
+        self.era = era
         self.xsec = xsec
         self.partitions = partitions
         self.stepsize = stepsize

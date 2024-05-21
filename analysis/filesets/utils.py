@@ -24,7 +24,7 @@ def build_single_fileset(name: str, year: str) -> dict:
             },
             "metadata": {
                 "short_name": dataset_config.name,
-                "metadata": {"isMC": dataset_config.is_mc, "xsec": dataset_config.xsec},
+                "metadata": {"era": dataset_config.era, "xsec": dataset_config.xsec},
             },
         },
     }
