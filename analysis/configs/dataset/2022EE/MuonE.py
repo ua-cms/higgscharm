@@ -8,10 +8,10 @@ dataset_config = DatasetConfig(
     ),
     key="Events",
     year="2022EE",
-    is_mc=False,
+    era="E",
     xsec=None,
     partitions=30,
-    stepsize=10000,
+    stepsize=50_000,
     filenames=(
         "data_defaultAK4_2023_15.root",
         "data_defaultAK4_2023_276.root",
