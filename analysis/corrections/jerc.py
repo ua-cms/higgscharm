@@ -1,7 +1,9 @@
 # tools to apply JEC/JER and compute their uncertainties (https://cms-jerc.web.cern.ch/Recommendations/)
 # copied from https://github.com/green-cabbage/copperheadV2/blob/main/corrections/jet.py
+import contextlib
 import numpy as np
 import awkward as ak
+import importlib.resources
 from pathlib import Path
 from coffea.lookup_tools import extractor
 from coffea.jetmet_tools import JECStack, CorrectedJetsFactory
@@ -98,10 +100,8 @@ def jec_names_and_sources(year):
     return names
 
 
-def jec_weight_sets(year):
-    data_path = str(Path(Path.home(), "higgscharm/analysis/data"))
+def get_jet_evaluator(year):
     names = jec_names_and_sources(year)
-    weight_sets = {}
     extensions = {
         "jec_names": "jec",
         "jer_names": "jr",
@@ -109,14 +109,14 @@ def jec_weight_sets(year):
         "junc_names": "junc",
         "junc_sources": "junc",
     }
-    weight_sets["jec_weight_sets_mc"] = []
-    weight_sets["jec_weight_sets_data"] = []
-    
+    # prepare evaluators for JEC, JER and their systematics
+    jec_ext = extractor()
     for opt, ext in extensions.items():
         # MC
-        weight_sets["jec_weight_sets_mc"].extend(
-            [f"* * {data_path}/jec/{name}.{ext}.txt" for name in names[opt]]
-        )
+        with contextlib.ExitStack() as stack:
+            jec_files = [stack.enter_context(importlib.resources.path("analysis.data.jec", f"{name}.{ext}.txt")) for name in names[opt]]
+            jec_ext.add_weight_sets([f"* * {file}" for file in jec_files])
+
         # Data
         if "jer" in opt:
             continue
@@ -124,13 +124,16 @@ def jec_weight_sets(year):
         for run, items in names[f"{opt}_data"].items():
             data.extend(items)
         data = list(set(data))
-        weight_sets["jec_weight_sets_data"].extend(
-            [f"* * {data_path}/jec/{name}.{ext}.txt" for name in data]
-        )
-    return weight_sets, names
+        with contextlib.ExitStack() as stack:
+            jec_data_files = [stack.enter_context(importlib.resources.path("analysis.data.jec", f"{name}.{ext}.txt")) for name in data]
+            jec_ext.add_weight_sets([f"* * {file}" for file in jec_data_files])
+    
+    jec_ext.finalize()
+    jet_evaluator = jec_ext.make_evaluator()
+    return jet_evaluator
 
 
-def get_jec_factory(
+def apply_jerc_corrections(
     events,
     era="E",
     year="2022EE",
@@ -138,16 +141,12 @@ def get_jec_factory(
     apply_jer=True,
     apply_junc=False,
 ):
-    weight_sets, names = jec_weight_sets(year)
-    # prepare evaluators for JEC, JER and their systematics
+    names = jec_names_and_sources(year)
+    jet_evaluator = get_jet_evaluator(year)
+
     jec_factories = {}
     jec_factories_data = {}
-    jetext = extractor()
-    jetext.add_weight_sets(weight_sets["jec_weight_sets_mc"])
-    jetext.add_weight_sets(weight_sets["jec_weight_sets_data"])
-    jetext.finalize()
-    jet_evaluator = jetext.make_evaluator()
-
+    
     stacks_def = {
         "jec_stack": ["jec_names"],
         "jer_stack": ["jer_names", "jersf_names"],
@@ -232,4 +231,4 @@ def get_jec_factory(
         jec_stack_data = JECStack(jec_inputs_data)
         jec_factory = CorrectedJetsFactory(jec_name_map, jec_stack_data)
         
-    return jec_factory
+    events["Jet"] = jec_factory.build(events.Jet)

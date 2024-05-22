@@ -12,7 +12,7 @@ from coffea.analysis_tools import Weights, PackedSelection
 from analysis.weights.muon import MuonWeights
 from analysis.weights.pileup import add_pileup_weight
 from analysis.histograms.zplusjet import histograms
-from analysis.corrections.jerc import get_jec_factory
+from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
 PFNanoAODSchema.warn_missing_crossrefs = False
@@ -78,7 +78,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         apply_junc = False
         if is_mc:
             apply_jer = True
-        jec_factory = get_jec_factory(
+        apply_jerc_corrections(
             events, 
             era=events.metadata["metadata"]["era"], 
             year=self.year,
@@ -86,8 +86,6 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             apply_jer=apply_jer,
             apply_junc=apply_junc
         )
-        jets = events.Jet
-        events["Jet"] = jec_factory.build(jets)
 
         # --------------------------------------------------------------
         # Weights
