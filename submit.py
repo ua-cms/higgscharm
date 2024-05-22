@@ -35,6 +35,10 @@ def main(args):
             files_per_batch=1,
             save_form=False,
         )
+        dataset_runnable[args.dataset_name]["metadata"] = {
+            "metadata": {
+                "era": args.partition_fileset[args.dataset_name]["metadata"]["metadata"]["era"]
+            }
         # save preprocess output
         with gzip.open(
             f"{args.preprocess_file_path}/{args.dataset_name}.json.gz", "wt"
