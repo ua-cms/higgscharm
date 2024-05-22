@@ -115,6 +115,7 @@ if __name__ == "__main__":
         "--stepsize",
         dest="stepsize",
         type=int,
+        default=None,
         help="stepsize",
     )
     parser.add_argument(

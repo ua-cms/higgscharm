@@ -72,7 +72,6 @@ def main(args):
                 dataset_runnable = json.load(f)
                 
         # set condor and submit args
-        args["step_size"] = dataset_config.stepsize
         args["dataset_name"] = dataset_runnable_key
         args["cmd"] = (
             "python3 submit.py "
@@ -91,6 +90,8 @@ def main(args):
             f"--dataset_runnable '{json.dumps(dataset_runnable)}' "
             f"--partition_fileset '{json.dumps(partition_fileset)}' "
         )
+        if dataset_config.stepsize:
+            args["cmd"] += f"--stepsize {dataset_config.stepsize} "
         submit_condor(args)
 
 
