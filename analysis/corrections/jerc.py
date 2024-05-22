@@ -19,7 +19,7 @@ JEC_PARAMS = {
     "jec_levels_data": {
         "2022EE": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
     },
-    # I modified the original names since coffea jetmet_tools requires file names 
+    # I modified the original names since coffea jetmet_tools requires file names
     # of "5 words in length" ('Summer22EE22Sep2023_V2_MC_L1FastJet_AK4PFPuppi.jec')
     "jec_tags": {
         "2022EE": "Summer22EE22Sep2023_V2_MC",
@@ -114,9 +114,13 @@ def get_jet_evaluator(year):
     for opt, ext in extensions.items():
         # MC
         with contextlib.ExitStack() as stack:
-            jec_files = [stack.enter_context(importlib.resources.path("analysis.data.jec", f"{name}.{ext}.txt")) for name in names[opt]]
+            jec_files = [
+                stack.enter_context(
+                    importlib.resources.path("analysis.data.jec", f"{name}.{ext}.txt")
+                )
+                for name in names[opt]
+            ]
             jec_ext.add_weight_sets([f"* * {file}" for file in jec_files])
-
         # Data
         if "jer" in opt:
             continue
@@ -125,9 +129,14 @@ def get_jet_evaluator(year):
             data.extend(items)
         data = list(set(data))
         with contextlib.ExitStack() as stack:
-            jec_data_files = [stack.enter_context(importlib.resources.path("analysis.data.jec", f"{name}.{ext}.txt")) for name in data]
+            jec_data_files = [
+                stack.enter_context(
+                    importlib.resources.path("analysis.data.jec", f"{name}.{ext}.txt")
+                )
+                for name in data
+            ]
             jec_ext.add_weight_sets([f"* * {file}" for file in jec_data_files])
-    
+            
     jec_ext.finalize()
     jet_evaluator = jec_ext.make_evaluator()
     return jet_evaluator
@@ -135,18 +144,33 @@ def get_jet_evaluator(year):
 
 def apply_jerc_corrections(
     events,
-    era="E",
+    era="MC",
     year="2022EE",
-    apply_jec=False,
-    apply_jer=True,
+    apply_jec=True,
+    apply_jer=False,
     apply_junc=False,
 ):
+    # add requiered variables to Jet collection
+    jets = events.Jet
+    if apply_jec:
+        # set raw pT and Mass, otherwise original pT and Mass will be used as 'raw' values
+        events["Jet", "pt_raw"] = (
+            (1 - jets.rawFactor) * jets.pt if apply_jec else jets.pt
+        )
+        events["Jet", "mass_raw"] = (
+            (1 - jets.rawFactor) * jets.mass if apply_jec else jets.mass
+        )
+    if apply_jer:
+        # set ptGenJet (required for hybrid JER smearing method)
+        events["Jet", "pt_gen"] = ak.values_astype(
+            ak.fill_none(jets.matched_gen.pt, 0), np.float32
+        )
+    events["Jet", "rho"] = ak.ones_like(jets.pt) * events.Rho.fixedGridRhoFastjetAll
+    
+    # set inputs for jec, jer and junc stack
     names = jec_names_and_sources(year)
     jet_evaluator = get_jet_evaluator(year)
 
-    jec_factories = {}
-    jec_factories_data = {}
-    
     stacks_def = {
         "jec_stack": ["jec_names"],
         "jer_stack": ["jer_names", "jersf_names"],
@@ -174,24 +198,7 @@ def apply_jerc_corrections(
         jec_options.update(jec_input_options["jer"])
     if apply_junc:
         jec_options.update(jec_input_options["junc"])
-        
-    # add requiered variables to Jet collection
-    jets = events.Jet
-    if apply_jec:
-        # set raw pT and Mass, otherwise original pT and Mass will be used as 'raw' values
-        events["Jet", "pt_raw"] = (
-            (1 - jets.rawFactor) * jets.pt if apply_jec else jets.pt
-        )
-        events["Jet", "mass_raw"] = (
-            (1 - jets.rawFactor) * jets.mass if apply_jec else jets.mass
-        )
-    if apply_jer:
-        # set ptGenJet (required for hybrid JER smearing method)
-        events["Jet", "pt_gen"] = ak.values_astype(
-            ak.fill_none(jets.matched_gen.pt, 0), np.float32
-        )
-    events["Jet", "rho"] = ak.ones_like(jets.pt) * events.Rho.fixedGridRhoFastjetAll
-
+    
     # set jerc name map (I don't use JECStack.blank_name_map since it includes 'ptRaw' and 'massRaw' by default)
     jec_name_map = {
         "JetPt": "pt",
@@ -231,4 +238,5 @@ def apply_jerc_corrections(
         jec_stack_data = JECStack(jec_inputs_data)
         jec_factory = CorrectedJetsFactory(jec_name_map, jec_stack_data)
         
+    # update Jet collection
     events["Jet"] = jec_factory.build(events.Jet)
