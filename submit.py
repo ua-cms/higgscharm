@@ -6,10 +6,10 @@ import argparse
 import awkward as ak
 import dask_awkward as dak
 from coffea.nanoevents import PFNanoAODSchema
-from analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from analysis.processors.signal import SignalProcessor
 from analysis.processors.taggers import JetTaggersPlots
 from analysis.processors.zplusjet import ZPlusJetProcessor
+from analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
 
 
@@ -24,8 +24,10 @@ def main(args):
         "taggers": JetTaggersPlots(),
         "zplusjet": ZPlusJetProcessor(year=args.year, config=args.config),
     }
-    # check if preprocess file exist, otherwise preprocees fileset
+    # check if dataset_runnable file exist already
+    # otherwise it's created and saved for future runs
     if args.dataset_runnable:
+        
         dataset_runnable = args.dataset_runnable
     else:
         dataset_runnable, _ = preprocess(
@@ -37,22 +39,24 @@ def main(args):
         )
         dataset_runnable[args.dataset_name]["metadata"] = {
             "metadata": {
-                "era": args.partition_fileset[args.dataset_name]["metadata"]["metadata"]["era"]
+                "era": args.partition_fileset[args.dataset_name]["metadata"][
+                    "metadata"
+                ]["era"]
             }
-        # save preprocess output
+        }
         with gzip.open(
             f"{args.preprocess_file_path}/{args.dataset_name}.json.gz", "wt"
         ) as f:
             f.write(json.dumps(dataset_runnable))
             
-    # process fileset
+    # process fileset and save output to a pickle file
     to_compute = apply_to_fileset(
         processors[args.processor],
         max_chunks(dataset_runnable),
         schemaclass=PFNanoAODSchema,
     )
     (computed,) = dask.compute(to_compute)
-    # save output to a pickle file
+    
     save_path = f"{args.output_path}/{args.dataset_name}"
     with open(f"{save_path}.pkl", "wb") as handle:
         pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)
