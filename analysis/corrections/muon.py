@@ -5,8 +5,7 @@ import awkward as ak
 import dask_awkward as dak
 from typing import Type
 from coffea.analysis_tools import Weights
-from analysis.utils import get_pog_json
-
+from analysis.corrections.utils import get_pog_json
 
 class MuonWeights:
     """

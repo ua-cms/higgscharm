@@ -2,7 +2,7 @@ import correctionlib
 import numpy as np
 import awkward as ak
 import dask_awkward as dak
-from analysis.utils import get_pog_json
+from analysis.corrections.utils import get_pog_json
 
 
 def jetvetomaps_mask(jets: ak.Array, year: str, mapname: str = "jetvetomap"):
