@@ -1,13 +1,17 @@
 import yaml
 import importlib.util
 
-def load_config(config_type: str, config_name: str, year: str):
+def load_config(config_type: str, config_name: str, year: str = None):
     """
-    load dataset or processor configuration
+    load dataset or histogram configuration
     """
-    path = f"analysis.configs.{config_type}.{year}.{config_name}"
+    path = f"analysis.configs.{config_type}."
+    if config_type == "histogram":
+        path += config_name
+    else:
+        path += f"{year}.{config_name}"
+        
     loader = importlib.util.find_spec(path)
-
     if loader is None:
         raise Exception(
             f"No config file found for the selected {config_type} '{config_name}'"
