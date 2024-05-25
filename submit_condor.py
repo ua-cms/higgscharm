@@ -11,7 +11,6 @@ from analysis.configs.load_config import load_config
 from analysis.filesets.utils import build_single_fileset, divide_list
 
 
-
 def main(args):
     args = vars(args)
     
@@ -37,7 +36,6 @@ def main(args):
     root_files_list = divide_list(root_files, dataset_config.partitions)
 
     # run over batches
-    dataset_runnables = []
     for i, partition in enumerate(root_files_list, start=1):
         partition_fileset = deepcopy(fileset)
         if dataset_config.partitions > 1:
