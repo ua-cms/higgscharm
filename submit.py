@@ -8,6 +8,7 @@ import dask_awkward as dak
 from coffea.nanoevents import PFNanoAODSchema
 from analysis.processors.signal import SignalProcessor
 from analysis.processors.taggers import JetTaggersPlots
+from analysis.processors.ztomumu import ZtoMuMuProcessor
 from analysis.processors.zplusjet import ZPlusJetProcessor
 from analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
@@ -40,6 +41,7 @@ def main(args):
         ),
         "taggers": JetTaggersPlots(year=args.year),
         "zplusjet": ZPlusJetProcessor(year=args.year),
+        "ztomumu": ZtoMuMuProcessor(year=args.year),
     }
     to_compute = apply_to_fileset(
         processors[args.processor],
@@ -60,7 +62,7 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="tag_eff",
-        help="processor to be used {signal, tag_eff, taggers, zplusjet}",
+        help="processor to be used {signal, tag_eff, taggers, zplusjet, ztomumu}",
     )
     parser.add_argument(
         "--dataset_name",
