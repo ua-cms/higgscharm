@@ -14,42 +14,33 @@ from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
 
 
 def main(args):
+    # build dataset runnable (preprocessed fileset)
+    dataset_runnable, _ = preprocess(
+        args.partition_fileset,
+        step_size=args.stepsize,
+        align_clusters=False,
+        files_per_batch=1,
+        save_form=False,
+    )
+    dataset_runnable[args.dataset_name]["metadata"] = {
+        "metadata": {
+            "era": args.partition_fileset[args.dataset_name]["metadata"][
+                "metadata"
+            ]["era"]
+        }
+    }
+    # process dataset runnable and save output to a pickle file
     processors = {
-        "signal": SignalProcessor(),
+        "signal": SignalProcessor(year=args.year),
         "tag_eff": TaggingEfficiencyProcessor(
+            year=args.year,
             tagger=args.tagger,
             flavor=args.flavor,
             wp=args.wp,
         ),
-        "taggers": JetTaggersPlots(),
-        "zplusjet": ZPlusJetProcessor(year=args.year, config=args.config),
+        "taggers": JetTaggersPlots(year=args.year),
+        "zplusjet": ZPlusJetProcessor(year=args.year),
     }
-    # check if dataset_runnable file exist already
-    # otherwise it's created and saved for future runs
-    if args.dataset_runnable:
-        
-        dataset_runnable = args.dataset_runnable
-    else:
-        dataset_runnable, _ = preprocess(
-            args.partition_fileset,
-            step_size=args.stepsize,
-            align_clusters=False,
-            files_per_batch=1,
-            save_form=False,
-        )
-        dataset_runnable[args.dataset_name]["metadata"] = {
-            "metadata": {
-                "era": args.partition_fileset[args.dataset_name]["metadata"][
-                    "metadata"
-                ]["era"]
-            }
-        }
-        with gzip.open(
-            f"{args.preprocess_file_path}/{args.dataset_name}.json.gz", "wt"
-        ) as f:
-            f.write(json.dumps(dataset_runnable))
-            
-    # process fileset and save output to a pickle file
     to_compute = apply_to_fileset(
         processors[args.processor],
         max_chunks(dataset_runnable),
@@ -95,7 +86,6 @@ if __name__ == "__main__":
         "--output_path",
         dest="output_path",
         type=str,
-        default="",
         help="output path",
     )
     parser.add_argument(
@@ -125,24 +115,6 @@ if __name__ == "__main__":
         type=int,
         default=None,
         help="stepsize",
-    )
-    parser.add_argument(
-        "--config",
-        dest="config",
-        type=json.loads,
-        help="config file with processor parameters",
-    )
-    parser.add_argument(
-        "--dataset_runnable",
-        dest="dataset_runnable",
-        type=json.loads,
-        help="dataset runnable",
-    )
-    parser.add_argument(
-        "--preprocess_file_path",
-        dest="preprocess_file_path",
-        type=str,
-        help="preprocess_file_path",
     )
     args = parser.parse_args()
     main(args)
