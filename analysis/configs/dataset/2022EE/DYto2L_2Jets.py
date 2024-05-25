@@ -11,7 +11,7 @@ dataset_config = DatasetConfig(
     year="2022EE",
     era="MC",
     xsec=6688.0,
-    partitions=40,
+    partitions=30,
     stepsize=50_000,
     filenames=(
         "MC_defaultAK4_376.root",

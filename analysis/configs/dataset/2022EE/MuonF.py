@@ -10,7 +10,7 @@ dataset_config = DatasetConfig(
     year="2022EE",
     era="F",
     xsec=None,
-    partitions=40,
+    partitions=30,
     stepsize=50_000,
     filenames=(
         "data_defaultAK4_2023_840.root",
