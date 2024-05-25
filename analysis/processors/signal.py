@@ -1,15 +1,19 @@
-import hist
-import dask
-import copy
 import numba
 import numpy as np
 import awkward as ak
-import hist.dask as hda
 import dask_awkward as dak
+from copy import deepcopy
 from coffea import processor
-from collections import defaultdict
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
+from coffea.analysis_tools import Weights, PackedSelection
+from analysis.working_points import working_points
+from analysis.configs.load_config import load_config
+from analysis.histograms.utils import build_histogram
+from analysis.corrections.muon import MuonWeights
+from analysis.corrections.pileup import add_pileup_weight
+from analysis.corrections.jerc import apply_jerc_corrections
+from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
 
 def normalize(array):
@@ -69,71 +73,109 @@ def find_4lep(events_leptons):
 
 
 class SignalProcessor(processor.ProcessorABC):
-    def __init__(self):
-        # set histogram axes
-        higgs_mass_axis = hist.axis.Regular(
-            120, 10, 150, name="higgs_mass", label=r"$m(H)$ [GeV]"
+    def __init__(self, year: str):
+        self.year = year
+
+        self.config = load_config(
+            config_type="processor", config_name="signal", year=year
         )
-        higgs_pt_axis = hist.axis.Regular(
-            40, 0, 300, name="higgs_pt", label=r"$p_T(H)$ [GeV]"
+        self.histograms = build_histogram(
+            histogram_config=load_config(config_type="histogram", config_name="signal")
         )
-        z1_mass_axis = hist.axis.Regular(
-            100, 10, 150, name="z1_mass", label=r"$m(Z)$ [GeV]"
-        )
-        z2_mass_axis = hist.axis.Regular(
-            50, 10, 150, name="z2_mass", label=r"$m(Z^*)$ [GeV]"
-        )
-        jet_pt_axis = hist.axis.Regular(
-            30, 30, 150, name="cjet_pt", label=r"Jet $p_T$ [GeV]"
-        )
-        jet_eta_axis = hist.axis.Regular(
-            bins=50, start=-2.5, stop=2.5, name="cjet_eta", label="Jet $\eta$"
-        )
-        jet_phi_axis = hist.axis.Regular(
-            bins=50, start=-np.pi, stop=np.pi, name="cjet_phi", label="Jet $\phi$"
-        )
-        deltaphi_axis = hist.axis.Regular(
-            bins=50,
-            start=-np.pi,
-            stop=np.pi,
-            name="cjet_higgs_deltaphi",
-            label="$\Delta\phi$(Jet, H)",
-        )
-        # set histogram map
-        self.histograms = {
-            "z1_mass": hda.hist.Hist(z1_mass_axis, hist.storage.Weight()),
-            "z2_mass": hda.hist.Hist(z2_mass_axis, hist.storage.Weight()),
-            "higgs_mass": hda.hist.Hist(higgs_mass_axis, hist.storage.Weight()),
-            "higgs_pt": hda.hist.Hist(higgs_pt_axis, hist.storage.Weight()),
-            "cjet_pt": hda.hist.Hist(jet_pt_axis, hist.storage.Weight()),
-            "cjet_eta": hda.hist.Hist(jet_eta_axis, hist.storage.Weight()),
-            "cjet_phi": hda.hist.Hist(jet_phi_axis, hist.storage.Weight()),
-            "cjet_higgs_deltaphi": hda.hist.Hist(deltaphi_axis, hist.storage.Weight()),
-        }
 
     def process(self, events):
-        # copy histogram map
-        histograms = copy.deepcopy(self.histograms)
+        # check if dataset is MC or Data
+        is_mc = hasattr(events, "genWeight")
+
+        # --------------------------------------------------------------
+        # Object corrections
+        # --------------------------------------------------------------
+        # apply JEC/JER corrections
+        apply_jec = True
+        apply_jer = False
+        apply_junc = False
+        if is_mc:
+            apply_jer = True
+        apply_jerc_corrections(
+            events,
+            era=events.metadata["metadata"]["era"],
+            year=self.year,
+            apply_jec=apply_jec,
+            apply_jer=apply_jer,
+            apply_junc=apply_junc,
+        )
+        # --------------------------------------------------------------
+        # Weights
+        # --------------------------------------------------------------
+        # initialize weights container
+        weights_container = Weights(None, storeIndividual=True)
+        if is_mc:
+            # add genweights
+            weights_container.add("genweight", events.genWeight)
+            # add pileup weights
+            add_pileup_weight(
+                events=events,
+                year=self.year,
+                variation="nominal",
+                weights_container=weights_container,
+            )
+            # add muon id and pfiso weights
+            muon_weights = MuonWeights(
+                muons=events.Muon,
+                year=self.year,
+                variation="nominal",
+                weights=weights_container,
+                id_wp=self.config.selection["muon"]["id_wp"],
+                iso_wp=self.config.selection["muon"]["iso_wp"],
+            )
+            muon_weights.add_id_weights()
+            muon_weights.add_iso_weights()
+        else:
+            weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
+            
+        # --------------------------------------------------------------
+        # Object selection
+        # --------------------------------------------------------------
         # impose some quality and minimum pt cuts on the muons
         muons = events.Muon
         muons = muons[
-            (muons.pt > 5)
-            & (np.abs(muons.eta) < 2.4)
-            & (muons.dxy < 0.5)
-            & (muons.dz < 1)
-            & (muons.pfRelIso04_all < 0.35)
-            & (muons.sip3d < 4)
-            & (muons.mediumId)
+            (muons.pt > self.config.selection["muon"]["pt"])
+            & (np.abs(muons.eta) < self.config.selection["muon"]["abs_eta"])
+            & (muons.dxy < self.config.selection["muon"]["dxy"])
+            & (muons.dz < self.config.selection["muon"]["dz"])
+            & (muons.sip3d < self.config.selection["muon"]["sip3d"])
+            & (
+                working_points.muon_id(
+                    muons=muons, wp=self.config.selection["muon"]["id_wp"]
+                )
+            )
+            & (
+                working_points.muon_iso(
+                    muons=muons, wp=self.config.selection["muon"]["iso_wp"]
+                )
+            )
         ]
         # impose some quality and minimum pt cuts on the jets
         jets = events.Jet
-        jets = jets[(jets.pt >= 30) & (np.abs(jets.eta) < 2.5) & (jets.jetId == 6)]
-        # cross-cleaning of jets with respect to muons
-        jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
+        jets = jets[
+            (jets.pt >= self.config.selection["jet"]["pt"])
+            & (np.abs(jets.eta) < self.config.selection["jet"]["abs_eta"])
+            & (jets.jetId == self.config.selection["jet"]["id"])
+        ]
+        if self.config.selection["jet"]["delta_r_lepton"]:
+            jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
+        if self.config.selection["jet"]["veto_maps"]:
+            jets = jets[jetvetomaps_mask(jets, self.year)]
         # selec c-tagged jets (ParticleNet tight WP)
-        cjets = jets[(jets.btagPNetCvB > 0.258) & (jets.btagPNetCvL > 0.491)]
-
-        # build Lorentz vectors
+        cjets = jets[
+            working_points.jet_tagger(
+                jets=jets,
+                flavor="c",
+                tagger=self.config.selection["jet"]["tagger"],
+                wp=self.config.selection["jet"]["tagger_wp"],
+            )
+        ]
+        # build Lorentz vectors for muons
         muons = ak.zip(
             {
                 "pt": muons.pt,
@@ -183,45 +225,90 @@ class SignalProcessor(processor.ProcessorABC):
         # choose permutation with z1 mass closest to nominal Z boson mass
         bestz1 = ak.singletons(ak.argmin(abs(fourmuon.z1.p4.mass - 91.1876), axis=1))
         fourmuon = fourmuon[bestz1]
+
+        # --------------------------------------------------------------
+        # Event selection
+        # --------------------------------------------------------------
+        # get luminosity mask
+        if is_mc:
+            lumi_mask = ak.ones_like(events.PV.npvsGood)
+        else:
+            lumi_info = LumiMask(self.config.lumimask)
+            lumi_mask = lumi_info(events.run, events.luminosityBlock)
+        # get trigger mask
+
+        trigger_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
+        for hlt_path in self.config.hlt_paths:
+            if hlt_path in events.HLT.fields:
+                trigger_mask = trigger_mask | events.HLT[hlt_path]
+                
+        # define region selection
         # select events with 4 muons, one c-tagged jet and one higgs candidate
-        four_muons = ak.num(muons) == 4
-        one_cjet = ak.num(cjets) == 1
-        one_higgs = ak.num((fourmuon.z1.p4 + fourmuon.z2.p4)) == 1
-        region_selection = four_muons & one_cjet & one_higgs
-
-        # define feature map with non-flat arrays
-        feature_dict = {
-            "higgs_pt": (fourmuon.z1.p4 + fourmuon.z2.p4).pt[region_selection],
-            "higgs_mass": (fourmuon.z1.p4 + fourmuon.z2.p4).mass[region_selection],
-            "cjet_pt": cjets.pt[region_selection],
-            "cjet_eta": cjets.eta[region_selection],
-            "cjet_phi": cjets.phi[region_selection],
-            "z1_mass": fourmuon.z1.p4.mass[region_selection],
-            "z2_mass": fourmuon.z2.p4.mass[region_selection],
-            "z1_mu1_pt": fourmuon.z1.lep1.pt[region_selection],
-            "z1_mu2_pt": fourmuon.z1.lep2.pt[region_selection],
-            "z2_mu1_pt": fourmuon.z2.lep1.pt[region_selection],
-            "z2_mu2_pt": fourmuon.z2.lep2.pt[region_selection],
-            "cjet_higgs_deltaphi": LorentzVector.delta_phi(
-                ak.pad_none(cjets[region_selection], 1),
-                ak.pad_none((fourmuon.z1.p4 + fourmuon.z2.p4)[region_selection], 1),
-            ),
+        selection = PackedSelection()
+        selections = {
+            "four_muons": ak.num(muons) == 4,
+            "one_cjet": ak.num(cjets) == 1,
+            "one_higgs": ak.num((fourmuon.z1.p4 + fourmuon.z2.p4)) == 1,
+            "atleast_one_goodvertex": events.PV.npvsGood > 0,
+            "lumimask": lumi_mask == 1,
+            "trigger": trigger_mask,
         }
-        feature_dict = {f: normalize(feature_dict[f]) for f in feature_dict}
+        selection.add_multiple(selections)
+        region_selection = selection.all(*(selections.keys()))
 
-        # get region weights
-        weights = events.genWeight
-        region_weights = weights[region_selection]
-        
-        # fill histograms
-        for feature in histograms:
-            fill_args = {
-                feature: feature_dict[feature],
-                "weight": region_weights,
+        # --------------------------------------------------------------
+        # Histogram filling
+        # --------------------------------------------------------------
+        if dak.sum(region_selection) > 0:
+            # define feature map with non-flat arrays
+            feature_map = {
+                # "z1_mu1_pt": fourmuon.z1.lep1.pt[region_selection],
+                # "z1_mu2_pt": fourmuon.z1.lep2.pt[region_selection],
+                # "z2_mu1_pt": fourmuon.z2.lep1.pt[region_selection],
+                # "z2_mu2_pt": fourmuon.z2.lep2.pt[region_selection],
+                "z1_mass": fourmuon.z1.p4.mass[region_selection],
+                "z2_mass": fourmuon.z2.p4.mass[region_selection],
+                "higgs_pt": (fourmuon.z1.p4 + fourmuon.z2.p4).pt[region_selection],
+                "higgs_mass": (fourmuon.z1.p4 + fourmuon.z2.p4).mass[region_selection],
+                "cjet_pt": cjets.pt[region_selection],
+                "cjet_eta": cjets.eta[region_selection],
+                "cjet_phi": cjets.phi[region_selection],
+                "cjet_higgs_deltaphi": LorentzVector.delta_phi(
+                    ak.pad_none(cjets[region_selection], 1),
+                    ak.pad_none((fourmuon.z1.p4 + fourmuon.z2.p4)[region_selection], 1),
+                ),
             }
-            histograms[feature].fill(**fill_args)
+            feature_map = {f: normalize(feature_map[f]) for f in feature_map}
 
-        return {"histograms": histograms, "sumw": ak.sum(weights)}
+            histograms = deepcopy(self.histograms)
+            if is_mc:
+                # get event weight systematic variations for MC samples
+                variations = ["nominal"] + list(weights_container.variations)
+                for variation in variations:
+                    if variation == "nominal":
+                        region_weight = weights_container.weight()[region_selection]
+                    else:
+                        region_weight = weights_container.weight(modifier=variation)[
+                            region_selection
+                        ]
+                    for feature in histograms:
+                        fill_args = {
+                            feature: feature_map[feature],
+                            "variation": variation,
+                            "weight": region_weight,
+                        }
+                        histograms[feature].fill(**fill_args)
+            else:
+                region_weight = weights_container.weight()[region_selection]
+                for feature in histograms:
+                    fill_args = {
+                        feature: feature_map[feature],
+                        "variation": "nominal",
+                        "weight": region_weight,
+                    }
+                    histograms[feature].fill(**fill_args)
+                    
+        return {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
 
     def postprocess(self, accumulator):
         pass

@@ -1,19 +1,22 @@
-import copy
 import numba
 import numpy as np
 import awkward as ak
 import dask_awkward as dak
+from copy import deepcopy
 from coffea import processor
 from coffea.lumi_tools import LumiMask
 from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
-from analysis.histograms.zplusjet import histograms
+from analysis.working_points import working_points
+from analysis.configs.load_config import load_config
+from analysis.histograms.utils import build_histogram
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
+
 
 PFNanoAODSchema.warn_missing_crossrefs = False
 
@@ -60,10 +63,17 @@ def find_2lep(events_leptons):
 
 
 class ZPlusJetProcessor(processor.ProcessorABC):
-    def __init__(self, year: str, config: dict):
+    def __init__(self, year: str):
         self.year = year
-        self.config = config
-        self.histograms = histograms
+        
+        self.config = load_config(
+            config_type="processor", config_name="zplusjet", year=year
+        )
+        self.histograms = build_histogram(
+            histogram_config=load_config(
+                config_type="histogram", config_name="zplusjet"
+            )
+        )
 
     def process(self, events):
         # check if dataset is MC or Data
@@ -108,8 +118,8 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                 year=self.year,
                 variation="nominal",
                 weights=weights_container,
-                id_wp=self.config["muon_id_wp"],
-                iso_wp=self.config["muon_iso_wp"],
+                id_wp=self.config.selection["muon"]["id_wp"],
+                iso_wp=self.config.selection["muon"]["iso_wp"],
             )
             muon_weights.add_id_weights()
             muon_weights.add_iso_weights()
@@ -121,71 +131,43 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         # --------------------------------------------------------------
         # impose some quality and minimum pt cuts on the muons
         muons = events.Muon
-        muons_id_wps = {
-            "loose": muons.looseId,
-            "medium": muons.mediumId,
-            "tight": muons.tightId,
-        }
-        muons_iso_wps = {
-            "loose": (
-                muons.pfRelIso04_all < 0.25
-                if hasattr(muons, "pfRelIso04_all")
-                else muons.pfRelIso03_all < 0.25
-            ),
-            "medium": (
-                muons.pfRelIso04_all < 0.20
-                if hasattr(muons, "pfRelIso04_all")
-                else muons.pfRelIso03_all < 0.20
-            ),
-            "tight": (
-                muons.pfRelIso04_all < 0.15
-                if hasattr(muons, "pfRelIso04_all")
-                else muons.pfRelIso03_all < 0.15
-            ),
-        }
         muons = muons[
-            (muons.pt > 10)
-            & (np.abs(muons.eta) < 2.4)
-            & (muons_id_wps[self.config["muon_id_wp"]])
-            & (muons_iso_wps[self.config["muon_iso_wp"]])
-            & (muons.dxy < 0.5)
-            & (muons.dz < 1)
-            & (muons.sip3d < 4)
+            (muons.pt > self.config.selection["muon"]["pt"])
+            & (np.abs(muons.eta) < self.config.selection["muon"]["abs_eta"])
+            & (muons.dxy < self.config.selection["muon"]["dxy"])
+            & (muons.dz < self.config.selection["muon"]["dz"])
+            & (muons.sip3d < self.config.selection["muon"]["sip3d"])
+            & (
+                working_points.muon_id(
+                    muons=muons, wp=self.config.selection["muon"]["id_wp"]
+                )
+            )
+            & (
+                working_points.muon_iso(
+                    muons=muons, wp=self.config.selection["muon"]["iso_wp"]
+                )
+            )
         ]
         # impose some quality and minimum pt cuts on the jets
         jets = events.Jet
-        jets = jets[(jets.pt >= 30) & (np.abs(jets.eta) < 2.5) & (jets.jetId == 6)]
-        # cross-cleaning with muons
-        jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
-        # apply veto maps
-        jets = jets[jetvetomaps_mask(jets, self.year)]
+        jets = jets[
+            (jets.pt >= self.config.selection["jet"]["pt"])
+            & (np.abs(jets.eta) < self.config.selection["jet"]["abs_eta"])
+            & (jets.jetId == self.config.selection["jet"]["id"])
+        ]
+        if self.config.selection["jet"]["delta_r_lepton"]:
+            jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
+        if self.config.selection["jet"]["veto_maps"]:
+            jets = jets[jetvetomaps_mask(jets, self.year)]
         # selec c-tagged jets using ParticleNet tight WP
-        # https://indico.cern.ch/event/1304360/contributions/5518916/attachments/2692786/4673101/230731_BTV.pdf
-        jets_ctagging_wps = {
-            "deepjet": {
-                "loose": (jets.btagDeepFlavCvB > 0.206)
-                & (jets.btagDeepFlavCvL > 0.042),
-                "medium": (jets.btagDeepFlavCvB > 0.298)
-                & (jets.btagDeepFlavCvL > 0.108),
-                "tight": (jets.btagDeepFlavCvB > 0.241)
-                & (jets.btagDeepFlavCvL > 0.305),
-            },
-            "pnet": {
-                "loose": (jets.btagPNetCvB > 0.182) & (jets.btagPNetCvL > 0.054),
-                "medium": (jets.btagPNetCvB > 0.304) & (jets.btagPNetCvL > 0.160),
-                "tight": (jets.btagPNetCvB > 0.258) & (jets.btagPNetCvL > 0.491),
-            },
-            "part": {
-                "loose": (jets.btagRobustParTAK4CvB > 0.067)
-                & (jets.btagRobustParTAK4CvL > 0.0390),
-                "medium": (jets.btagRobustParTAK4CvB > 0.128)
-                & (jets.btagRobustParTAK4CvL > 0.117),
-                "tight": (jets.btagRobustParTAK4CvB > 0.095)
-                & (jets.btagRobustParTAK4CvL > 0.358),
-            },
-        }
-        cjets = jets[jets_ctagging_wps[self.config["tagger"]][self.config["tagger_wp"]]]
-
+        cjets = jets[
+            working_points.jet_tagger(
+                jets=jets,
+                flavor="c",
+                tagger=self.config.selection["jet"]["tagger"],
+                wp=self.config.selection["jet"]["tagger_wp"],
+            )
+        ]
         # build lorentz vectors for muons
         muons = ak.zip(
             {
@@ -229,12 +211,12 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         if is_mc:
             lumi_mask = ak.ones_like(events.PV.npvsGood)
         else:
-            lumi_info = LumiMask(self.config["lumimask"])
+            lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
             
         # get trigger mask
         trigger_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
-        for hlt_path in self.config["hlt_paths"]:
+        for hlt_path in self.config.hlt_paths:
             if hlt_path in events.HLT.fields:
                 trigger_mask = trigger_mask | events.HLT[hlt_path]
                 
@@ -256,7 +238,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         # --------------------------------------------------------------
         if dak.sum(region_selection) > 0:
             # define feature map with non-flat arrays
-            feature_dict = {
+            feature_map = {
                 "cjet_pt": cjets.pt[region_selection],
                 "cjet_eta": cjets.eta[region_selection],
                 "cjet_phi": cjets.phi[region_selection],
@@ -268,9 +250,9 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                     ak.pad_none(dimuon.z.p4[region_selection], 1),
                 ),
             }
-            feature_dict = {f: normalize(feature_dict[f]) for f in feature_dict}
+            feature_map = {f: normalize(feature_map[f]) for f in feature_map}
             # update feature map with flat arrays
-            feature_dict.update(
+            feature_map.update(
                 {
                     # jet multiplicity
                     "njets": ak.num(jets[region_selection]),
@@ -278,7 +260,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                     "npvs": events.PV.npvsGood[region_selection],
                 },
             )
-            histograms = copy.deepcopy(self.histograms)
+            histograms = deepcopy(self.histograms)
             if is_mc:
                 # get event weight systematic variations for MC samples
                 variations = ["nominal"] + list(weights_container.variations)
@@ -291,7 +273,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                         ]
                     for feature in histograms:
                         fill_args = {
-                            feature: feature_dict[feature],
+                            feature: feature_map[feature],
                             "variation": variation,
                             "weight": region_weight,
                         }
@@ -300,7 +282,7 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                 region_weight = weights_container.weight()[region_selection]
                 for feature in histograms:
                     fill_args = {
-                        feature: feature_dict[feature],
+                        feature: feature_map[feature],
                         "variation": "nominal",
                         "weight": region_weight,
                     }
