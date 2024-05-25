@@ -23,7 +23,7 @@ def move_X509() -> str:
     return x509_path
 
 
-def submit_condor(args: dict, is_dataset: bool = False) -> None:
+def submit_condor(args: dict) -> None:
     """build condor and executable files. Submit condor job"""
     main_dir = Path.cwd()
     condor_dir = Path(f"{main_dir}/condor")
@@ -72,4 +72,3 @@ def submit_condor(args: dict, is_dataset: bool = False) -> None:
     # submit jobs
     print(f"submitting {jobname}")
     subprocess.run(["condor_submit", local_condor])
-    
