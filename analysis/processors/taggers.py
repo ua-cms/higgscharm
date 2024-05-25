@@ -74,8 +74,6 @@ class JetTaggersPlots(processor.ProcessorABC):
             (jets.pt > self.config.selection["jet"]["pt"])
             & (np.abs(jets.eta) < self.config.selection["jet"]["abs_eta"])
             & (jets.jetId == self.config.selection["jet"]["id"])
-            & (ak.all(jets.metric_table(muons) > 0.4, axis=-1))
-            & (ak.all(jets.metric_table(electrons) > 0.4, axis=-1))
         ]
         if self.config.selection["jet"]["delta_r_lepton"]:
             jets = jets[
