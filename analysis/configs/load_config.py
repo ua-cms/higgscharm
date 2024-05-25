@@ -20,8 +20,3 @@ def load_config(config_type: str, config_name: str, year: str = None):
     config_module = importlib.import_module(path)
     config = getattr(config_module, f"{config_type}_config")
     return config
-
-def load_config_params(year: str):
-    with open(f'analysis/configs/config_{year}.yaml', 'r') as file:
-        config = yaml.safe_load(file)
-    return config
