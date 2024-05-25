@@ -1,9 +1,0 @@
-hlt_paths:
-- IsoMu24
-- Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
-lumimask: analysis/data/Cert_Collisions2022_355100_362760_Golden.txt
-zplusjet:
-  muon_id_wp: medium
-  muon_iso_wp: loose
-  tagger: pnet
-  tagger_wp: tight

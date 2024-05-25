@@ -1,21 +1,28 @@
-from analysis.configs.config import Config
-
-class DatasetConfig(Config):
+class DatasetConfig:
     """
     Container for information about a dataset.
 
     Attributes:
-        name: The name of the dataset.
-        path: The path to the dataset.
-        key: The key of the TTree in the ROOT file.
-        year: The year of the dataset
-        is_mc: Is the dataset MC or not
-        xsec: The cross section of the dataset
-        partitions: number of partitions when building the dataset
-        stepsize: step size to use in the dataset preprocessing
-        filenames: Filenames of the ROOT files.
+    -----------
+        name: 
+            short name of the dataset
+        path: 
+            path to the dataset
+        key: 
+            key of the TTree in the ROOT file.
+        year: 
+            year of the dataset
+        is_mc: 
+            Is the dataset MC?
+        xsec: 
+            dataset cross section
+        partitions: 
+            number of partitions when building the dataset
+        stepsize: 
+            step size to use in the dataset preprocessing
+        filenames: 
+            names of the ROOT files
     """
-
     def __init__(
         self,
         name: str,
@@ -30,8 +37,6 @@ class DatasetConfig(Config):
     ) -> None:
         if path[-1] != "/":
             raise ValueError(f"Dataset path has to end with '/'. Got: {path}")
-
-        super().__init__(name=name)
 
         self.name = name
         self.path = path
