@@ -1,22 +1,28 @@
 import numpy as np
 from analysis.configs.histogram_config import HistogramConfig
 
-
 histogram_config = HistogramConfig(
     individual=False,
-    add_dataset_axis=True,
     add_syst_axis=False,
     add_weight=False,
+    names=[],
     axes={
-        "pt": {"type": "Regular", "bins": 50, "start": 0, "stop": 1, "label": "CvsL"},
-        "cvsb": {"type": "Regular", "bins": 50, "start": 0, "stop": 1, "label": "CvsB"},
+        "pt": {
+            "type": "Variable",
+            "edges": [20, 30, 50, 70, 100, 140, 200, 300, 600, 1000],
+            "label": r"Jet $pT$ [GeV]",
+        },
+        "eta": {
+            "type": "Regular",
+            "bins": 10,
+            "start": -2.5,
+            "stop": 2.5,
+            "label": r"Jet $\eta$",
+        },
         "flavor": {
             "type": "IntCategory",
             "categories": [0, 4, 5],
         },
-        "tagger": {
-            "type": "StrCategory",
-            "categories": ["deepjet", "pnet", "part"],
-        },
+        "pass_wp": {"type": "IntCategory", "categories": [0, 1]},
     },
 )

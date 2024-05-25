@@ -35,27 +35,48 @@ def build_histogram(histogram_config: HistogramConfig):
     dataset_axis = build_axis(
         {"dataset": {"type": "StrCategory", "categories": [], "growth": True}}
     )
-    if histogram_config.individual:
-        histograms = {}
-        for name, args in histogram_config.axes.items():
-            axes = [build_axis({name: args})]
-            if histogram_config.add_dataset_axis:
-                axes.append(dataset_axis)
+    if len(histogram_config.names) == 0:
+        if histogram_config.individual:
+            histograms = {}
+            for name, args in histogram_config.axes.items():
+                axes = [build_axis({name: args})]
+                if histogram_config.add_syst_axis:
+                    axes.append(syst_axis)
+                if histogram_config.add_weight:
+                    axes.append(hist.storage.Weight())
+                histograms[name] = hda.hist.Hist(*axes)
+        else:
+            axes = []
+            for name, args in histogram_config.axes.items():
+                axes.append(build_axis({name: args}))
             if histogram_config.add_syst_axis:
                 axes.append(syst_axis)
             if histogram_config.add_weight:
                 axes.append(hist.storage.Weight())
-            histograms[name] = hda.hist.Hist(*axes)
-        return histograms
+            histograms = hda.hist.Hist(*axes)
     else:
-        axes = []
-        for name, args in histogram_config.axes.items():
-            axes.append(build_axis({name: args}))
-        if histogram_config.add_dataset_axis:
-            axes.append(dataset_axis)
-        if histogram_config.add_syst_axis:
-            axes.append(syst_axis)
-        if histogram_config.add_weight:
-            axes.append(hist.storage.Weight())
-        histogram = hda.hist.Hist(*axes)
-        return histogram
+        if histogram_config.individual:
+            histograms = {}
+            for key_name in histogram_config.names:
+                histograms[key_name] = {}
+                for name, args in histogram_config.axes.items():
+                    axes = [build_axis({name: args})]
+                    if histogram_config.add_syst_axis:
+                        axes.append(syst_axis)
+                    if histogram_config.add_weight:
+                        axes.append(hist.storage.Weight())
+                    histograms[key_name][name] = hda.hist.Hist(*axes)
+        else:
+            histograms = {}
+            for key_name in histogram_config.names:
+                histograms[key_name] = {}
+                axes = []
+                for name, args in histogram_config.axes.items():
+                    axes.append(build_axis({name: args}))
+                if histogram_config.add_syst_axis:
+                    axes.append(syst_axis)
+                if histogram_config.add_weight:
+                    axes.append(hist.storage.Weight())
+                histograms[key_name] = hda.hist.Hist(*axes)
+    
+    return histograms
