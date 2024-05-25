@@ -6,8 +6,9 @@ Python package for analyzing H+c events. The package uses a columnar framework t
 ### Processors
 
 The available processors are:
-* `signal`: Select events with H+c final events (a candidate Higgs and one c-tagged jet)
-* `zplusjet`: Select events with Z+c final events (a candidate Z and one c-tagged jet)
+* `ztomumu`: Select events with Z($\mu \mu$) final events
+* `zplusjet`: Select events with Z($\mu \mu$)+c final events (a candidate Z and one c-tagged jet)
+* `signal`: Select events with H(ZZ)+c final events (a candidate Higgs and one c-tagged jet)
 * `tag_eff`: Save jet features needed to compute efficiency maps
 * `taggers`: Save CvsL and CvsB distributions for the DeepJet, ParticleNet and RobustParticleTransformer taggers
 
