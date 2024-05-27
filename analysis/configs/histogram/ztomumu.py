@@ -35,5 +35,10 @@ histogram_config = HistogramConfig(
             "stop": 60,
             "label": "$N_{pvs}$",
         },
+        "njets": {
+            "type": "IntCategory",
+            "categories": np.arange(0, 16),
+            "label": "$N_{jets}$",
+        },
     },
 )

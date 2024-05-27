@@ -258,6 +258,8 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                 {
                     # number of good primary vertices
                     "npvs": events.PV.npvsGood[region_selection],
+                    # jet multiplicity
+                    "njets": ak.num(jets[region_selection]),
                 },
             )
             histograms = deepcopy(self.histograms)
