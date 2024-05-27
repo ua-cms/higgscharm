@@ -7,7 +7,7 @@ import subprocess
 from pathlib import Path
 from copy import deepcopy
 from condor.utils import submit_condor
-from analysis.configs.load_config import load_config
+from analysis.configs import load_config
 from analysis.filesets.utils import build_single_fileset, divide_list
 
 
