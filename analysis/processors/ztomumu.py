@@ -9,6 +9,7 @@ from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
+from analysis.utils import trigger_match
 from analysis.working_points import working_points
 from analysis.configs.load_config import load_config
 from analysis.histograms.utils import build_histogram
@@ -17,7 +18,6 @@ from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
-from analysis.utils import trigger_match
 
 PFNanoAODSchema.warn_missing_crossrefs = False
 
@@ -160,6 +160,15 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
         if self.config.selection["jet"]["veto_maps"]:
             jets = jets[jetvetomaps_mask(jets, self.year)]
+        # selec c-tagged jets using ParticleNet tight WP
+        cjets = jets[
+            working_points.jet_tagger(
+                jets=jets,
+                flavor="c",
+                tagger=self.config.selection["jet"]["tagger"],
+                wp=self.config.selection["jet"]["tagger_wp"],
+            )
+        ]
         # build lorentz vectors for muons
         muons = ak.zip(
             {
@@ -224,7 +233,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         selections = {
             "two_muons": ak.num(muons) == 2,
             "one_z": ak.num(dimuon.z.p4) == 1,
-            "jet_veto": ak.num(jets) == 0,
+            "cjet_veto": ak.num(cjets) == 0,
             "atleast_one_goodvertex": events.PV.npvsGood > 0,
             "lumimask": lumi_mask == 1,
             "trig": trig_mask,
