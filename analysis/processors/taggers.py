@@ -2,8 +2,8 @@ import numpy as np
 import awkward as ak
 from copy import deepcopy
 from coffea import processor
+from analysis.configs import load_config
 from analysis.working_points import working_points
-from analysis.configs.load_config import load_config
 from analysis.histograms.utils import build_histogram
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask

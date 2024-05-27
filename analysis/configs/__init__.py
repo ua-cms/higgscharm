@@ -1,0 +1,1 @@
+from analysis.configs.load_config import load_config as load_config
