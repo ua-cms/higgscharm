@@ -17,6 +17,7 @@ from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
+from analysis.utils import trigger_match
 
 PFNanoAODSchema.warn_missing_crossrefs = False
 
@@ -159,7 +160,6 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
         if self.config.selection["jet"]["veto_maps"]:
             jets = jets[jetvetomaps_mask(jets, self.year)]
-
         # build lorentz vectors for muons
         muons = ak.zip(
             {
@@ -206,12 +206,19 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
             
-        # get trigger mask
-        trigger_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
+        # get trigger mask and DeltaR matched trigger objects mask
+        trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
+        trig_match_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool") 
         for hlt_path in self.config.hlt_paths:
             if hlt_path in events.HLT.fields:
-                trigger_mask = trigger_mask | events.HLT[hlt_path]
-                
+                trig_mask = trig_mask | events.HLT[hlt_path]
+                trig_obj_mask = trigger_match(
+                    leptons=events.Muon,
+                    trigobjs=events.TrigObj,
+                    hlt_path=hlt_path,
+                )
+                trig_match_mask = trig_match_mask | trig_obj_mask
+            
         # define region selection
         selection = PackedSelection()
         selections = {
@@ -220,7 +227,8 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             "jet_veto": ak.num(jets) == 0,
             "atleast_one_goodvertex": events.PV.npvsGood > 0,
             "lumimask": lumi_mask == 1,
-            "trigger": trigger_mask,
+            "trig": trig_mask,
+            "trig_match": dak.sum(trig_match_mask, axis=-1) > 0,
         }
         selection.add_multiple(selections)
         region_selection = selection.all(*(selections.keys()))
