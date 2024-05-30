@@ -5,7 +5,7 @@ class Paths:
 
     def __init__(self) -> None:
         # finds the root path as the directory one level upwards of where this file is located
-        self.root_path = pathlib.Path(__file__).resolve().parent
+        self.root_path = pathlib.Path(__file__).resolve().parent.parent
 
     def processor_path(
         self,
