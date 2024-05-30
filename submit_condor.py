@@ -2,10 +2,11 @@ import os
 import glob
 import json
 import gzip
+import pathlib
 import argparse
 import subprocess
-from pathlib import Path
 from copy import deepcopy
+from analysis.utils import paths
 from condor.utils import submit_condor
 from analysis.configs import load_config
 from analysis.filesets.utils import build_single_fileset, divide_list
@@ -15,17 +16,14 @@ def main(args):
     args = vars(args)
     
     # set output path
-    if args["output_path"]:
-        output_path = Path(args["output_path"])
-    else:
-        cwd = Path.cwd()
-        output_path = cwd 
-    output_path = output_path / "outputs" / args["processor"] / args["year"]
-    if args["processor"] == "tag_eff":
-        output_path = output_path / args["tagger"] / args["flavor"] / args["wp"]
-    if not output_path.exists():
-        output_path.mkdir(parents=True)
-    args["output_path"] = str(output_path)
+    processor_output_path = paths.processor_path(
+        processor=args["processor"],
+        tagger=args["tagger"],
+        flavor=args["flavor"],
+        wp=args["wp"],
+        year=args["year"],
+    )
+    args["output_path"] = str(processor_output_path)
         
     # split dataset into batches
     dataset_config = load_config(
@@ -96,21 +94,21 @@ if __name__ == "__main__":
         "--tagger",
         dest="tagger",
         type=str,
-        default="pnet",
+        default=None,
         help="tagger {pnet, part, deepjet}",
     )
     parser.add_argument(
         "--wp",
         dest="wp",
         type=str,
-        default="tight",
+        default=None,
         help="working point {loose, medium, tight}",
     )
     parser.add_argument(
         "--flavor",
         dest="flavor",
         type=str,
-        default="c",
+        default=None,
         help="Hadron flavor {c, b}",
     )
     parser.add_argument(
