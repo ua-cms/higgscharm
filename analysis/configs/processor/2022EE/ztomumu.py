@@ -19,8 +19,6 @@ processor_config = ProcessorConfig(
             "id": 6,
             "delta_r_lepton": True,
             "veto_maps": True,
-            "tagger": "pnet",
-            "tagger_wp": "tight",
         },
     },
 )
