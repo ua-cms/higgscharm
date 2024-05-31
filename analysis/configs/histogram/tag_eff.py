@@ -2,10 +2,8 @@ import numpy as np
 from analysis.configs.histogram_config import HistogramConfig
 
 histogram_config = HistogramConfig(
-    individual=False,
     add_syst_axis=False,
     add_weight=False,
-    names=[],
     axes={
         "pt": {
             "type": "Variable",
@@ -25,4 +23,7 @@ histogram_config = HistogramConfig(
         },
         "pass_wp": {"type": "IntCategory", "categories": [0, 1]},
     },
+    layout={
+        "eff": ["pt", "eta", "flavor", "pass_wp"]
+    }
 )

@@ -2,10 +2,8 @@ import numpy as np
 from analysis.configs.histogram_config import HistogramConfig
 
 histogram_config = HistogramConfig(
-    individual=True,
     add_syst_axis=True,
     add_weight=True,
-    names=[],
     axes={
         "z_mass": {
             "type": "Regular",
@@ -69,4 +67,5 @@ histogram_config = HistogramConfig(
             "label": "$N_{pvs}$",
         },
     },
+    layout="individual"
 )

@@ -3,80 +3,63 @@ import hist.dask as hda
 from analysis.configs.histogram_config import HistogramConfig
 
 
-def build_axis(axis_config: dict):
-    """build a hist axis object from an axis config"""
-    axis_opt = {
-        "StrCategory": hist.axis.StrCategory,
-        "IntCategory": hist.axis.IntCategory,
-        "Regular": hist.axis.Regular,
-        "Variable": hist.axis.Variable,
-    }
-    axis_args = {}
-    for name in axis_config:
-        axis_args["name"] = name
-        hist_type = axis_config[name]["type"]
-        for arg_name, arg_value in axis_config[name].items():
-            if arg_name == "type":
-                continue
-            axis_args[arg_name] = arg_value
-    hist_args = {k: v for k, v in axis_args.items()}
-    axis = axis_opt[hist_type](**hist_args)
-    return axis
-
-
-def build_histogram(histogram_config: HistogramConfig):
-    """
-    build a hist.dask histogram for each axis config in HistogramConfig.
-    Optionally include 'systematic' and 'weight' axes to histograms.
-    """
-    syst_axis = build_axis(
-        {"variation": {"type": "StrCategory", "categories": [], "growth": True}}
-    )
-    dataset_axis = build_axis(
-        {"dataset": {"type": "StrCategory", "categories": [], "growth": True}}
-    )
-    if len(histogram_config.names) == 0:
-        if histogram_config.individual:
-            histograms = {}
-            for name, args in histogram_config.axes.items():
-                axes = [build_axis({name: args})]
-                if histogram_config.add_syst_axis:
-                    axes.append(syst_axis)
-                if histogram_config.add_weight:
-                    axes.append(hist.storage.Weight())
-                histograms[name] = hda.hist.Hist(*axes)
-        else:
-            axes = []
-            for name, args in histogram_config.axes.items():
-                axes.append(build_axis({name: args}))
-            if histogram_config.add_syst_axis:
-                axes.append(syst_axis)
-            if histogram_config.add_weight:
-                axes.append(hist.storage.Weight())
-            histograms = hda.hist.Hist(*axes)
-    else:
-        if histogram_config.individual:
-            histograms = {}
-            for key_name in histogram_config.names:
-                histograms[key_name] = {}
-                for name, args in histogram_config.axes.items():
-                    axes = [build_axis({name: args})]
-                    if histogram_config.add_syst_axis:
-                        axes.append(syst_axis)
-                    if histogram_config.add_weight:
-                        axes.append(hist.storage.Weight())
-                    histograms[key_name][name] = hda.hist.Hist(*axes)
-        else:
-            histograms = {}
-            for key_name in histogram_config.names:
-                histograms[key_name] = {}
-                axes = []
-                for name, args in histogram_config.axes.items():
-                    axes.append(build_axis({name: args}))
-                if histogram_config.add_syst_axis:
-                    axes.append(syst_axis)
-                if histogram_config.add_weight:
-                    axes.append(hist.storage.Weight())
-                histograms[key_name] = hda.hist.Hist(*axes)
+class HistBuilder:
     
-    return histograms
+    def __init__(self, histogram_config):
+        self.histogram_config = histogram_config
+        self.axis_opt = {
+            "StrCategory": hist.axis.StrCategory,
+            "IntCategory": hist.axis.IntCategory,
+            "Regular": hist.axis.Regular,
+            "Variable": hist.axis.Variable,
+        }
+        self.syst_axis = self.build_axis(
+            {"variation": {"type": "StrCategory", "categories": [], "growth": True}}
+        )
+
+    def build_axis(self, axis_config: dict):
+        """build a hist axis object from an axis config"""
+        axis_args = {}
+        for name in axis_config:
+            axis_args["name"] = name
+            hist_type = axis_config[name]["type"]
+            for arg_name, arg_value in axis_config[name].items():
+                if arg_name == "type":
+                    continue
+                axis_args[arg_name] = arg_value
+        hist_args = {k: v for k, v in axis_args.items()}
+        axis = self.axis_opt[hist_type](**hist_args)
+        return axis
+
+    def build_individual_histogram(self):
+        histograms = {}
+        for name, args in self.histogram_config.axes.items():
+            axes = [self.build_axis({name: args})]
+            if self.histogram_config.add_syst_axis:
+                axes.append(self.syst_axis)
+            if self.histogram_config.add_weight:
+                axes.append(hist.storage.Weight())
+            histograms[name] = hda.hist.Hist(*axes)
+        return histograms
+    
+    def build_stacked_histogram(self, axes_names):
+        axes = []
+        for name, args in self.histogram_config.axes.items():
+            if name in axes_names:
+                axes.append(self.build_axis({name: args}))
+        if self.histogram_config.add_syst_axis:
+            axes.append(self.syst_axis)
+        if self.histogram_config.add_weight:
+            axes.append(hist.storage.Weight())
+        histograms = hda.hist.Hist(*axes)
+        return histograms
+
+    def build_histogram(self):
+        if self.histogram_config.layout == "individual":
+            histograms = self.build_individual_histogram()
+        else:
+            histograms = {}
+            for hist_name, axes_names in self.histogram_config.layout.items():
+                histograms[hist_name] = self.build_stacked_histogram(axes_names)
+
+        return histograms
