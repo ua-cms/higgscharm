@@ -3,8 +3,8 @@ import awkward as ak
 from copy import deepcopy
 from coffea import processor
 from analysis.configs import load_config
+from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
-from analysis.histograms.utils import build_histogram
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
@@ -19,9 +19,10 @@ class TaggingEfficiencyProcessor(processor.ProcessorABC):
         self.config = load_config(
             config_type="processor", config_name="tag_eff", year=year
         )
-        self.histogram = build_histogram(
-            histogram_config=load_config(config_type="histogram", config_name="tag_eff")
+        self.histogram_config = load_config(
+            config_type="histogram", config_name="tag_eff"
         )
+        self.histograms = HistBuilder(self.histogram_config).build_histogram()
 
     def process(self, events):
         # apply JEC/JER corrections
@@ -53,8 +54,9 @@ class TaggingEfficiencyProcessor(processor.ProcessorABC):
                 )
             ),
         }
-        histogram = deepcopy(self.histogram)
-        histogram.fill(**feature_map)
+        histogram = deepcopy(self.histograms)
+        for key in self.histogram_config.layout:
+            histogram[key].fill(**feature_map)
 
         return {"histograms": histogram}
 

@@ -3,14 +3,17 @@ import awkward as ak
 from copy import deepcopy
 from coffea import processor
 from analysis.configs import load_config
+from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
-from analysis.histograms.utils import build_histogram
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
 
 def normalize(array):
-    return ak.fill_none(ak.flatten(array), -99)
+    if array.ndim == 2:
+        return ak.fill_none(ak.flatten(array), -99)
+    else:
+        return ak.fill_none(array, -99)
 
 
 class JetTaggersPlots(processor.ProcessorABC):
@@ -20,9 +23,10 @@ class JetTaggersPlots(processor.ProcessorABC):
         self.config = load_config(
             config_type="processor", config_name="taggers", year=year
         )
-        self.histograms = build_histogram(
-            histogram_config=load_config(config_type="histogram", config_name="taggers")
+        self.histogram_config = load_config(
+            config_type="histogram", config_name="taggers"
         )
+        self.histograms = HistBuilder(self.histogram_config).build_histogram()
 
     def process(self, events):
         # apply JEC/JER corrections
@@ -85,30 +89,20 @@ class JetTaggersPlots(processor.ProcessorABC):
             
         # fill histograms
         feature_map = {
-            "deepjet": {
-                "cvsl": jets.btagDeepFlavCvL,
-                "cvsb": jets.btagDeepFlavCvB,
-            },
-            "pnet": {
-                "cvsl": jets.btagPNetCvL,
-                "cvsb": jets.btagPNetCvB,
-            },
-            "part": {
-                "cvsl": jets.btagRobustParTAK4CvL,
-                "cvsb": jets.btagRobustParTAK4CvB,
-            },
+            "deepjet_cvsl": jets.btagDeepFlavCvL,
+            "deepjet_cvsb": jets.btagDeepFlavCvB,
+            "pnet_cvsl": jets.btagPNetCvL,
+            "pnet_cvsb": jets.btagPNetCvB,
+            "part_cvsl": jets.btagRobustParTAK4CvL,
+            "part_cvsb": jets.btagRobustParTAK4CvB,
+            "flavor": ak.values_astype(jets.hadronFlavour, "int32"),
         }
         histograms = deepcopy(self.histograms)
-        for tagger in feature_map:
-            fill_args = {
-                f: normalize(feature_map[tagger][f]) for f in feature_map[tagger]
-            }
-            fill_args.update(
-                {
-                    "flavor": normalize(ak.values_astype(jets.hadronFlavour, "int32")),
-                }
-            )
-            histograms[tagger].fill(**fill_args)
+        for key, features in self.histogram_config.layout.items():
+            fill_args = {}
+            for feature in features:
+                fill_args[feature] = normalize(feature_map[feature])
+            histograms[key].fill(**fill_args)
             
         return {"histograms": histograms}
 

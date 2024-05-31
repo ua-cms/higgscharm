@@ -9,9 +9,10 @@ from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
+from analysis.utils import trigger_match
 from analysis.configs import load_config
+from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
-from analysis.histograms.utils import build_histogram
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
@@ -22,8 +23,10 @@ PFNanoAODSchema.warn_missing_crossrefs = False
 
 
 def normalize(array):
-    return ak.fill_none(ak.flatten(array), -99)
-
+    if array.ndim == 2:
+        return ak.fill_none(ak.flatten(array), -99)
+    else:
+        return ak.fill_none(array, -99)
 
 @numba.njit
 def find_2lep_kernel(events_leptons, builder):
@@ -69,11 +72,11 @@ class ZPlusJetProcessor(processor.ProcessorABC):
         self.config = load_config(
             config_type="processor", config_name="zplusjet", year=year
         )
-        self.histograms = build_histogram(
-            histogram_config=load_config(
-                config_type="histogram", config_name="zplusjet"
-            )
+        self.histogram_config = load_config(
+            config_type="histogram", config_name="zplusjet"
         )
+        self.histograms = HistBuilder(self.histogram_config).build_histogram()
+
 
     def process(self, events):
         # check if dataset is MC or Data
@@ -214,11 +217,18 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
             
-        # get trigger mask
-        trigger_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
+        # get trigger mask and DeltaR matched trigger objects mask
+        trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
+        trig_match_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool") 
         for hlt_path in self.config.hlt_paths:
             if hlt_path in events.HLT.fields:
-                trigger_mask = trigger_mask | events.HLT[hlt_path]
+                trig_mask = trig_mask | events.HLT[hlt_path]
+                trig_obj_mask = trigger_match(
+                    leptons=events.Muon,
+                    trigobjs=events.TrigObj,
+                    hlt_path=hlt_path,
+                )
+                trig_match_mask = trig_match_mask | trig_obj_mask
                 
         # define region selection
         selection = PackedSelection()
@@ -228,7 +238,8 @@ class ZPlusJetProcessor(processor.ProcessorABC):
             "one_z": ak.num(dimuon.z.p4) == 1,
             "atleast_one_goodvertex": events.PV.npvsGood > 0,
             "lumimask": lumi_mask == 1,
-            "trigger": trigger_mask,
+            "trigger": trig_mask,
+            "trigger_matching": dak.sum(trig_match_mask, axis=-1) > 0,
         }
         selection.add_multiple(selections)
         region_selection = selection.all(*(selections.keys()))
@@ -249,17 +260,9 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                     ak.pad_none(cjets[region_selection], 1),
                     ak.pad_none(dimuon.z.p4[region_selection], 1),
                 ),
+                "njets": ak.num(jets[region_selection]),
+                "npvs": events.PV.npvsGood[region_selection],
             }
-            feature_map = {f: normalize(feature_map[f]) for f in feature_map}
-            # update feature map with flat arrays
-            feature_map.update(
-                {
-                    # jet multiplicity
-                    "njets": ak.num(jets[region_selection]),
-                    # number of primary vertices
-                    "npvs": events.PV.npvsGood[region_selection],
-                },
-            )
             histograms = deepcopy(self.histograms)
             if is_mc:
                 # get event weight systematic variations for MC samples
@@ -271,22 +274,64 @@ class ZPlusJetProcessor(processor.ProcessorABC):
                         region_weight = weights_container.weight(modifier=variation)[
                             region_selection
                         ]
-                    for feature in histograms:
-                        fill_args = {
-                            feature: feature_map[feature],
-                            "variation": variation,
-                            "weight": region_weight,
-                        }
-                        histograms[feature].fill(**fill_args)
+                    if self.histogram_config.layout == "individual":
+                        for feature in histograms:
+                            fill_args = {
+                                feature: normalize(feature_map[feature]),
+                                "variation": variation,
+                                "weight": (
+                                    ak.flatten(feature_map[feature] * region_weight)
+                                    if feature_map[feature].ndim == 2
+                                    else region_weight
+                                ),
+                            }
+                            histograms[feature].fill(**fill_args)
+                    else:
+                        for key, features in self.histogram_config.layout.items():
+                            fill_args = {}
+                            for feature in features:
+                                fill_args[feature] = normalize(feature_map[feature])
+                            fill_args.update(
+                                {
+                                    "variation": variation,
+                                    "weight": (
+                                        ak.flatten(feature_map[feature] * region_weight)
+                                        if feature_map[feature].ndim == 2
+                                        else region_weight
+                                    )
+                                }
+                            )
+                            histograms[key].fill(**fill_args)
             else:
                 region_weight = weights_container.weight()[region_selection]
-                for feature in histograms:
-                    fill_args = {
-                        feature: feature_map[feature],
-                        "variation": "nominal",
-                        "weight": region_weight,
-                    }
-                    histograms[feature].fill(**fill_args)
+                if self.histogram_config.layout == "individual":
+                    for feature in histograms:
+                        fill_args = {
+                            feature: normalize(feature_map[feature]),
+                            "variation": variation,
+                            "weight": (
+                                ak.flatten(feature_map[feature] * region_weight)
+                                if feature_map[feature].ndim == 2
+                                else region_weight
+                            ),
+                        }
+                        histograms[feature].fill(**fill_args)
+                else:
+                    for key, features in self.histogram_config.layout.items():
+                        fill_args = {}
+                        for feature in features:
+                            fill_args[feature] = normalize(feature_map[feature])
+                        fill_args.update(
+                            {
+                                "variation": variation,
+                                "weight": (
+                                    ak.flatten(feature_map[feature] * region_weight)
+                                    if feature_map[feature].ndim == 2
+                                    else region_weight
+                                )
+                            }
+                        )
+                        histograms[key].fill(**fill_args)
                     
         return {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
 

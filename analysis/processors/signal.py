@@ -4,20 +4,29 @@ import awkward as ak
 import dask_awkward as dak
 from copy import deepcopy
 from coffea import processor
+from coffea.lumi_tools import LumiMask
+from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
+from analysis.utils import trigger_match
 from analysis.configs import load_config
+from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
-from analysis.histograms.utils import build_histogram
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
 
+PFNanoAODSchema.warn_missing_crossrefs = False
+
+
 def normalize(array):
-    return ak.fill_none(ak.flatten(array), -99)
+    if array.ndim == 2:
+        return ak.fill_none(ak.flatten(array), -99)
+    else:
+        return ak.fill_none(array, -99)
 
 
 @numba.njit
@@ -79,9 +88,10 @@ class SignalProcessor(processor.ProcessorABC):
         self.config = load_config(
             config_type="processor", config_name="signal", year=year
         )
-        self.histograms = build_histogram(
-            histogram_config=load_config(config_type="histogram", config_name="signal")
+        self.histogram_config = load_config(
+            config_type="histogram", config_name="signal"
         )
+        self.histograms = HistBuilder(self.histogram_config).build_histogram()
 
     def process(self, events):
         # check if dataset is MC or Data
@@ -235,12 +245,19 @@ class SignalProcessor(processor.ProcessorABC):
         else:
             lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
-        # get trigger mask
-
-        trigger_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
+            
+        # get trigger mask and DeltaR matched trigger objects mask
+        trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
+        trig_match_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool") 
         for hlt_path in self.config.hlt_paths:
             if hlt_path in events.HLT.fields:
-                trigger_mask = trigger_mask | events.HLT[hlt_path]
+                trig_mask = trig_mask | events.HLT[hlt_path]
+                trig_obj_mask = trigger_match(
+                    leptons=events.Muon,
+                    trigobjs=events.TrigObj,
+                    hlt_path=hlt_path,
+                )
+                trig_match_mask = trig_match_mask | trig_obj_mask
                 
         # define region selection
         # select events with 4 muons, one c-tagged jet and one higgs candidate
@@ -251,7 +268,8 @@ class SignalProcessor(processor.ProcessorABC):
             "one_higgs": ak.num((fourmuon.z1.p4 + fourmuon.z2.p4)) == 1,
             "atleast_one_goodvertex": events.PV.npvsGood > 0,
             "lumimask": lumi_mask == 1,
-            "trigger": trigger_mask,
+            "trigger": trig_mask,
+            "trigger_matching": dak.sum(trig_match_mask, axis=-1) > 0,
         }
         selection.add_multiple(selections)
         region_selection = selection.all(*(selections.keys()))
@@ -278,8 +296,6 @@ class SignalProcessor(processor.ProcessorABC):
                     ak.pad_none((fourmuon.z1.p4 + fourmuon.z2.p4)[region_selection], 1),
                 ),
             }
-            feature_map = {f: normalize(feature_map[f]) for f in feature_map}
-
             histograms = deepcopy(self.histograms)
             if is_mc:
                 # get event weight systematic variations for MC samples
@@ -291,22 +307,64 @@ class SignalProcessor(processor.ProcessorABC):
                         region_weight = weights_container.weight(modifier=variation)[
                             region_selection
                         ]
-                    for feature in histograms:
-                        fill_args = {
-                            feature: feature_map[feature],
-                            "variation": variation,
-                            "weight": region_weight,
-                        }
-                        histograms[feature].fill(**fill_args)
+                    if self.histogram_config.layout == "individual":
+                        for feature in histograms:
+                            fill_args = {
+                                feature: normalize(feature_map[feature]),
+                                "variation": variation,
+                                "weight": (
+                                    ak.flatten(feature_map[feature] * region_weight)
+                                    if feature_map[feature].ndim == 2
+                                    else region_weight
+                                ),
+                            }
+                            histograms[feature].fill(**fill_args)
+                    else:
+                        for key, features in self.histogram_config.layout.items():
+                            fill_args = {}
+                            for feature in features:
+                                fill_args[feature] = normalize(feature_map[feature])
+                            fill_args.update(
+                                {
+                                    "variation": variation,
+                                    "weight": (
+                                        ak.flatten(feature_map[feature] * region_weight)
+                                        if feature_map[feature].ndim == 2
+                                        else region_weight
+                                    )
+                                }
+                            )
+                            histograms[key].fill(**fill_args)
             else:
                 region_weight = weights_container.weight()[region_selection]
-                for feature in histograms:
-                    fill_args = {
-                        feature: feature_map[feature],
-                        "variation": "nominal",
-                        "weight": region_weight,
-                    }
-                    histograms[feature].fill(**fill_args)
+                if self.histogram_config.layout == "individual":
+                    for feature in histograms:
+                        fill_args = {
+                            feature: normalize(feature_map[feature]),
+                            "variation": variation,
+                            "weight": (
+                                ak.flatten(feature_map[feature] * region_weight)
+                                if feature_map[feature].ndim == 2
+                                else region_weight
+                            ),
+                        }
+                        histograms[feature].fill(**fill_args)
+                else:
+                    for key, features in self.histogram_config.layout.items():
+                        fill_args = {}
+                        for feature in features:
+                            fill_args[feature] = normalize(feature_map[feature])
+                        fill_args.update(
+                            {
+                                "variation": variation,
+                                "weight": (
+                                    ak.flatten(feature_map[feature] * region_weight)
+                                    if feature_map[feature].ndim == 2
+                                    else region_weight
+                                )
+                            }
+                        )
+                        histograms[key].fill(**fill_args)
                     
         return {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
 
