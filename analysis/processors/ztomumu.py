@@ -271,7 +271,10 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                                 feature: normalize(feature_map[feature]),
                                 "variation": variation,
                                 "weight": (
-                                    ak.flatten(feature_map[feature] * region_weight)
+                                    ak.flatten(
+                                        ak.ones_like(feature_map[feature]) 
+                                        * region_weight
+                                    )
                                     if feature_map[feature].ndim == 2
                                     else region_weight
                                 ),
@@ -286,7 +289,10 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                                 {
                                     "variation": variation,
                                     "weight": (
-                                        ak.flatten(feature_map[feature] * region_weight)
+                                        ak.flatten(
+                                            ak.ones_like(feature_map[feature]) 
+                                            * region_weight
+                                        )
                                         if feature_map[feature].ndim == 2
                                         else region_weight
                                     )
@@ -301,7 +307,10 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                             feature: normalize(feature_map[feature]),
                             "variation": variation,
                             "weight": (
-                                ak.flatten(feature_map[feature] * region_weight)
+                                ak.flatten(
+                                    ak.ones_like(feature_map[feature]) 
+                                    * region_weight
+                                )
                                 if feature_map[feature].ndim == 2
                                 else region_weight
                             ),
@@ -316,7 +325,10 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                             {
                                 "variation": variation,
                                 "weight": (
-                                    ak.flatten(feature_map[feature] * region_weight)
+                                    ak.flatten(
+                                        ak.ones_like(feature_map[feature]) 
+                                        * region_weight
+                                    )
                                     if feature_map[feature].ndim == 2
                                     else region_weight
                                 )
