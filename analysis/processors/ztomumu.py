@@ -246,13 +246,10 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                 "jet_pt": jets.pt[region_selection],
                 "jet_eta": jets.eta[region_selection],
                 "jet_phi": jets.phi[region_selection],
-                "jet_flavor": ak.values_astype(jets.hadronFlavour, "int32")[region_selection],
                 "pnet_cvsb": jets.btagPNetCvB[region_selection],
                 "pnet_cvsl": jets.btagPNetCvL[region_selection],
                 "npvs": events.PV.npvsGood[region_selection],
-                "nljets": ak.num(jets[jets.hadronFlavour == 0][region_selection]),
-                "ncjets": ak.num(jets[jets.hadronFlavour == 4][region_selection]),
-                "nbjets": ak.num(jets[jets.hadronFlavour == 5][region_selection]),
+                "njets": ak.num(jets[region_selection])
             }
             histograms = deepcopy(self.histograms)
             if is_mc:
@@ -305,7 +302,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                     for feature in histograms:
                         fill_args = {
                             feature: normalize(feature_map[feature]),
-                            "variation": variation,
+                            "variation": "nominal",
                             "weight": (
                                 ak.flatten(
                                     ak.ones_like(feature_map[feature]) 
@@ -323,7 +320,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                             fill_args[feature] = normalize(feature_map[feature])
                         fill_args.update(
                             {
-                                "variation": variation,
+                                "variation": "nominal",
                                 "weight": (
                                     ak.flatten(
                                         ak.ones_like(feature_map[feature]) 

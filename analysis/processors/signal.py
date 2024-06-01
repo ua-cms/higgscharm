@@ -347,7 +347,7 @@ class SignalProcessor(processor.ProcessorABC):
                     for feature in histograms:
                         fill_args = {
                             feature: normalize(feature_map[feature]),
-                            "variation": variation,
+                            "variation": "nominal",
                             "weight": (
                                 ak.flatten(
                                     ak.ones_like(feature_map[feature]) 
@@ -365,7 +365,7 @@ class SignalProcessor(processor.ProcessorABC):
                             fill_args[feature] = normalize(feature_map[feature])
                         fill_args.update(
                             {
-                                "variation": variation,
+                                "variation": "nominal",
                                 "weight": (
                                     ak.flatten(
                                         ak.ones_like(feature_map[feature]) 
