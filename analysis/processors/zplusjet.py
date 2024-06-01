@@ -9,10 +9,10 @@ from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
-from analysis.utils import trigger_match
 from analysis.configs import load_config
 from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
+from analysis.utils.trigger_matching import trigger_match
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
