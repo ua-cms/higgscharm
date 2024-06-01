@@ -48,10 +48,6 @@ histogram_config = HistogramConfig(
             "stop": np.pi,
             "label": "Jet $\phi$",
         },
-        "jet_flavor": {
-            "type": "IntCategory",
-            "categories": [0, 4, 5],
-        },
         "pnet_cvsl": {
             "type": "Regular",
             "bins": 50,
@@ -66,21 +62,6 @@ histogram_config = HistogramConfig(
             "stop": 1,
             "label": "CvsB",
         },
-        "nljets": {
-            "type": "IntCategory",
-            "categories": np.arange(0, 16),
-            "label": "$N_{jets}$",
-        },
-        "nbjets": {
-            "type": "IntCategory",
-            "categories": np.arange(0, 16),
-            "label": "$N_{jets}$",
-        },
-        "ncjets": {
-            "type": "IntCategory",
-            "categories": np.arange(0, 16),
-            "label": "$N_{jets}$",
-        },
         "npvs": {
             "type": "Regular",
             "bins": 60,
@@ -88,16 +69,19 @@ histogram_config = HistogramConfig(
             "stop": 60,
             "label": "$N_{pvs}$",
         },
+        "njets": {
+            "type": "IntCategory",
+            "categories": np.arange(0, 16),
+            "label": "$N_{jets}$",
+        },
     },
     layout={
         "z_mass": ["z_mass"],
         "mu1_pt": ["mu1_pt"],
         "mu2_pt": ["mu2_pt"],
         "jet_kin": ["jet_pt", "jet_eta", "jet_phi"],
-        "jet_tag": ["jet_flavor", "pnet_cvsl", "pnet_cvsb"],
-        "nljets": ["nljets"],
-        "nbjets": ["nbjets"],
-        "ncjets": ["ncjets"],
+        "jet_tag": ["pnet_cvsl", "pnet_cvsb"],
+        "njets": ["njets"],
         "npvs": ["npvs"],
     },
 )
