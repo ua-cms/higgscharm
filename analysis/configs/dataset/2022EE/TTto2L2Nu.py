@@ -2,6 +2,7 @@ from analysis.configs.dataset_config import DatasetConfig
 
 dataset_config = DatasetConfig(
     name="TTto2L2Nu",
+    process="tt",
     path=(
         "root://maite.iihe.ac.be:1094//store/user/daocampo/PFNano_Run3/"
         "mc_summer22EE_MINIAODv4/TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/"

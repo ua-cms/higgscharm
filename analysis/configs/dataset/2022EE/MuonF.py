@@ -2,6 +2,7 @@ from analysis.configs.dataset_config import DatasetConfig
 
 dataset_config = DatasetConfig(
     name="MuonF",
+    process="Data",
     path=(
         "root://maite.iihe.ac.be:1094//store/user/daocampo/PFNano_Run3/"
         "data_2022_MINIAODv4/Muon/Run2022F-22Sep2023-v2_BTV_Run3_2022_Comm_MINIAODv4/240429_092119/0000/"

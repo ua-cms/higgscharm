@@ -6,10 +6,12 @@ class DatasetConfig:
     -----------
         name: 
             short name of the dataset
+        process: 
+            physical process class (used as a key to accumulate datasets in postprocessing)
         path: 
             path to the dataset
         key: 
-            key of the TTree in the ROOT file.
+            key of the TTree in the ROOT file
         year: 
             year of the dataset
         is_mc: 
@@ -26,6 +28,7 @@ class DatasetConfig:
     def __init__(
         self,
         name: str,
+        process: str,
         path: str,
         key: str,
         year: str,
@@ -39,6 +42,7 @@ class DatasetConfig:
             raise ValueError(f"Dataset path has to end with '/'. Got: {path}")
 
         self.name = name
+        self.process = process
         self.path = path
         self.key = key
         self.year = year
