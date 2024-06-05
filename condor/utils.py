@@ -41,7 +41,7 @@ def submit_condor(args: dict) -> None:
         line = line.replace("EXECUTABLEPATH", str(exe_dir))
         line = line.replace("LOGPATH", str(log_dir))
         line = line.replace("JOBNAME", jobname)
-        line = line.replace("JOBFLAVOR", f'"longlunch"')
+        line = line.replace("JOBFLAVOR", f'"workday"')
         condor_file.write(line)
     condor_file.close()
     condor_template_file.close()
