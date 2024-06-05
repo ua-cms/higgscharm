@@ -22,6 +22,11 @@ git clone https://github.com/deoache/higgscharm.git
 cd higgscharm
 
 # submit condor jobs for some processor and dataset
-python3 submit_condor.py --processor <processor> --dataset_name <dataset name>
+python3 submit_condor.py --processor <processor> --dataset_name <dataset name> --year <year>
 ```    
 You can find the available datasets at [analysis/configs/dataset/2022EE](https://github.com/deoache/higgscharm/tree/main/analysis/configs/dataset/2022EE). The `tag_eff` processor requires additional arguments: `--tagger` (deepjet, pnet or part), `--flavor` (c or b), and `--wp` (loose, medium or tight)
+
+Once you have run the corresponding datasets for a processor, you can get the results (plots) by typing:
+``` 
+python3 run_postprocess.py --processor <processor> --year <dataset name> 
+``` 
