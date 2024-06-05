@@ -1,32 +1,22 @@
 import os
+import pathlib
 import subprocess
-from pathlib import Path
 
-def move_X509() -> str:
-    """move x509 proxy file from /tmp to /afs/private. Returns the afs path"""
-    try:
-        x509_localpath = (
-            [
-                line
-                for line in os.popen("voms-proxy-info").read().split("\n")
-                if line.startswith("path")
-            ][0]
-            .split(":")[-1]
-            .strip()
-        )
-    except Exception as err:
-        raise RuntimeError(
-            "x509 proxy could not be parsed, try creating it with 'voms-proxy-init --voms cms'"
-        ) from err
-    x509_path = f"{Path.home()}/private/{x509_localpath.split('/')[-1]}"
-    subprocess.run(["cp", x509_localpath, x509_path])
-    return x509_path
+
+def gridproxy():
+    """return gridproxy file path"""
+    user = os.environ["USER"]
+    gridproxy = f"/afs/cern.ch/user/{user[0]}/{user}/private/gridproxy.pem"
+    if not os.path.isfile(gridproxy):
+        print(f"creating gridproxy file {gridproxy}")
+        os.system(f"voms-proxy-init --rfc --voms cms -valid 192:00 --out {gridproxy}")
+    return gridproxy
 
 
 def submit_condor(args: dict) -> None:
     """build condor and executable files. Submit condor job"""
-    main_dir = Path.cwd()
-    condor_dir = Path(f"{main_dir}/condor")
+    main_dir = pathlib.Path.cwd()
+    condor_dir = pathlib.Path(f"{main_dir}/condor")
     
     # set jobname
     jobname = f'{args["processor"]}_{args["dataset_name"]}'
@@ -57,14 +47,14 @@ def submit_condor(args: dict) -> None:
     condor_template_file.close()
 
     # make executable file
-    x509_path = move_X509() 
+    gridproxy_path = gridproxy() 
     sh_template_file = open(f"{condor_dir}/submit.sh")
     local_sh = f"{exe_dir}/{jobname}.sh"
     sh_file = open(local_sh, "w")
     for line in sh_template_file:
         line = line.replace("MAINDIRECTORY", str(main_dir))
         line = line.replace("COMMAND", args["cmd"])
-        line = line.replace("X509PATH", x509_path)
+        line = line.replace("X509PATH", gridproxy_path)
         sh_file.write(line)
     sh_file.close()
     sh_template_file.close()
