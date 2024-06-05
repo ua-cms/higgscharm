@@ -1,9 +1,10 @@
 import numpy as np
 import mplhep as hep
 import matplotlib.pyplot as plt
-from coffea import processor
 from analysis.utils import paths
+from analysis.postprocess.utils import accumulate
 from hist.intervals import poisson_interval, ratio_uncertainty
+
 
 np.seterr(invalid="ignore")
 np.seterr(divide="ignore")
@@ -81,7 +82,7 @@ class Plotter:
         feature_hists = self.get_feature_hists(feature)
         # MC
         nominal_mc_hists = feature_hists["mc"]["nominal"]["histograms"]
-        mc_histogram = processor.accumulate(nominal_mc_hists)
+        mc_histogram = accumulate(nominal_mc_hists)
         mc_histogram_values = mc_histogram.values()
         mc_histogram_variances = mc_histogram.variances()
         mc_histogram_edges = mc_histogram.axes.edges[0]
@@ -178,7 +179,7 @@ class Plotter:
                 color="k",
             )
         except ValueError:
-            print(f"\t(no poisson-ratio error for {feature})")
+            print(f"(no poisson-ratio error for {feature})")
             
         # plot ratio uncertaity band
         ratio_up = np.concatenate([[0], band_up / mc_histogram_values])
