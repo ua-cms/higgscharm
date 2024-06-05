@@ -28,5 +28,6 @@ You can find the available datasets at [analysis/configs/dataset/2022EE](https:/
 
 Once you have run the corresponding datasets for a processor, you can get the results (plots) by typing:
 ``` 
-python3 run_postprocess.py --processor <processor> --year <dataset name> 
+python3 run_postprocess.py --processor <processor> --year <year>
 ``` 
+The plots will be saved in the same directory as the output files
