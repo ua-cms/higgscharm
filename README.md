@@ -17,10 +17,7 @@ To run a processor:
 # connect to lxplus 
 ssh <your_username>@lxplus.cern.ch
 
-# activate your proxy
-voms-proxy-init --voms cms
-
-# clone the repository (if you have not done so yet)
+# clone the repository (if you have not done it yet)
 git clone https://github.com/deoache/higgscharm.git
 cd higgscharm
 
