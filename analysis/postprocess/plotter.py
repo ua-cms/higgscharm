@@ -1,6 +1,7 @@
 import numpy as np
 import mplhep as hep
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 from analysis.utils import paths
 from analysis.postprocess.utils import accumulate
 from hist.intervals import poisson_interval, ratio_uncertainty
@@ -42,7 +43,7 @@ data_hist_kwargs = {
     "color": "k",
     "linestyle": "none",
     "marker": ".",
-    "markersize": 10.0,
+    "markersize": 13,
     "elinewidth": 1,
     "yerr": True,
     "xerr": True,
@@ -163,7 +164,7 @@ class Plotter:
             y=ratio,
             xerr=xerr / 2,
             fmt=f"ko",
-            markersize=5,
+            markersize=6,
         )
         # plot ratio y error bar
         try:
@@ -199,12 +200,13 @@ class Plotter:
         # plot horizontal reference lines
         xmin, xmax = rax.get_xlim()
         rax.hlines(1, xmin, xmax, color="k", linestyle=":")
+        """
         ymajorticks = rax.get_yticks()
         ymajorticks_mp = (ymajorticks[1:] + ymajorticks[:-1]) / 2
         yticks = np.concatenate([ymajorticks, ymajorticks_mp])
         for ytick in yticks:
             rax.hlines(ytick, xmin, xmax, color="k", linestyle=":", alpha=0.3)
-            
+        """
         # set limits
         hist_edges = np.array(
             [[i, j] for i, j in zip(mc_histogram_edges[:-1], mc_histogram_edges[1:])]
@@ -247,6 +249,9 @@ class Plotter:
             
         # set axes labels
         ax.set(xlabel=None, ylabel="Events")
+        formatter = ticker.ScalarFormatter()
+        formatter.set_scientific(False)
+        ax.yaxis.set_major_formatter(formatter)
         rax.set(xlabel=feature_label, ylabel="Data / Pred", facecolor="white")
 
         # add CMS info
