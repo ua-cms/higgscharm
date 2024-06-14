@@ -6,15 +6,16 @@ import argparse
 import awkward as ak
 import dask_awkward as dak
 from coffea.nanoevents import PFNanoAODSchema
-from analysis.processors.signal import SignalProcessor
-from analysis.processors.taggers import JetTaggersPlots
+#rom analysis.processors.signal import SignalProcessor
+#rom analysis.processors.taggers import JetTaggersPlots
 from analysis.processors.ztomumu import ZtoMuMuProcessor
-from analysis.processors.zplusjet import ZPlusJetProcessor
-from analysis.processors.tag_eff import TaggingEfficiencyProcessor
+#rom analysis.processors.zplusjet import ZPlusJetProcessor
+#rom analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
 
 
 def main(args):
+    with 
     # build dataset runnable (preprocessed fileset)
     dataset_runnable, _ = preprocess(
         args.partition_fileset,
@@ -32,15 +33,15 @@ def main(args):
     }
     # process dataset runnable and save output to a pickle file
     processors = {
-        "signal": SignalProcessor(year=args.year),
-        "tag_eff": TaggingEfficiencyProcessor(
-            year=args.year,
-            tagger=args.tagger,
-            flavor=args.flavor,
-            wp=args.wp,
-        ),
-        "taggers": JetTaggersPlots(year=args.year),
-        "zplusjet": ZPlusJetProcessor(year=args.year),
+        #signal": SignalProcessor(year=args.year),
+        #tag_eff": TaggingEfficiencyProcessor(
+        #   year=args.year,
+        #   tagger=args.tagger,
+        #   flavor=args.flavor,
+        #   wp=args.wp,
+        #,
+        #taggers": JetTaggersPlots(year=args.year),
+        #zplusjet": ZPlusJetProcessor(year=args.year),
         "ztomumu": ZtoMuMuProcessor(year=args.year),
     }
     to_compute = apply_to_fileset(
