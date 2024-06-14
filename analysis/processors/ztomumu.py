@@ -18,7 +18,6 @@ from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
-
 PFNanoAODSchema.warn_missing_crossrefs = False
 
 
@@ -27,6 +26,7 @@ def normalize(array):
         return ak.fill_none(ak.flatten(array), -99)
     else:
         return ak.fill_none(array, -99)
+
 
 @numba.njit
 def find_2lep_kernel(events_leptons, builder):
@@ -58,6 +58,7 @@ def find_2lep(events_leptons):
     if ak.backend(events_leptons) == "typetracer":
         # here we fake the output of find_2lep_kernel since
         # operating on length-zero data returns the wrong layout!
+
         ak.typetracer.length_zero_if_typetracer(
             events_leptons.charge
         )  # force touching of the necessary data
@@ -68,7 +69,7 @@ def find_2lep(events_leptons):
 class ZtoMuMuProcessor(processor.ProcessorABC):
     def __init__(self, year: str):
         self.year = year
-        
+
         self.config = load_config(
             config_type="processor", config_name="ztomumu", year=year
         )
@@ -80,7 +81,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
     def process(self, events):
         # check if dataset is MC or Data
         is_mc = hasattr(events, "genWeight")
-        
+
         # --------------------------------------------------------------
         # Object corrections
         # --------------------------------------------------------------
@@ -91,14 +92,13 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         if is_mc:
             apply_jer = True
         apply_jerc_corrections(
-            events, 
-            era=events.metadata["metadata"]["era"], 
+            events,
+            era=events.metadata["metadata"]["era"],
             year=self.year,
             apply_jec=apply_jec,
             apply_jer=apply_jer,
-            apply_junc=apply_junc
+            apply_junc=apply_junc,
         )
-
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
@@ -127,7 +127,6 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             muon_weights.add_iso_weights()
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
-            
         # --------------------------------------------------------------
         # Object selection
         # --------------------------------------------------------------
@@ -161,7 +160,6 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
         if self.config.selection["jet"]["veto_maps"]:
             jets = jets[jetvetomaps_mask(jets, self.year)]
-
         # build lorentz vectors for muons
         muons = ak.zip(
             {
@@ -210,7 +208,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             
         # get trigger mask and DeltaR matched trigger objects mask
         trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
-        trig_match_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool") 
+        trig_match_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
         for hlt_path in self.config.hlt_paths:
             if hlt_path in events.HLT.fields:
                 trig_mask = trig_mask | events.HLT[hlt_path]
@@ -220,7 +218,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                     hlt_path=hlt_path,
                 )
                 trig_match_mask = trig_match_mask | trig_obj_mask
-            
+                
         # define region selection
         selection = PackedSelection()
         selections = {
@@ -238,38 +236,85 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         # Histogram filling
         # --------------------------------------------------------------
         if dak.sum(region_selection) > 0:
-            # define feature map with non-flat arrays
-            feature_map = {
-                "z_mass": dimuon.z.p4.mass[region_selection],
-                "mu1_pt": dimuon.z.mu1.pt[region_selection],
-                "mu2_pt": dimuon.z.mu2.pt[region_selection],
-                "jet_pt": jets.pt[region_selection],
-                "jet_eta": jets.eta[region_selection],
-                "jet_phi": jets.phi[region_selection],
-                "pnet_cvsb": jets.btagPNetCvB[region_selection],
-                "pnet_cvsl": jets.btagPNetCvL[region_selection],
-                "npvs": events.PV.npvsGood[region_selection],
-                "njets": ak.num(jets[region_selection])
-            }
-            histograms = deepcopy(self.histograms)
-            if is_mc:
-                # get event weight systematic variations for MC samples
-                variations = ["nominal"] + list(weights_container.variations)
-                for variation in variations:
-                    if variation == "nominal":
-                        region_weight = weights_container.weight()[region_selection]
-                    else:
-                        region_weight = weights_container.weight(modifier=variation)[
-                            region_selection
-                        ]
+            for eta_region in ["endcap", "barrel"]:
+                eta_region_map = {
+                    "endcap": np.abs(jets.eta) > 1.479,
+                    "barrel": np.abs(jets.eta) < 1.479,
+                }
+                # define feature map
+                feature_map = {
+                    "z_mass": dimuon.z.p4.mass[region_selection],
+                    "mu1_pt": dimuon.z.mu1.pt[region_selection],
+                    "mu2_pt": dimuon.z.mu2.pt[region_selection],
+                    "jet_pt": jets.pt[eta_region_map[eta_region]][region_selection],
+                    "jet_eta": jets.eta[eta_region_map[eta_region]][region_selection],
+                    "jet_phi": jets.phi[eta_region_map[eta_region]][region_selection],
+                    "pnet_cvsb": jets.btagPNetCvB[eta_region_map[eta_region]][
+                        region_selection
+                    ],
+                    "pnet_cvsl": jets.btagPNetCvL[eta_region_map[eta_region]][
+                        region_selection
+                    ],
+                    "npvs": events.PV.npvsGood[region_selection],
+                    "njets": ak.num(jets[eta_region_map[eta_region]][region_selection]),
+                    "rho": events.Rho.fixedGridRhoFastjetAll[region_selection],
+                }
+                histograms = deepcopy(self.histograms)
+                if is_mc:
+                    # get event weight systematic variations for MC samples
+                    variations = ["nominal"] + list(weights_container.variations)
+                    for variation in variations:
+                        if variation == "nominal":
+                            region_weight = weights_container.weight()[region_selection]
+                        else:
+                            region_weight = weights_container.weight(
+                                modifier=variation
+                            )[region_selection]
+                        if self.histogram_config.layout == "individual":
+                            for feature in histograms:
+                                fill_args = {
+                                    feature: normalize(feature_map[feature]),
+                                    "variation": variation,
+                                    "weight": (
+                                        ak.flatten(
+                                            ak.ones_like(feature_map[feature])
+                                            * region_weight
+                                        )
+                                        if feature_map[feature].ndim == 2
+                                        else region_weight
+                                    ),
+                                }
+                                histograms[feature].fill(**fill_args)
+                        else:
+                            for key, features in self.histogram_config.layout.items():
+                                fill_args = {}
+                                for feature in features:
+                                    fill_args[feature] = normalize(feature_map[feature])
+                                fill_args.update(
+                                    {
+                                        "eta_region": eta_region,
+                                        "variation": variation,
+                                        "weight": (
+                                            ak.flatten(
+                                                ak.ones_like(feature_map[feature])
+                                                * region_weight
+                                            )
+                                            if feature_map[feature].ndim == 2
+                                            else region_weight
+                                        ),
+                                    }
+                                )
+                                histograms[key].fill(**fill_args)
+                else:
+                    region_weight = weights_container.weight()[region_selection]
                     if self.histogram_config.layout == "individual":
                         for feature in histograms:
                             fill_args = {
                                 feature: normalize(feature_map[feature]),
-                                "variation": variation,
+                                "variation": "nominal",
                                 "weight": (
                                     ak.flatten(
-                                        ak.ones_like(feature_map[feature]) 
+                                        ak.ones_like(feature_map[feature])
                                         * region_weight
                                     )
                                     if feature_map[feature].ndim == 2
@@ -284,55 +329,19 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                                 fill_args[feature] = normalize(feature_map[feature])
                             fill_args.update(
                                 {
-                                    "variation": variation,
+                                    "eta_region": eta_region,
+                                    "variation": "nominal",
                                     "weight": (
                                         ak.flatten(
-                                            ak.ones_like(feature_map[feature]) 
+                                            ak.ones_like(feature_map[feature])
                                             * region_weight
                                         )
                                         if feature_map[feature].ndim == 2
                                         else region_weight
-                                    )
+                                    ),
                                 }
                             )
                             histograms[key].fill(**fill_args)
-            else:
-                region_weight = weights_container.weight()[region_selection]
-                if self.histogram_config.layout == "individual":
-                    for feature in histograms:
-                        fill_args = {
-                            feature: normalize(feature_map[feature]),
-                            "variation": "nominal",
-                            "weight": (
-                                ak.flatten(
-                                    ak.ones_like(feature_map[feature]) 
-                                    * region_weight
-                                )
-                                if feature_map[feature].ndim == 2
-                                else region_weight
-                            ),
-                        }
-                        histograms[feature].fill(**fill_args)
-                else:
-                    for key, features in self.histogram_config.layout.items():
-                        fill_args = {}
-                        for feature in features:
-                            fill_args[feature] = normalize(feature_map[feature])
-                        fill_args.update(
-                            {
-                                "variation": "nominal",
-                                "weight": (
-                                    ak.flatten(
-                                        ak.ones_like(feature_map[feature]) 
-                                        * region_weight
-                                    )
-                                    if feature_map[feature].ndim == 2
-                                    else region_weight
-                                )
-                            }
-                        )
-                        histograms[key].fill(**fill_args)
-                    
         return {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
 
     def postprocess(self, accumulator):
