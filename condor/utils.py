@@ -4,7 +4,8 @@ import subprocess
 
 def submit_condor(args: dict) -> None:
     """build condor and executable files. Submit condor job"""
-    main_dir = pathlib.Path.cwd()
+    user = os.environ["USER"]
+    main_dir = pathlib.Path(f"/user/{user}/higgscharm")
     condor_dir = pathlib.Path(f"{main_dir}/condor")
     
     # set jobname
