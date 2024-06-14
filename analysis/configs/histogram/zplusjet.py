@@ -4,6 +4,7 @@ from analysis.configs.histogram_config import HistogramConfig
 histogram_config = HistogramConfig(
     add_syst_axis=True,
     add_weight=True,
+    add_cat_axis=None,
     axes={
         "z_mass": {
             "type": "Regular",

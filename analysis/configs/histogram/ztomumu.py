@@ -2,6 +2,15 @@ import numpy as np
 from analysis.configs.histogram_config import HistogramConfig
 
 histogram_config = HistogramConfig(
+    add_syst_axis=True,
+    add_weight=True,
+    add_cat_axis={
+        "eta_region": {
+            "type": "StrCategory",
+            "categories": ["endcap", "barrel"],
+            "label": "ecal region"
+        }
+    },
     axes={
         "z_mass": {
             "type": "Regular",
@@ -90,14 +99,5 @@ histogram_config = HistogramConfig(
         "njets": ["njets"],
         "npvs": ["npvs"],
         "rho": ["rho"],
-    },
-    add_syst_axis=True,
-    add_weight=True,
-    add_cat_axis={
-        "eta_region": {
-            "type": "StrCategory",
-            "categories": ["endcap", "barrel"],
-            "label": "ecal region"
-        }
     }
 )

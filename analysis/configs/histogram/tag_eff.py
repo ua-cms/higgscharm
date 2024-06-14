@@ -4,6 +4,7 @@ from analysis.configs.histogram_config import HistogramConfig
 histogram_config = HistogramConfig(
     add_syst_axis=False,
     add_weight=False,
+    add_cat_axis=None,
     axes={
         "pt": {
             "type": "Variable",

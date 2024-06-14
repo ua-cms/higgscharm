@@ -5,6 +5,7 @@ from analysis.configs.histogram_config import HistogramConfig
 histogram_config = HistogramConfig(
     add_syst_axis=False,
     add_weight=False,
+    add_cat_axis=None,
     axes={
         "deepjet_cvsl": {"type": "Regular", "bins": 50, "start": 0, "stop": 1, "label": "CvsL"},
         "deepjet_cvsb": {"type": "Regular", "bins": 50, "start": 0, "stop": 1, "label": "CvsB"},
