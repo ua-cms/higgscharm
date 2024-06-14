@@ -15,7 +15,6 @@ from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
 
 
 def main(args):
-    with 
     # build dataset runnable (preprocessed fileset)
     dataset_runnable, _ = preprocess(
         args.partition_fileset,
