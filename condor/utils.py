@@ -44,6 +44,7 @@ def submit_condor(args: dict) -> None:
         sh_file.write(line)
     sh_file.close()
     sh_template_file.close()
+    os.system(f"chmod u+x {exe_dir}/to_run_{jobname}.sh")
     
     # make executable file runner
     sh_runner_template_file = open(f"{condor_dir}/submit.sh")
@@ -55,7 +56,8 @@ def submit_condor(args: dict) -> None:
         sh_file.write(line)
     sh_file.close()
     sh_template_file.close()
+    os.system(f"chmod u+x {exe_dir}/{jobname}.sh")
     
     # submit jobs
     print(f"submitting {jobname}")
-    #subprocess.run(["condor_submit", local_condor])
+    subprocess.run(["condor_submit", local_condor])
