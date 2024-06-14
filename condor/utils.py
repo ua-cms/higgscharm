@@ -2,17 +2,6 @@ import os
 import pathlib
 import subprocess
 
-
-def gridproxy():
-    """return gridproxy file path"""
-    user = os.environ["USER"]
-    gridproxy = f"/afs/cern.ch/user/{user[0]}/{user}/private/gridproxy.pem"
-    if not os.path.isfile(gridproxy):
-        print(f"creating gridproxy file {gridproxy}")
-        os.system(f"voms-proxy-init --rfc --voms cms -valid 192:00 --out {gridproxy}")
-    return gridproxy
-
-
 def submit_condor(args: dict) -> None:
     """build condor and executable files. Submit condor job"""
     main_dir = pathlib.Path.cwd()
@@ -41,24 +30,32 @@ def submit_condor(args: dict) -> None:
         line = line.replace("EXECUTABLEPATH", str(exe_dir))
         line = line.replace("LOGPATH", str(log_dir))
         line = line.replace("JOBNAME", jobname)
-        line = line.replace("JOBFLAVOR", f'"workday"')
         condor_file.write(line)
     condor_file.close()
     condor_template_file.close()
 
     # make executable file
-    gridproxy_path = gridproxy() 
-    sh_template_file = open(f"{condor_dir}/submit.sh")
-    local_sh = f"{exe_dir}/{jobname}.sh"
+    sh_template_file = open(f"{condor_dir}/to_submit.sh")
+    local_sh = f"{exe_dir}/to_run_{jobname}.sh"
     sh_file = open(local_sh, "w")
     for line in sh_template_file:
         line = line.replace("MAINDIRECTORY", str(main_dir))
         line = line.replace("COMMAND", args["cmd"])
-        line = line.replace("X509PATH", gridproxy_path)
         sh_file.write(line)
     sh_file.close()
     sh_template_file.close()
-
+    
+    # make executable file runner
+    sh_runner_template_file = open(f"{condor_dir}/submit.sh")
+    local_sh = f"{exe_dir}/{jobname}.sh"
+    sh_file = open(local_sh, "w")
+    for line in sh_runner_template_file:
+        line = line.replace("EXECUTABLEPATH", str(exe_dir))
+        line = line.replace("JOBNAME", jobname)
+        sh_file.write(line)
+    sh_file.close()
+    sh_template_file.close()
+    
     # submit jobs
     print(f"submitting {jobname}")
-    subprocess.run(["condor_submit", local_condor])
+    #subprocess.run(["condor_submit", local_condor])

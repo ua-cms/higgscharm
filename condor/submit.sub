@@ -3,7 +3,4 @@ arguments             = $(ClusterId)$(ProcId)
 output                = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).out
 error                 = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).err
 log                   = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).log
-
-+JobFlavour           = JOBFLAVOR
-+SingularityImage     = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.10"
 queue 1
