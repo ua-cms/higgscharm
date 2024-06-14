@@ -14,19 +14,19 @@ The available processors are:
 
 To run a processor:
 ```
-# connect to lxplus 
-ssh <your_username>@lxplus.cern.ch
+# connect to T2B
+ssh -X -o ServerAliveInterval=100 <your_username>@m0.iihe.ac.be
 
 # clone the repository (if you have not done it yet)
-git clone https://github.com/deoache/higgscharm.git
+git clone -b t2b_iihe https://github.com/deoache/higgscharm.git
 cd higgscharm
 
 # submit condor jobs for some processor and dataset
 python3 submit_condor.py --processor <processor> --dataset_name <dataset name> --year <year>
 ```    
-You can find the available datasets at [analysis/configs/dataset/2022EE](https://github.com/deoache/higgscharm/tree/main/analysis/configs/dataset/2022EE). The `tag_eff` processor requires additional arguments: `--tagger` (deepjet, pnet or part), `--flavor` (c or b), and `--wp` (loose, medium or tight)
+You can find the available datasets at [analysis/configs/dataset/2022EE](https://github.com/deoache/higgscharm/tree/main/analysis/configs/dataset/2022EE). The `tag_eff` processor requires additional arguments: `--tagger` (deepjet, pnet or part), `--flavor` (c or b), and `--wp` (loose, medium or tight).
 
-Once you have run the corresponding datasets for a processor, you can get the results (plots) by typing:
+Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs`. Once you have run the corresponding datasets for a processor, you can get the results (plots) by typing:
 ``` 
 python3 run_postprocess.py --processor <processor> --year <year>
 ``` 
