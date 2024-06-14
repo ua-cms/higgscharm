@@ -1,10 +1,8 @@
 import hist
 import hist.dask as hda
-from analysis.configs.histogram_config import HistogramConfig
 
 
 class HistBuilder:
-    
     def __init__(self, histogram_config):
         self.histogram_config = histogram_config
         self.axis_opt = {
@@ -16,6 +14,9 @@ class HistBuilder:
         self.syst_axis = self.build_axis(
             {"variation": {"type": "StrCategory", "categories": [], "growth": True}}
         )
+        if self.histogram_config.add_cat_axis:
+            self.cat_axis = self.build_axis(self.histogram_config.add_cat_axis)
+            
 
     def build_axis(self, axis_config: dict):
         """build a hist axis object from an axis config"""
@@ -37,8 +38,11 @@ class HistBuilder:
             axes = [self.build_axis({name: args})]
             if self.histogram_config.add_syst_axis:
                 axes.append(self.syst_axis)
+            if self.histogram_config.add_cat_axis:
+                axes.append(self.cat_axis)
             if self.histogram_config.add_weight:
                 axes.append(hist.storage.Weight())
+            
             histograms[name] = hda.hist.Hist(*axes)
         return histograms
     
@@ -49,6 +53,8 @@ class HistBuilder:
                 axes.append(self.build_axis({name: args}))
         if self.histogram_config.add_syst_axis:
             axes.append(self.syst_axis)
+        if self.histogram_config.add_cat_axis:
+            axes.append(self.cat_axis)
         if self.histogram_config.add_weight:
             axes.append(hist.storage.Weight())
         histograms = hda.hist.Hist(*axes)

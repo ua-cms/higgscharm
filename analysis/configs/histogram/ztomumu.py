@@ -1,10 +1,7 @@
 import numpy as np
 from analysis.configs.histogram_config import HistogramConfig
 
-
 histogram_config = HistogramConfig(
-    add_syst_axis=True,
-    add_weight=True,
     axes={
         "z_mass": {
             "type": "Regular",
@@ -74,14 +71,33 @@ histogram_config = HistogramConfig(
             "categories": np.arange(0, 16),
             "label": "$N_{jets}$",
         },
+        "rho": {
+            "type": "Regular",
+            "bins": 60,
+            "start": 0,
+            "stop": 60,
+            "label": r"$\rho$",
+        },
     },
     layout={
         "z_mass": ["z_mass"],
         "mu1_pt": ["mu1_pt"],
         "mu2_pt": ["mu2_pt"],
-        "jet_kin": ["jet_pt", "jet_eta", "jet_phi"],
+        "jet_pt": ["jet_pt"],
+        "jet_eta":["jet_eta"], 
+        "jet_phi": ["jet_phi"],
         "jet_tag": ["pnet_cvsl", "pnet_cvsb"],
         "njets": ["njets"],
         "npvs": ["npvs"],
+        "rho": ["rho"],
     },
+    add_syst_axis=True,
+    add_weight=True,
+    add_cat_axis={
+        "eta_region": {
+            "type": "StrCategory",
+            "categories": ["endcap", "barrel"],
+            "label": "ecal region"
+        }
+    }
 )
