@@ -236,6 +236,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         # Histogram filling
         # --------------------------------------------------------------
         if dak.sum(region_selection) > 0:
+            histograms = deepcopy(self.histograms)
             for eta_region in ["endcap", "barrel"]:
                 eta_region_map = {
                     "endcap": np.abs(jets.eta) > 1.479,
@@ -259,7 +260,6 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                     "njets": ak.num(jets[eta_region_map[eta_region]][region_selection]),
                     "rho": events.Rho.fixedGridRhoFastjetAll[region_selection],
                 }
-                histograms = deepcopy(self.histograms)
                 if is_mc:
                     # get event weight systematic variations for MC samples
                     variations = ["nominal"] + list(weights_container.variations)
