@@ -6,6 +6,7 @@ import argparse
 import awkward as ak
 import dask_awkward as dak
 from coffea.nanoevents import PFNanoAODSchema
+from analysis.processors.flavor import FlavorProcessor
 from analysis.processors.signal import SignalProcessor
 from analysis.processors.taggers import JetTaggersPlots
 from analysis.processors.ztomumu import ZtoMuMuProcessor
@@ -42,6 +43,7 @@ def main(args):
         "taggers": JetTaggersPlots(year=args.year),
         "zplusjet": ZPlusJetProcessor(year=args.year),
         "ztomumu": ZtoMuMuProcessor(year=args.year),
+        "flavor": FlavorProcessor(year=args.year),
     }
     to_compute = apply_to_fileset(
         processors[args.processor],
@@ -62,7 +64,7 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="tag_eff",
-        help="processor to be used {signal, tag_eff, taggers, zplusjet, ztomumu}",
+        help="processor to be used {signal, tag_eff, taggers, zplusjet, ztomumu, flavor}",
     )
     parser.add_argument(
         "--dataset_name",
@@ -82,7 +84,7 @@ if __name__ == "__main__":
         dest="year",
         type=str,
         default="",
-        help="year of the data {2022EE}",
+        help="year of the data {2022, 2022EE}",
     )
     parser.add_argument(
         "--output_path",
