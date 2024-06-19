@@ -1,7 +1,7 @@
 from analysis.configs.dataset_config import DatasetConfig
 
 dataset_config = DatasetConfig(
-    name="DYto2L_2Jets",
+    name="DYto2L_2Jets_10to50",
     process="DY+Jets",
     path=(
         "/pnfs/iihe/cms/store/user/daocampo/PFNano_Run3/"
