@@ -26,6 +26,7 @@ class TaggingEfficiencyProcessor(processor.ProcessorABC):
 
     def process(self, events):
         # apply JEC/JER corrections
+
         apply_jerc_corrections(
             events,
             era=events.metadata["metadata"]["era"],
@@ -35,6 +36,7 @@ class TaggingEfficiencyProcessor(processor.ProcessorABC):
             apply_junc=False,
         )
         # impose some quality and minimum pt cuts on the jets
+
         jets = events.Jet
         jets = jets[
             (jets.pt >= self.config.selection["jet"]["pt"])
@@ -42,22 +44,25 @@ class TaggingEfficiencyProcessor(processor.ProcessorABC):
         ]
         if self.config.selection["jet"]["veto_maps"]:
             jets = jets[jetvetomaps_mask(jets, self.year)]
-            
         # Histogram filling
+
         feature_map = {
             "pt": ak.flatten(jets.pt),
             "eta": ak.flatten(jets.eta),
             "flavor": ak.values_astype(ak.flatten(jets.hadronFlavour), "int32"),
             "pass_wp": ak.flatten(
                 working_points.jet_tagger(
-                    jets=jets, flavor=self.flavor, tagger=self.tagger, wp=self.wp
+                    jets=jets,
+                    flavor=self.flavor,
+                    tagger=self.tagger,
+                    wp=self.wp,
+                    year=self.year,
                 )
             ),
         }
         histogram = deepcopy(self.histograms)
         for key in self.histogram_config.layout:
             histogram[key].fill(**feature_map)
-
         return {"histograms": histogram}
 
     def postprocess(self, accumulator):

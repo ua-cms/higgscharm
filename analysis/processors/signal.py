@@ -183,6 +183,7 @@ class SignalProcessor(processor.ProcessorABC):
                 flavor="c",
                 tagger=self.config.selection["jet"]["tagger"],
                 wp=self.config.selection["jet"]["tagger_wp"],
+                year=self.year
             )
         ]
         # build Lorentz vectors for muons
