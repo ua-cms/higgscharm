@@ -32,6 +32,7 @@ def add_pileup_weight(
         get_pog_json(json_name="pileup", year=year)
     )
     year_to_corr = {
+        "2022": "Collisions2022_355100_357900_eraBCD_GoldenJson",
         "2022EE": "Collisions2022_359022_362760_eraEFG_GoldenJson",
     }
     # get number of true interactions

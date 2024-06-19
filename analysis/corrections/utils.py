@@ -9,6 +9,7 @@ POG_JSONS = {
     "ctag": ["BTV", "ctagging.json.gz"]
 }
 POG_YEARS = {
+    "2022": "2022_Summer22",
     "2022EE": "2022_Summer22EE",
 }
 
@@ -21,7 +22,7 @@ def get_pog_json(json_name: str, year: str) -> str:
         json_name:
             json name {pileup, muon, jetvetomaps}
         year:
-            dataset year {2022EE}
+            dataset year {2022, 2022EE}
     """
     if json_name in POG_JSONS:
         pog_json = POG_JSONS[json_name]
