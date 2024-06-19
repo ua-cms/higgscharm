@@ -34,6 +34,13 @@ histogram_config = HistogramConfig(
             "stop": 1,
             "label": "CvsB",
         },
+        "pnet_cvsl": {
+            "type": "Regular",
+            "bins": 50,
+            "start": 0,
+            "stop": 1,
+            "label": "CvsL",
+        },
         "flavor": {
             "type": "IntCategory",
             "categories": [0, 4, 5],
@@ -44,5 +51,6 @@ histogram_config = HistogramConfig(
         "eta":["jet_eta", "flavor"], 
         "phi": ["jet_phi", "flavor"],
         "cvsb": ["pnet_cvsb", "flavor"],
+        "cvsl": ["pnet_cvsl", "flavor"],
     }
 )
