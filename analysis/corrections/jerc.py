@@ -11,28 +11,68 @@ from coffea.jetmet_tools import JECStack, CorrectedJetsFactory
 
 JEC_PARAMS = {
     "runs": {
+        "2022": ["C", "D"],
         "2022EE": ["E", "F", "G"],
     },
     "jec_levels_mc": {
+        "2022": ["L1FastJet", "L2Relative", "L3Absolute"],
         "2022EE": ["L1FastJet", "L2Relative", "L3Absolute"],
     },
     "jec_levels_data": {
+        "2022": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
         "2022EE": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
     },
     # I modified the original names since coffea jetmet_tools requires file names
     # of "5 words in length" ('Summer22EE22Sep2023_V2_MC_L1FastJet_AK4PFPuppi.jec')
     "jec_tags": {
+        "2022": "Summer2222Sep2023_V2_MC",
         "2022EE": "Summer22EE22Sep2023_V2_MC",
     },
     "jer_tags": {
+        "2022": "Summer2222Sep2023_JRV1_MC",
         "2022EE": "Summer22EE22Sep2023_JRV1_MC",
     },
     "jec_data_tags": {
+        "2022": {
+            "Summer2222Sep2023_RunCD_V2_DATA": ["C", "D"]
+        },
         "2022EE": {
-            "Summer22EE22Sep2023_RunE_V2_DATA": ["E", "F", "G"],
+            "Summer22EE22Sep2023_RunE_V2_DATA": ["E"],
+            "Summer22EE22Sep2023_RunF_V2_DATA": ["F"],
+            "Summer22EE22Sep2023_RunG_V2_DATA": ["G"],
         },
     },
     "jec_variations": {
+        "2022": [
+            "AbsoluteMPFBias",
+            "AbsoluteScale",
+            "AbsoluteStat",
+            "FlavorQCD",
+            "Fragmentation",
+            "PileUpDataMC",
+            "PileUpPtBB",
+            "PileUpPtEC1",
+            "PileUpPtEC2",
+            "PileUpPtHF",
+            "PileUpPtRef",
+            "RelativeFSR",
+            "RelativeJEREC1",
+            "RelativeJEREC2",
+            "RelativeJERHF",
+            "RelativePtBB",
+            "RelativePtEC1",
+            "RelativePtEC2",
+            "RelativePtHF",
+            "RelativeBal",
+            "RelativeSample",
+            "RelativeStatEC",
+            "RelativeStatFSR",
+            "RelativeStatHF",
+            "SinglePionECAL",
+            "SinglePionHCAL",
+            "TimePtEta",
+            "Total",
+        ],
         "2022EE": [
             "AbsoluteMPFBias",
             "AbsoluteScale",
