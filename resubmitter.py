@@ -8,13 +8,13 @@ def main(args):
     main_dir = Path.cwd()
     outputs_path = f"{args.output_path}/{args.processor}/{args.year}"
     print(f"Reading outputs from: {outputs_path}")
-    
+
     # get jobs to be run
     condor_path = f"{main_dir}/condor/{args.processor}/{args.year}"
     condor_files = glob.glob(f"{condor_path}/*.sub", recursive=True)
     total_files = len(condor_files)
     print(f"Jobs to be run: {total_files}")
-    
+
     # get jobs already run
     dataset_path = f"{main_dir}/analysis/configs/dataset/{args.year}"
     datasets = [
@@ -23,12 +23,12 @@ def main(args):
     ]
     run_done = []
     for sample in datasets:
-        output_list = glob.glob(f"{outputs_path}/{sample}*.pkl")
+        output_list = glob.glob(f"{outputs_path}/*{sample}*.pkl")
         for f in output_list:
-            run_done.append(f.split("/")[-1].replace(".pkl", ""))
+            run_done.append(f.split("/")[-1].replace(".pkl", "").replace(f"{args.year}_", ""))
     total_run = len(run_done)
     print(f"Jobs already run: {total_run}")
-    
+
     # show (and optionally resubmit) missing jobs
     print(f"Missing jobs {total_files - total_run}:")
     condor_files_keys = [
@@ -40,7 +40,7 @@ def main(args):
             print(f)
             if args.resubmit == "True":
                 subprocess.run(["condor_submit", sub])
-    
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
