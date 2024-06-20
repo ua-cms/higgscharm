@@ -2,6 +2,7 @@ from analysis.configs.processor_config import ProcessorConfig
 
 processor_config = ProcessorConfig(
     lumimask=None,
+    lumidata=None,
     hlt_paths=None,
     selection={
         "muon": {

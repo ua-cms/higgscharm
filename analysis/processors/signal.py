@@ -4,11 +4,11 @@ import awkward as ak
 import dask_awkward as dak
 from copy import deepcopy
 from coffea import processor
-from coffea.lumi_tools import LumiMask
 from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
+from coffea.lumi_tools import LumiData, LumiList, LumiMask
 from analysis.configs import load_config
 from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
@@ -240,12 +240,19 @@ class SignalProcessor(processor.ProcessorABC):
         # --------------------------------------------------------------
         # Event selection
         # --------------------------------------------------------------
-        # get luminosity mask
+       # get luminosity mask
         if is_mc:
             lumi_mask = ak.ones_like(events.PV.npvsGood)
         else:
             lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
+            
+            # get integrated luminosity in pb^-1
+            lumi_data = LumiData(self.config.lumidata, is_inst_lumi=True)
+            lumi_list = LumiList(
+                events[lumi_mask].run, events[lumi_mask].luminosityBlock
+            )
+            lumi = lumi_data.get_lumi(lumi_list)
             
         # get trigger mask and DeltaR matched trigger objects mask
         trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
@@ -379,7 +386,11 @@ class SignalProcessor(processor.ProcessorABC):
                         )
                         histograms[key].fill(**fill_args)
                     
-        return {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
+        output = {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
+        if not is_mc:
+            output.update({"lumi": lumi})
+            
+        return output
 
     def postprocess(self, accumulator):
         pass

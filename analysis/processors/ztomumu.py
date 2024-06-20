@@ -4,11 +4,11 @@ import awkward as ak
 import dask_awkward as dak
 from copy import deepcopy
 from coffea import processor
-from coffea.lumi_tools import LumiMask
 from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
+from coffea.lumi_tools import LumiData, LumiList, LumiMask
 from analysis.configs import load_config
 from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
@@ -17,6 +17,7 @@ from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.jetvetomaps import jetvetomaps_mask
+
 
 PFNanoAODSchema.warn_missing_crossrefs = False
 
@@ -58,7 +59,6 @@ def find_2lep(events_leptons):
     if ak.backend(events_leptons) == "typetracer":
         # here we fake the output of find_2lep_kernel since
         # operating on length-zero data returns the wrong layout!
-
         ak.typetracer.length_zero_if_typetracer(
             events_leptons.charge
         )  # force touching of the necessary data
@@ -127,6 +127,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             muon_weights.add_iso_weights()
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
+            
         # --------------------------------------------------------------
         # Object selection
         # --------------------------------------------------------------
@@ -160,6 +161,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
         if self.config.selection["jet"]["veto_maps"]:
             jets = jets[jetvetomaps_mask(jets, self.year)]
+            
         # build lorentz vectors for muons
         muons = ak.zip(
             {
@@ -196,6 +198,8 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         )
         dimuon = dimuon[z_mass_window]
 
+        # compute luminosity
+        
         # --------------------------------------------------------------
         # Event selection
         # --------------------------------------------------------------
@@ -205,6 +209,13 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         else:
             lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
+            
+            # get integrated luminosity in pb^-1
+            lumi_data = LumiData(self.config.lumidata, is_inst_lumi=True)
+            lumi_list = LumiList(
+                events[lumi_mask].run, events[lumi_mask].luminosityBlock
+            )
+            lumi = lumi_data.get_lumi(lumi_list)
             
         # get trigger mask and DeltaR matched trigger objects mask
         trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
@@ -342,7 +353,12 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                                 }
                             )
                             histograms[key].fill(**fill_args)
-        return {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
+        
+        output = {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
+        if not is_mc:
+            output.update({"lumi": lumi})
+            
+        return output
 
     def postprocess(self, accumulator):
         pass

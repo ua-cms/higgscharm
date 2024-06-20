@@ -4,11 +4,11 @@ import awkward as ak
 import dask_awkward as dak
 from copy import deepcopy
 from coffea import processor
-from coffea.lumi_tools import LumiMask
 from coffea.nanoevents import PFNanoAODSchema
 from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
+from coffea.lumi_tools import LumiData, LumiList, LumiMask
 from analysis.configs import load_config
 from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
@@ -158,17 +158,16 @@ class FlavorProcessor(processor.ProcessorABC):
             jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
         if self.config.selection["jet"]["veto_maps"]:
             jets = jets[jetvetomaps_mask(jets, self.year)]
-
-        jets = jets[
-            working_points.jet_tagger(
-                jets=jets,
-                flavor="c",
-                tagger="pnet",
-                wp="tight",
-                year=self.year,
-            )
-        ]
-        #jets = jets[jets.btagPNetCvL > 0.160] # Medium WP
+        if self.config.selection["jet"]["c_pnet_wp"]:
+            jets = jets[
+                working_points.jet_tagger(
+                    jets=jets,
+                    flavor="c",
+                    tagger="pnet",
+                    wp=self.config.selection["jet"]["c_pnet_wp"],
+                    year=self.year,
+                )
+            ]
 
         # build lorentz vectors for muons
         muons = ak.zip(
@@ -215,6 +214,13 @@ class FlavorProcessor(processor.ProcessorABC):
         else:
             lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
+            
+            # get integrated luminosity in pb^-1
+            lumi_data = LumiData(self.config.lumidata, is_inst_lumi=True)
+            lumi_list = LumiList(
+                events[lumi_mask].run, events[lumi_mask].luminosityBlock
+            )
+            lumi = lumi_data.get_lumi(lumi_list)
 
         # get trigger mask and DeltaR matched trigger objects mask
         trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
@@ -308,7 +314,11 @@ class FlavorProcessor(processor.ProcessorABC):
                     )
                     histograms[key].fill(**fill_args)
 
-        return {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
-
+        output = {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
+        if not is_mc:
+            output.update({"lumi": lumi})
+            
+        return output
+    
     def postprocess(self, accumulator):
         pass

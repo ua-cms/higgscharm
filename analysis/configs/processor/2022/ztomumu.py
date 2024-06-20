@@ -2,6 +2,7 @@ from analysis.configs.processor_config import ProcessorConfig
 
 processor_config = ProcessorConfig(
     lumimask="analysis/data/Cert_Collisions2022_355100_362760_Golden.txt",
+    lumidata="analysis/data/lumi2022.csv",
     hlt_paths=["IsoMu24", "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"],
     selection={
         "muon": {
