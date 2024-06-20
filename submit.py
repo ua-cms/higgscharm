@@ -52,7 +52,7 @@ def main(args):
     )
     (computed,) = dask.compute(to_compute)
     
-    save_path = f"{args.output_path}/{args.dataset_name}"
+    save_path = f"{args.output_path}/{args.year}_{args.dataset_name}"
     with open(f"{save_path}.pkl", "wb") as handle:
         pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
