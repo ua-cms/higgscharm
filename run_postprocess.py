@@ -5,6 +5,29 @@ from analysis.postprocess.utils import print_header
 from analysis.postprocess.postprocessor import Postprocessor
 
 
+def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
+    plotter = Plotter(
+        processor=args.processor,
+        processed_histograms=processed_histograms,
+        tagger=args.tagger,
+        flavor=args.flavor,
+        wp=args.wp,
+        year=args.year,
+        lumi=lumi,
+        cat_axis=cat_axis
+    )
+    print_header("plotting histograms")
+    for key, features in histograms_config.layout.items():
+        for feature in features:
+            print(feature)
+            plotter.plot_feature_hist(
+                feature=feature,
+                feature_label=histograms_config.axes[feature]["label"],
+                yratio_limits=(0, 2),
+                savefig=True,
+            )
+
+
 def main(args):
     # process output histograms
     postprocessor = Postprocessor(
@@ -16,27 +39,18 @@ def main(args):
         output_dir=args.output_dir,
     )
     processed_histograms = postprocessor.process_histograms()
+    
     # plot histograms
-    plotter = Plotter(
-        processor=args.processor,
-        processed_histograms=processed_histograms,
-        tagger=args.tagger,
-        flavor=args.flavor,
-        wp=args.wp,
-        year=args.year,
-        lumi=postprocessor.lumi,
-    )
     histograms_config = load_config(config_type="histogram", config_name=args.processor)
-    print_header("plotting histograms")
-    for key, features in histograms_config.layout.items():
-        for feature in features:
-            print(feature)
-            plotter.plot_feature_hist(
-                feature=feature,
-                feature_label=histograms_config.axes[feature]["label"],
-                yratio_limits=(0, 2),
-                savefig=True,
-            )
+    if histograms_config.add_cat_axis:
+        for k in histograms_config.add_cat_axis:
+            categories = histograms_config.add_cat_axis[k]["categories"] + [sum]
+            for category in categories:
+                print(f"plotting {category} category of {k} axis")
+                plot(args, processed_histograms, histograms_config, postprocessor.lumi, (k, category))
+    else:
+        plot(args, processed_histograms, histograms_config, postprocessor.lumi, None)
+        
 
 
 if __name__ == "__main__":

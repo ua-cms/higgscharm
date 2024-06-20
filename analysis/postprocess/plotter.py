@@ -63,6 +63,7 @@ class Plotter:
         wp: str,
         year: str,
         lumi: int,
+        cat_axis: tuple
     ):
         self.processor = processor
         self.processed_histograms = processed_histograms
@@ -71,6 +72,90 @@ class Plotter:
         self.wp = wp
         self.year = year
         self.lumi = lumi
+        self.cat_axis = cat_axis
+        
+    def get_feature_hists(self, feature: str) -> dict:
+        """get nominal and variations histograms"""
+        # https://cms-analysis.docs.cern.ch/guidelines/plotting/colors/
+        colors = iter(
+            [
+                "#3f90da",
+                "#ffa90e",
+                "#bd1f01",
+                "#94a4a2",
+                "#832db6",
+                "#a96b59",
+                "#e76300",
+                "#b9ac70",
+                "#717581",
+                "#92dadd",
+            ]
+        )
+        feature_hists = {
+            "mc": {
+                "nominal": {"histograms": [], "labels": [], "colors": []},
+                "variations": {},
+            },
+        }
+        for process, histogram_dicts in self.processed_histograms.items():
+            if histogram_dicts is None:
+                continue
+            if feature in histogram_dicts:
+                histogram = histogram_dicts[feature]
+            else:
+                for key in histogram_dicts:
+                    if feature in histogram_dicts[key].axes.name:
+                        if self.cat_axis:
+                            histogram = histogram_dicts[key].project(feature, "variation", self.cat_axis[0])
+                        else:
+                            histogram = histogram_dicts[key].project(feature, "variation")
+                        break
+            if self.cat_axis:
+                if process != "Data":
+                    for variation in histogram.axes["variation"]:
+                        if variation == "nominal":
+                            # add nominal histograms, their labels and colors
+                            feature_hists["mc"]["nominal"]["histograms"].append(
+                                histogram[{"variation": "nominal", self.cat_axis[0]: self.cat_axis[1]}]
+                            )
+                            feature_hists["mc"]["nominal"]["labels"].append(process)
+                            feature_hists["mc"]["nominal"]["colors"].append(next(colors))
+                        else:
+                            variation_hist = histogram[{"variation": variation, self.cat_axis[0]: self.cat_axis[1]}]
+                            if variation in feature_hists["mc"]["variations"]:
+                                feature_hists["mc"]["variations"][variation].append(
+                                    variation_hist
+                                )
+                            else:
+                                feature_hists["mc"]["variations"][variation] = [
+                                    variation_hist
+                                ]
+                else:
+                    feature_hists["data"] = histogram[{"variation": "nominal", self.cat_axis[0]: self.cat_axis[1]}]
+            else:
+                if process != "Data":
+                    for variation in histogram.axes["variation"]:
+                        if variation == "nominal":
+                            # add nominal histograms, their labels and colors
+                            feature_hists["mc"]["nominal"]["histograms"].append(
+                                histogram[{"variation": "nominal"}]
+                            )
+                            feature_hists["mc"]["nominal"]["labels"].append(process)
+                            feature_hists["mc"]["nominal"]["colors"].append(next(colors))
+                        else:
+                            variation_hist = histogram[{"variation": variation}]
+                            if variation in feature_hists["mc"]["variations"]:
+                                feature_hists["mc"]["variations"][variation].append(
+                                    variation_hist
+                                )
+                            else:
+                                feature_hists["mc"]["variations"][variation] = [
+                                    variation_hist
+                                ]
+                else:
+                    feature_hists["data"] = histogram[{"variation": "nominal"}]
+        return feature_hists
+    
 
     def plot_feature_hist(
         self,
@@ -272,62 +357,7 @@ class Plotter:
             fname = f"{processor_output_dir}/{self.processor}_{feature}"
             if self.tagger and self.wp:
                 fname += f"_{self.tagger}_{self.wp}"
+            if self.cat_axis:
+                fname += f"_{self.cat_axis[0]}_{self.cat_axis[1]}"
             fig.savefig(f"{fname}_{self.year}.png")
             fig.savefig(f"{fname}_{self.year}.pdf")
-
-            
-    def get_feature_hists(self, feature: str) -> dict:
-        """get nominal and variations histograms"""
-        # https://cms-analysis.docs.cern.ch/guidelines/plotting/colors/
-        colors = iter(
-            [
-                "#3f90da",
-                "#ffa90e",
-                "#bd1f01",
-                "#94a4a2",
-                "#832db6",
-                "#a96b59",
-                "#e76300",
-                "#b9ac70",
-                "#717581",
-                "#92dadd",
-            ]
-        )
-        feature_hists = {
-            "mc": {
-                "nominal": {"histograms": [], "labels": [], "colors": []},
-                "variations": {},
-            },
-        }
-        for process, histogram_dicts in self.processed_histograms.items():
-            if histogram_dicts is None:
-                continue
-            if feature in histogram_dicts:
-                histogram = histogram_dicts[feature]
-            else:
-                for key in histogram_dicts:
-                    if feature in histogram_dicts[key].axes.name:
-                        histogram = histogram_dicts[key].project(feature, "variation")
-                        break
-            if process != "Data":
-                for variation in histogram.axes["variation"]:
-                    if variation == "nominal":
-                        # add nominal histograms, their labels and colors
-                        feature_hists["mc"]["nominal"]["histograms"].append(
-                            histogram[{"variation": "nominal"}]
-                        )
-                        feature_hists["mc"]["nominal"]["labels"].append(process)
-                        feature_hists["mc"]["nominal"]["colors"].append(next(colors))
-                    else:
-                        variation_hist = histogram[{"variation": variation}]
-                        if variation in feature_hists["mc"]["variations"]:
-                            feature_hists["mc"]["variations"][variation].append(
-                                variation_hist
-                            )
-                        else:
-                            feature_hists["mc"]["variations"][variation] = [
-                                variation_hist
-                            ]
-            else:
-                feature_hists["data"] = histogram[{"variation": "nominal"}]
-        return feature_hists
