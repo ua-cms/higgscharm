@@ -58,14 +58,13 @@ class Postprocessor:
         """
         group output .pkl files and group histograms, lumi, and sum of weights by sample
         """
+        print(f"reading outputs from {self.output_dir}")
         extension = ".pkl"
         output_files = glob.glob(f"{self.output_dir}/*{extension}", recursive=True)
-
         n_output_files = len(output_files)
         assert n_output_files != 0, "No output files found"
 
         print_header(f"grouping {self.year} outputs by sample")
-        print(f"reading outputs from {self.output_dir}")
         
         # group output file paths by sample name
         grouped_outputs = {}
