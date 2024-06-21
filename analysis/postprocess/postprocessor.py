@@ -59,7 +59,6 @@ class Postprocessor:
         group output .pkl files and group histograms, lumi, and sum of weights by sample
         """
         extension = ".pkl"
-        extension = ".pkl"
         output_files = glob.glob(f"{self.output_dir}/*{extension}", recursive=True)
 
         n_output_files = len(output_files)
@@ -123,6 +122,7 @@ class Postprocessor:
         self.accumulated_sumw = accumulated_sumw
         self.accumulated_lumi = accumulated_lumi
 
+        
     def set_weights(self):
         """
         compute luminosity and set xsec-lumi weights
@@ -131,20 +131,8 @@ class Postprocessor:
             weights (dict)
             lumi (float)
         """
-        # get integrated luminosity (/pb)
-        self.lumi = 0
-        for l in self.accumulated_lumi.values():
-            self.lumi += l
-            
-        lumis = {
-            # https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit#slide=id.g289f499aa6b_2_52
-            "2022": {"C": 5010.4, "D": 2970.0},
-            "2022EE": {"E": 5807.0, "F": 17781.9, "G": 3082.8},
-            # https://docs.google.com/presentation/d/1TjPem5jX0fzqvTGl271_nQFoVBabsrdrO0i8Qo1uD5E/edit#slide=id.g289f499aa6b_2_58
-            "2023": {"C": 17794.0, "D": 9451.0},
-        }
-        self.expected_lumi = sum(lumis[self.year].values())
-        
+        # get integrated luminosity (/pb) in data 
+        self.lumi = sum(self.accumulated_lumi.values())
         # set lumi-xsec weights
         self.weights = {}
         self.xsecs = {}
@@ -164,7 +152,6 @@ class Postprocessor:
         print_header(f"scaling histograms to lumi-xsec weights")
         print(f"luminosities (/pb): {json.dumps(self.accumulated_lumi, indent=2)}")
         print(f"total luminosity (/fb): {self.lumi * 1e-3}")
-        print(f"expected luminosity (/fb): {self.expected_lumi * 1e-3}")
         print(f"sumw of weights: {json.dumps(self.accumulated_sumw, indent=2)}")
         print(f"cross sections: {json.dumps(self.xsecs, indent=2)}")
         print(f"lumi-xsec weights: {json.dumps(self.weights, indent=2)}")
