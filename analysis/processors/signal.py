@@ -248,7 +248,7 @@ class SignalProcessor(processor.ProcessorABC):
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
             
             # get integrated luminosity in pb^-1
-            lumi_data = LumiData(self.config.lumidata, is_inst_lumi=True)
+            lumi_data = LumiData(self.config.lumidata)
             lumi_list = LumiList(
                 events[lumi_mask].run, events[lumi_mask].luminosityBlock
             )
