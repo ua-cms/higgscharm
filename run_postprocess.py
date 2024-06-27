@@ -1,8 +1,8 @@
 import argparse
 from analysis.configs import load_config
 from analysis.postprocess.plotter import Plotter
-from analysis.postprocess.utils import print_header
 from analysis.postprocess.postprocessor import Postprocessor
+from analysis.postprocess.utils import print_header, accumulate
 
 
 def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
@@ -30,16 +30,42 @@ def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
 
 def main(args):
     # process output histograms
-    postprocessor = Postprocessor(
-        processor=args.processor,
-        tagger=args.tagger,
-        flavor=args.flavor,
-        wp=args.wp,
-        year=args.year,
-        output_dir=args.output_dir,
-    )
-    processed_histograms = postprocessor.process_histograms()
-    
+    if args.year != "full2022":
+        postprocessor = Postprocessor(
+            processor=args.processor,
+            tagger=args.tagger,
+            flavor=args.flavor,
+            wp=args.wp,
+            year=args.year,
+            output_dir=args.output_dir,
+        )
+        processed_histograms = postprocessor.process_histograms()
+        lumi = postprocessor.lumi
+    else:
+        lumi = 0
+        pre_processed_histograms = {}
+        for year in ["2022", "2022EE"]:
+            postprocessor = Postprocessor(
+                processor=args.processor,
+                tagger=args.tagger,
+                flavor=args.flavor,
+                wp=args.wp,
+                year=year,
+                output_dir=args.output_dir,
+            )
+            pre_processed_histograms[year] = postprocessor.process_histograms()
+            lumi += postprocessor.lumi
+            
+        accumulated_processed_histograms = {}
+        for sample in pre_processed_histograms["2022"]:
+            accumulated_processed_histograms[sample] = {}
+            for feature in pre_processed_histograms["2022"][sample]:
+                accumulated_processed_histograms[sample][feature] = (
+                    pre_processed_histograms["2022"][sample][feature]
+                    + pre_processed_histograms["2022EE"][sample][feature]
+                )
+        processed_histograms = accumulated_processed_histograms
+            
     # plot histograms
     histograms_config = load_config(config_type="histogram", config_name=args.processor)
     if histograms_config.add_cat_axis:
@@ -47,9 +73,9 @@ def main(args):
             categories = histograms_config.add_cat_axis[k]["categories"] + [sum]
             for category in categories:
                 print(f"plotting {category} category of {k} axis")
-                plot(args, processed_histograms, histograms_config, postprocessor.lumi, (k, category))
+                plot(args, processed_histograms, histograms_config, lumi, (k, category))
     else:
-        plot(args, processed_histograms, histograms_config, postprocessor.lumi, None)
+        plot(args, processed_histograms, histograms_config, lumi, None)
         
 
 
