@@ -28,6 +28,8 @@ You can find the available datasets at [analysis/configs/dataset/2022EE](https:/
 
 Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs`. Once you have run the corresponding datasets for a processor, you can get the results (plots) by typing:
 ``` 
+singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask-almalinux8:latest
+
 python3 run_postprocess.py --processor <processor> --year <year>
 ``` 
 The plots will be saved in the same directory as the output files
