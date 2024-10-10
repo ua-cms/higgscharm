@@ -127,7 +127,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             muon_weights.add_iso_weights()
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
-            
+
         # --------------------------------------------------------------
         # Object selection
         # --------------------------------------------------------------
@@ -161,7 +161,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
         if self.config.selection["jet"]["veto_maps"]:
             jets = jets[jetvetomaps_mask(jets, self.year)]
-            
+
         # build lorentz vectors for muons
         muons = ak.zip(
             {
@@ -198,8 +198,6 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         )
         dimuon = dimuon[z_mass_window]
 
-        # compute luminosity
-        
         # --------------------------------------------------------------
         # Event selection
         # --------------------------------------------------------------
@@ -209,14 +207,14 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         else:
             lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
-            
+
             # get integrated luminosity in pb^-1
             lumi_data = LumiData(self.config.lumidata)
             lumi_list = LumiList(
                 events[lumi_mask].run, events[lumi_mask].luminosityBlock
             )
             lumi = lumi_data.get_lumi(lumi_list)
-            
+
         # get trigger mask and DeltaR matched trigger objects mask
         trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
         trig_match_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
@@ -229,7 +227,7 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                     hlt_path=hlt_path,
                 )
                 trig_match_mask = trig_match_mask | trig_obj_mask
-                
+
         # define region selection
         selection = PackedSelection()
         selections = {
@@ -242,6 +240,12 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         }
         selection.add_multiple(selections)
         region_selection = selection.all(*(selections.keys()))
+        # compute cutflow
+        cutflow = selection.cutflow(*(selections.keys())).result()
+        cutflow_results = {
+            cut_label: nevents
+            for cut_label, nevents in zip(cutflow.labels, cutflow.nevcutflow)
+        }
 
         # --------------------------------------------------------------
         # Histogram filling
@@ -353,11 +357,15 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                                 }
                             )
                             histograms[key].fill(**fill_args)
-        
-        output = {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
+
+        output = {
+            "histograms": histograms,
+            "sumw": ak.sum(weights_container.weight()),
+            "cutflow": cutflow_results,
+        }
         if not is_mc:
             output.update({"lumi": lumi})
-            
+
         return output
 
     def postprocess(self, accumulator):

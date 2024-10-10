@@ -281,7 +281,12 @@ class SignalProcessor(processor.ProcessorABC):
         }
         selection.add_multiple(selections)
         region_selection = selection.all(*(selections.keys()))
-
+        # compute cutflow
+        cutflow = selection.cutflow(*(selections.keys())).result()
+        cutflow_results = {
+            cut_label: nevents
+            for cut_label, nevents in zip(cutflow.labels, cutflow.nevcutflow)
+        }
         # --------------------------------------------------------------
         # Histogram filling
         # --------------------------------------------------------------
@@ -386,7 +391,11 @@ class SignalProcessor(processor.ProcessorABC):
                         )
                         histograms[key].fill(**fill_args)
                     
-        output = {"histograms": histograms, "sumw": ak.sum(weights_container.weight())}
+        output = {
+            "histograms": histograms,
+            "sumw": ak.sum(weights_container.weight()),
+            "cutflow": cutflow_results,
+        }
         if not is_mc:
             output.update({"lumi": lumi})
             
