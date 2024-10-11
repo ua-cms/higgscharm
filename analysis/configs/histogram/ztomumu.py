@@ -4,13 +4,7 @@ from analysis.configs.histogram_config import HistogramConfig
 histogram_config = HistogramConfig(
     add_syst_axis=True,
     add_weight=True,
-    add_cat_axis={
-        "eta_region": {
-            "type": "StrCategory",
-            "categories": ["endcap", "barrel"],
-            "label": "ecal region"
-        }
-    },
+    add_cat_axis=None,
     axes={
         "z_mass": {
             "type": "Regular",
@@ -32,6 +26,13 @@ histogram_config = HistogramConfig(
             "start": 0,
             "stop": 300,
             "label": r"$p_T(\mu_2)$ [GeV]",
+        },
+        "muon_pt": {
+            "type": "Regular",
+            "bins": 50,
+            "start": 0,
+            "stop": 300,
+            "label": r"$p_T(\mu)$ [GeV]",
         },
         "jet_pt": {
             "type": "Regular",
@@ -92,11 +93,12 @@ histogram_config = HistogramConfig(
         "z_mass": ["z_mass"],
         "mu1_pt": ["mu1_pt"],
         "mu2_pt": ["mu2_pt"],
-        "jet_pt": ["jet_pt"],
-        "jet_eta":["jet_eta"], 
-        "jet_phi": ["jet_phi"],
-        "jet_tag": ["pnet_cvsl", "pnet_cvsb"],
-        "njets": ["njets"],
+        "muon_pt": ["muon_pt"],
+        #"jet_pt": ["jet_pt"],
+        #"jet_eta":["jet_eta"], 
+        #"jet_phi": ["jet_phi"],
+        #"jet_tag": ["pnet_cvsl", "pnet_cvsb"],
+        #"njets": ["njets"],
         "npvs": ["npvs"],
         "rho": ["rho"],
     }
