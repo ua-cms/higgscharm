@@ -34,40 +34,19 @@ histogram_config = HistogramConfig(
             "stop": 300,
             "label": r"$p_T(\mu)$ [GeV]",
         },
-        "jet_pt": {
-            "type": "Regular",
-            "bins": 30,
-            "start": 30,
-            "stop": 200,
-            "label": r"Jet $p_T$ [GeV]",
-        },
-        "jet_eta": {
+        "muon_eta": {
             "type": "Regular",
             "bins": 50,
             "start": -2.5,
             "stop": 2.5,
-            "label": "Jet $\eta$",
+            "label": "$\eta(\mu)$",
         },
-        "jet_phi": {
+        "muon_phi": {
             "type": "Regular",
             "bins": 50,
             "start": -np.pi,
             "stop": np.pi,
-            "label": "Jet $\phi$",
-        },
-        "pnet_cvsl": {
-            "type": "Regular",
-            "bins": 50,
-            "start": 0,
-            "stop": 1,
-            "label": "CvsL",
-        },
-        "pnet_cvsb": {
-            "type": "Regular",
-            "bins": 50,
-            "start": 0,
-            "stop": 1,
-            "label": "CvsB",
+            "label": "$\phi(\mu)$",
         },
         "npvs": {
             "type": "Regular",
@@ -75,11 +54,6 @@ histogram_config = HistogramConfig(
             "start": 0,
             "stop": 60,
             "label": "$N_{pvs}$",
-        },
-        "njets": {
-            "type": "IntCategory",
-            "categories": np.arange(0, 16),
-            "label": "$N_{jets}$",
         },
         "rho": {
             "type": "Regular",
@@ -90,16 +64,9 @@ histogram_config = HistogramConfig(
         },
     },
     layout={
-        "z_mass": ["z_mass"],
-        "mu1_pt": ["mu1_pt"],
-        "mu2_pt": ["mu2_pt"],
-        "muon_pt": ["muon_pt"],
-        #"jet_pt": ["jet_pt"],
-        #"jet_eta":["jet_eta"], 
-        #"jet_phi": ["jet_phi"],
-        #"jet_tag": ["pnet_cvsl", "pnet_cvsb"],
-        #"njets": ["njets"],
-        "npvs": ["npvs"],
-        "rho": ["rho"],
-    }
+        "zcandidate": ["z_mass", "mu1_pt", "mu2_pt"],
+        "muon": ["muon_pt", "muon_eta", "muon_phi"],
+        # "npvs": ["npvs"],
+        # "rho": ["rho"],
+    },
 )
