@@ -129,8 +129,9 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
 
-        # save sum of weights before selections and weights statistics
-        output["metadata"].update({"sumw": ak.sum(weights_container.weight())})
+        # save nevents (sum of weights) before selections
+        sumw = ak.sum(weights_container.weight())
+        output["metadata"].update({"sumw": sumw})
 
         # --------------------------------------------------------------
         # Object selection
@@ -250,12 +251,13 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         region_selection = selection.all(*(selections.keys()))
 
         # save cutflow
-        cutflow = selection.cutflow(*(selections.keys())).result()
-        cutflow_results = {
-            cut_label: nevents
-            for cut_label, nevents in zip(cutflow.labels, cutflow.nevcutflow)
-        }
-        output["metadata"].update({"cutflow": cutflow_results})
+        output["metadata"].update({"cutflow": {"initial": sumw}})
+        current_selection = []
+        for cut_name in selections.keys():
+            current_selection.append(cut_name)
+            output["metadata"]["cutflow"][cut_name] = ak.sum(
+                weights_container.weight()[selection.all(*current_selection)]
+            )
 
         # save raw and weighted number of events after selection
         final_nevents = dak.sum(region_selection)
