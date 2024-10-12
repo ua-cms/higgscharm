@@ -2,10 +2,10 @@ class WorkingPoints:
 
     def electron_id(self, electrons, wp):
         electrons_id_wps = {
-            "wpiso80": electrons.mvaIso_WP80,
-            "wpiso90": electrons.mvaIso_WP90,
-            "wpnoiso80": electrons.mvaNoIso_WP80,
-            "wpnoiso90": electrons.mvaNoIso_WP90,
+            "wp80iso": electrons.mvaIso_WP80,
+            "wp90iso": electrons.mvaIso_WP90,
+            "wp80noiso": electrons.mvaNoIso_WP80,
+            "wp90noiso": electrons.mvaNoIso_WP90,
         }
         return electrons_id_wps[wp]
 

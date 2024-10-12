@@ -20,7 +20,7 @@ processor_config = ProcessorConfig(
         "electron": {
             "pt": 30,
             "abs_eta": 2.5,
-            "id_wp": "wpiso90",
+            "id_wp": "wp90iso",
         },
     },
 )
