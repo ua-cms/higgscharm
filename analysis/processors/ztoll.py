@@ -15,6 +15,7 @@ from analysis.working_points import working_points
 from analysis.processors.utils import fill_histogram
 from analysis.utils.trigger_matching import trigger_match
 from analysis.corrections.muon import MuonWeights
+from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.pileup import add_pileup_weight
 
 
@@ -96,17 +97,33 @@ class ZtoLLProcessor(processor.ProcessorABC):
                 variation="nominal",
                 weights_container=weights_container,
             )
-            # add muon id and pfiso weights
-            muon_weights = MuonWeights(
-                muons=events.Muon,
-                year=self.year,
-                variation="nominal",
-                weights=weights_container,
-                id_wp=self.config.selection["muon"]["id_wp"],
-                iso_wp=self.config.selection["muon"]["iso_wp"],
-            )
-            muon_weights.add_id_weights()
-            muon_weights.add_iso_weights()
+            if self.lepton_flavor == "muon":
+                # add muon id and pfiso weights
+                muon_weights = MuonWeights(
+                    muons=events.Muon,
+                    year=self.year,
+                    variation="nominal",
+                    weights=weights_container,
+                    id_wp=self.config.selection["muon"]["id_wp"],
+                    iso_wp=self.config.selection["muon"]["iso_wp"],
+                )
+                muon_weights.add_id_weights()
+                muon_weights.add_iso_weights()
+
+            elif self.lepton_flavor == "electron":
+                # add electron Id, Reco and HLT weights
+                electron_weights = ElectronWeights(
+                    electrons=events.Electron,
+                    year=self.year,
+                    weights=weights_container,
+                    variation="nominal",
+                    id_wp=self.config.selection["electron"]["id_wp"],
+                )
+                electron_weights.add_id_weights()
+                electron_weights.add_hlt_weights()
+                electron_weights.add_reco_weights("RecoBelow20")
+                electron_weights.add_reco_weights("Reco20to75")
+                electron_weights.add_reco_weights("RecoAbove75")
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
 
@@ -178,7 +195,12 @@ class ZtoLLProcessor(processor.ProcessorABC):
         )
         # require minimum dilepton mass and minimum dilepton deltaR
         z_mass_window = (
-            (LorentzVector.delta_r(dilepton.z.leading_lepton, dilepton.z.subleading_lepton) > 0.02)
+            (
+                LorentzVector.delta_r(
+                    dilepton.z.leading_lepton, dilepton.z.subleading_lepton
+                )
+                > 0.02
+            )
             & (dilepton.z.p4.mass < 120.0)
             & (dilepton.z.p4.mass > 60.0)
         )
@@ -210,7 +232,9 @@ class ZtoLLProcessor(processor.ProcessorABC):
             if hlt_path in events.HLT.fields:
                 trig_mask = trig_mask | events.HLT[hlt_path]
                 trig_obj_mask = trigger_match(
-                    leptons=events.Muon if self.lepton_flavor == "muon" else events.Electron,
+                    leptons=(
+                        events.Muon if self.lepton_flavor == "muon" else events.Electron
+                    ),
                     trigobjs=events.TrigObj,
                     hlt_path=hlt_path,
                 )
