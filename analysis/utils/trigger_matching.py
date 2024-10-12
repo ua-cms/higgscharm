@@ -9,9 +9,13 @@ def trigger_match(leptons, trigobjs, hlt_path):
     trigobjs:
         trigobjs array
     trigger_path:
-        trigger to match (IsoMu24, Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8)
+        trigger to match (IsoMu24, Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8, Ele30_WPTight_Gsf)
         
+    how to:
     https://twiki.cern.ch/twiki/bin/viewauth/CMS/EgammaNanoAOD#Trigger_bits_how_to
+    
+    NanoAOD docs:
+    https://cms-nanoaod-integration.web.cern.ch/autoDoc/NanoAODv11/2022postEE/doc_WZ_TuneCP5_13p6TeV_pythia8_Run3Summer22EENanoAODv11-126X_mcRun3_2022_realistic_postEE_v1-v1.html#TrigObj
     """
     match_configs = {
         # filterbit: 3 => 1mu
@@ -28,6 +32,13 @@ def trigger_match(leptons, trigobjs, hlt_path):
             "pt": trigobjs.pt > 7,
             "id": abs(trigobjs.id) == 13,
             "filterbit": trigobjs.filterBits & (0x1 << 0) > 0,
+        },
+        # filterbit: 1 => 1e (WPTight) 
+        # id: 11 => ele
+        "Ele30_WPTight_Gsf": {
+            "pt": trigobjs.pt > 28,
+            "id": abs(trigobjs.id) == 11,
+            "filterbit": trigobjs.filterBits & (0x1 << 1) > 0,
         },
     }
     pass_pt = match_configs[hlt_path]["pt"]
