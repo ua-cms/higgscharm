@@ -9,7 +9,7 @@ from coffea.nanoevents import PFNanoAODSchema
 from analysis.processors.flavor import FlavorProcessor
 from analysis.processors.signal import SignalProcessor
 from analysis.processors.taggers import JetTaggersPlots
-from analysis.processors.ztomumu import ZtoMuMuProcessor
+from analysis.processors.ztoll import ZtoLLProcessor
 from analysis.processors.zplusjet import ZPlusJetProcessor
 from analysis.processors.tag_eff import TaggingEfficiencyProcessor
 from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
@@ -42,7 +42,7 @@ def main(args):
         ),
         "taggers": JetTaggersPlots(year=args.year),
         "zplusjet": ZPlusJetProcessor(year=args.year),
-        "ztomumu": ZtoMuMuProcessor(year=args.year),
+        "ztoll": ZtoMuMuProcessor(year=args.year, args.lepton_flavor),
         "flavor": FlavorProcessor(year=args.year),
     }
     to_compute = apply_to_fileset(
@@ -85,6 +85,13 @@ if __name__ == "__main__":
         type=str,
         default="",
         help="year of the data {2022, 2022EE}",
+    )
+    parser.add_argument(
+        "--lepton_flavor",
+        dest="lepton_flavor",
+        type=str,
+        default="muon",
+        help="lepton flavor {muon, electron}",
     )
     parser.add_argument(
         "--output_path",

@@ -22,6 +22,7 @@ def main(args):
         flavor=args["flavor"],
         wp=args["wp"],
         year=args["year"],
+        lepton_flavor=args["lepton_flavor"],
     )
     args["output_path"] = str(processor_output_path)
         
@@ -52,6 +53,7 @@ def main(args):
             "python3 submit.py "
             f"--processor {args['processor']} "
             f"--year {args['year']} "
+            f"--lepton_flavor {args['lepton_flavor']} "
             f"--output_path {args['output_path']} "
             f"--dataset_name {dataset_runnable_key} "
             f"--tagger {args['tagger']} "
@@ -89,6 +91,13 @@ if __name__ == "__main__":
         type=str,
         default="2022EE",
         help="year of the data {2022EE}",
+    )
+    parser.add_argument(
+        "--lepton_flavor",
+        dest="lepton_flavor",
+        type=str,
+        default="muon",
+        help="lepton flavor {muon, electron}",
     )
     parser.add_argument(
         "--tagger",
