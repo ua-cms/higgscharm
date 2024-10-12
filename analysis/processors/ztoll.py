@@ -16,8 +16,6 @@ from analysis.processors.utils import fill_histogram
 from analysis.utils.trigger_matching import trigger_match
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
-from analysis.corrections.jerc import apply_jerc_corrections
-from analysis.corrections.jetvetomaps import jetvetomaps_mask
 
 
 PFNanoAODSchema.warn_missing_crossrefs = False
@@ -60,15 +58,15 @@ def find_2lep(events_leptons):
     return find_2lep_kernel(events_leptons, ak.ArrayBuilder()).snapshot()
 
 
-class ZtoMuMuProcessor(processor.ProcessorABC):
-    def __init__(self, year: str):
+class ZtoLLProcessor(processor.ProcessorABC):
+    def __init__(self, year: str, lepton_flavor: str):
         self.year = year
-
+        self.lepton_flavor = lepton_flavor
         self.config = load_config(
-            config_type="processor", config_name="ztomumu", year=year
+            config_type="processor", config_name="ztoll", year=year
         )
         self.histogram_config = load_config(
-            config_type="histogram", config_name="ztomumu"
+            config_type="histogram", config_name="ztoll"
         )
         self.histograms = HistBuilder(self.histogram_config).build_histogram()
 
@@ -83,23 +81,6 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
         output["metadata"] = {}
         output["metadata"].update({"raw_initial_nevents": nevents})
 
-        # --------------------------------------------------------------
-        # Object corrections
-        # --------------------------------------------------------------
-        # apply JEC/JER corrections
-        apply_jec = True
-        apply_jer = False
-        apply_junc = False
-        if is_mc:
-            apply_jer = True
-        apply_jerc_corrections(
-            events,
-            era=events.metadata["metadata"]["era"],
-            year=self.year,
-            apply_jec=apply_jec,
-            apply_jer=apply_jer,
-            apply_junc=apply_junc,
-        )
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
@@ -155,53 +136,53 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                 )
             )
         ]
-        # impose some quality and minimum pt cuts on the jets
-        jets = events.Jet
-        jets = jets[
-            (jets.pt >= self.config.selection["jet"]["pt"])
-            & (np.abs(jets.eta) < self.config.selection["jet"]["abs_eta"])
-            & (jets.jetId == self.config.selection["jet"]["id"])
+        # impose some quality and minimum pt cuts on the electrons
+        electrons = events.Electron
+        electrons = electrons[
+            (electrons.pt > self.config.selection["electron"]["pt"])
+            & (np.abs(electrons.eta) < self.config.selection["electron"]["abs_eta"])
+            & (
+                working_points.electron_id(
+                    electrons=electrons, wp=self.config.selection["electron"]["id_wp"]
+                )
+            )
         ]
-        if self.config.selection["jet"]["delta_r_lepton"]:
-            jets = jets[(ak.all(jets.metric_table(muons) > 0.4, axis=-1))]
-        if self.config.selection["jet"]["veto_maps"]:
-            jets = jets[jetvetomaps_mask(jets, self.year)]
-
-        # build lorentz vectors for muons
-        muons = ak.zip(
+        leptons = muons if self.lepton_flavor == "muon" else electrons
+        # build lorentz vectors for leptons
+        leptons = ak.zip(
             {
-                "pt": muons.pt,
-                "eta": muons.eta,
-                "phi": muons.phi,
-                "mass": muons.mass,
-                "charge": muons.charge,
+                "pt": leptons.pt,
+                "eta": leptons.eta,
+                "phi": leptons.phi,
+                "mass": leptons.mass,
+                "charge": leptons.charge,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
         # make sure they are sorted by transverse momentum
-        muons = muons[ak.argsort(muons.pt, axis=1)]
-        # find all dimuon candidates with helper function
-        dimuon = dak.map_partitions(find_2lep, muons)
-        dimuon = [muons[dimuon[idx]] for idx in "01"]
-        dimuon = ak.zip(
+        leptons = leptons[ak.argsort(leptons.pt, axis=1)]
+        # find all dilepton candidates with helper function
+        dilepton = dak.map_partitions(find_2lep, leptons)
+        dilepton = [leptons[dilepton[idx]] for idx in "01"]
+        dilepton = ak.zip(
             {
                 "z": ak.zip(
                     {
-                        "mu1": dimuon[0],
-                        "mu2": dimuon[1],
-                        "p4": dimuon[0] + dimuon[1],
+                        "leading_lepton": dilepton[0],
+                        "subleading_lepton": dilepton[1],
+                        "p4": dilepton[0] + dilepton[1],
                     }
                 )
             }
         )
-        # require minimum dimuon mass and minimum dimuon deltaR
+        # require minimum dilepton mass and minimum dilepton deltaR
         z_mass_window = (
-            (LorentzVector.delta_r(dimuon.z.mu1, dimuon.z.mu2) > 0.02)
-            & (dimuon.z.p4.mass < 120.0)
-            & (dimuon.z.p4.mass > 60.0)
+            (LorentzVector.delta_r(dilepton.z.leading_lepton, dilepton.z.subleading_lepton) > 0.02)
+            & (dilepton.z.p4.mass < 120.0)
+            & (dilepton.z.p4.mass > 60.0)
         )
-        dimuon = dimuon[z_mass_window]
+        dilepton = dilepton[z_mass_window]
 
         # --------------------------------------------------------------
         # Event selection
@@ -213,24 +194,23 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             lumi_info = LumiMask(self.config.lumimask)
             lumi_mask = lumi_info(events.run, events.luminosityBlock)
 
-            # compute integrated luminosity (pb^-1)
+            # compute integrated luminosity (/pb)
             lumi_data = LumiData(self.config.lumidata)
             lumi_list = LumiList(
                 events[lumi_mask].run, events[lumi_mask].luminosityBlock
             )
             lumi = lumi_data.get_lumi(lumi_list)
-        # save luminosity
-        if not is_mc:
+            # save luminosity to metadata
             output["metadata"].update({"lumi": lumi})
 
         # get trigger mask and DeltaR matched trigger objects mask
         trig_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
         trig_match_mask = ak.zeros_like(events.PV.npvsGood, dtype="bool")
-        for hlt_path in self.config.hlt_paths:
+        for hlt_path in self.config.hlt_paths[self.lepton_flavor]:
             if hlt_path in events.HLT.fields:
                 trig_mask = trig_mask | events.HLT[hlt_path]
                 trig_obj_mask = trigger_match(
-                    leptons=events.Muon,
+                    leptons=events.Muon if self.lepton_flavor == "muon" else events.Electron,
                     trigobjs=events.TrigObj,
                     hlt_path=hlt_path,
                 )
@@ -243,8 +223,8 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             "lumimask": lumi_mask == 1,
             "trigger": trig_mask,
             "trigger_matching": dak.sum(trig_match_mask, axis=-1) > 0,
-            "two_muons": ak.num(muons) == 2,
-            "one_z": ak.num(dimuon.z.p4) == 1,
+            "two_leptons": ak.num(leptons) == 2,
+            "one_z": ak.num(dilepton.z.p4) == 1,
         }
         # get region selection cut mask
         selection.add_multiple(selections)
@@ -275,14 +255,12 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
             histograms = deepcopy(self.histograms)
             # define feature map
             feature_map = {
-                "z_mass": dimuon.z.p4.mass[region_selection],
-                "mu1_pt": dimuon.z.mu1.pt[region_selection],
-                "mu2_pt": dimuon.z.mu2.pt[region_selection],
-                "muon_pt": muons.pt[region_selection],
-                "muon_eta": muons.eta[region_selection],
-                "muon_phi": muons.eta[region_selection],
-                "npvs": events.PV.npvsGood[region_selection],
-                "rho": events.Rho.fixedGridRhoFastjetAll[region_selection],
+                "z_mass": dilepton.z.p4.mass[region_selection],
+                "leading_lepton_pt": dilepton.z.leading_lepton.pt[region_selection],
+                "subleading_lepton_pt": dilepton.z.subleading_lepton.pt[region_selection],
+                "lepton_pt": leptons.pt[region_selection],
+                "lepton_eta": leptons.eta[region_selection],
+                "lepton_phi": leptons.phi[region_selection],
             }
             if is_mc:
                 # get event weight systematic variations for MC samples
@@ -313,7 +291,6 @@ class ZtoMuMuProcessor(processor.ProcessorABC):
                     variation="nominal",
                     flow=True,
                 )
-
         # add histograms to output dictionary
         output["histograms"] = histograms
         return output

@@ -3,7 +3,10 @@ from analysis.configs.processor_config import ProcessorConfig
 processor_config = ProcessorConfig(
     lumimask="analysis/data/Cert_Collisions2022_355100_362760_Golden.txt",
     lumidata="analysis/data/lumi2022.csv",
-    hlt_paths=["IsoMu24", "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"],
+    hlt_paths={
+        "muon": ["IsoMu24", "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"],
+        "electron": ["Ele30_WPTight_Gsf"],
+    },
     selection={
         "muon": {
             "pt": 10,
@@ -14,12 +17,10 @@ processor_config = ProcessorConfig(
             "id_wp": "tight",
             "iso_wp": "tight",
         },
-        "jet": {
-            "pt": 20,
+        "electron": {
+            "pt": 30,
             "abs_eta": 2.5,
-            "id": 6,
-            "delta_r_lepton": True,
-            "veto_maps": True,
+            "id_wp": "wpiso90",
         },
     },
 )

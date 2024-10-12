@@ -13,60 +13,44 @@ histogram_config = HistogramConfig(
             "stop": 150,
             "label": r"$m(Z)$ [GeV]",
         },
-        "mu1_pt": {
+        "leading_lepton_pt": {
             "type": "Regular",
             "bins": 50,
             "start": 20,
             "stop": 300,
-            "label": r"$p_T(\mu_1)$ [GeV]",
+            "label": r"$p_T(\ell_1)$ [GeV]",
         },
-        "mu2_pt": {
+        "subleading_lepton_pt": {
             "type": "Regular",
             "bins": 50,
             "start": 0,
             "stop": 300,
-            "label": r"$p_T(\mu_2)$ [GeV]",
+            "label": r"$p_T(\ell_2)$ [GeV]",
         },
-        "muon_pt": {
+        "lepton_pt": {
             "type": "Regular",
             "bins": 50,
             "start": 0,
             "stop": 300,
-            "label": r"$p_T(\mu)$ [GeV]",
+            "label": r"$p_T(\ell)$ [GeV]",
         },
-        "muon_eta": {
+        "lepton_eta": {
             "type": "Regular",
             "bins": 50,
             "start": -2.5,
             "stop": 2.5,
-            "label": "$\eta(\mu)$",
+            "label": "$\eta(\ell)$",
         },
-        "muon_phi": {
+        "lepton_phi": {
             "type": "Regular",
             "bins": 50,
             "start": -np.pi,
             "stop": np.pi,
-            "label": "$\phi(\mu)$",
-        },
-        "npvs": {
-            "type": "Regular",
-            "bins": 60,
-            "start": 0,
-            "stop": 60,
-            "label": "$N_{pvs}$",
-        },
-        "rho": {
-            "type": "Regular",
-            "bins": 60,
-            "start": 0,
-            "stop": 60,
-            "label": r"$\rho$",
-        },
+            "label": "$\phi(\ell)$",
+        }
     },
     layout={
-        "zcandidate": ["z_mass", "mu1_pt", "mu2_pt"],
-        "muon": ["muon_pt", "muon_eta", "muon_phi"],
-        # "npvs": ["npvs"],
-        # "rho": ["rho"],
-    },
+        "zcandidate": ["z_mass", "leading_lepton_pt", "subleading_lepton_pt"],
+        "lepton": ["lepton_pt", "lepton_eta", "lepton_phi"]
+    }
 )
