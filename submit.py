@@ -26,23 +26,23 @@ def main(args):
     )
     dataset_runnable[args.dataset_name]["metadata"] = {
         "metadata": {
-            "era": args.partition_fileset[args.dataset_name]["metadata"][
-                "metadata"
-            ]["era"]
+            "era": args.partition_fileset[args.dataset_name]["metadata"]["metadata"][
+                "era"
+            ]
         }
     }
     # process dataset runnable and save output to a pickle file
     processors = {
         "signal": SignalProcessor(year=args.year),
         "tag_eff": TaggingEfficiencyProcessor(
-           year=args.year,
-           tagger=args.tagger,
-           flavor=args.flavor,
-           wp=args.wp,
+            year=args.year,
+            tagger=args.tagger,
+            flavor=args.flavor,
+            wp=args.wp,
         ),
         "taggers": JetTaggersPlots(year=args.year),
         "zplusjet": ZPlusJetProcessor(year=args.year),
-        "ztoll": ZtoMuMuProcessor(year=args.year, args.lepton_flavor),
+        "ztoll": ZtoLLProcessor(year=args.year, lepton_flavor=args.lepton_flavor),
         "flavor": FlavorProcessor(year=args.year),
     }
     to_compute = apply_to_fileset(
@@ -51,7 +51,7 @@ def main(args):
         schemaclass=PFNanoAODSchema,
     )
     (computed,) = dask.compute(to_compute)
-    
+
     save_path = f"{args.output_path}/{args.year}_{args.dataset_name}"
     with open(f"{save_path}.pkl", "wb") as handle:
         pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)

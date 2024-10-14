@@ -2,28 +2,38 @@ import os
 import pathlib
 import subprocess
 
+
 def submit_condor(args: dict) -> None:
     """build condor and executable files. Submit condor job"""
     user = os.environ["USER"]
     main_dir = pathlib.Path(f"/user/{user}/higgscharm")
     condor_dir = pathlib.Path(f"{main_dir}/condor")
-    
+
     # set jobname
     jobname = f'{args["processor"]}_{args["dataset_name"]}'
+    if args["processor"] in ["ztoll"]:
+        jobname += f'_{args["lepton_flavor"]}'
     if "nfile" in args:
         jobname += f'_{args["nfile"]}'
 
     # create logs directory
-    log_dir = condor_dir / "logs" / args["processor"] / args["year"] / args["dataset_name"]
+    log_dir = condor_dir / "logs" / args["processor"] / args["year"]
+    if args["processor"] in ["ztoll"]:
+        log_dir /= args["lepton_flavor"]
+    log_dir /= args["dataset_name"]
+
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
-        
+
     # creal local condor submit file
-    exe_dir = condor_dir / args["processor"] / args["year"]
+    exe_dir = condor_dir / args["processor"]
+    if args["processor"] in ["ztoll"]:
+        exe_dir /= args["lepton_flavor"]
+    exe_dir /= args["year"]
     if not exe_dir.exists():
         exe_dir.mkdir(parents=True)
     local_condor = f"{exe_dir}/{jobname}.sub"
-    
+
     # make condor file
     condor_template_file = open(f"{condor_dir}/submit.sub")
     condor_file = open(local_condor, "w")
@@ -46,7 +56,7 @@ def submit_condor(args: dict) -> None:
     sh_file.close()
     sh_template_file.close()
     os.system(f"chmod u+x {exe_dir}/to_run_{jobname}.sh")
-    
+
     # make executable file runner
     sh_runner_template_file = open(f"{condor_dir}/submit.sh")
     local_sh = f"{exe_dir}/{jobname}.sh"
@@ -58,7 +68,7 @@ def submit_condor(args: dict) -> None:
     sh_file.close()
     sh_template_file.close()
     os.system(f"chmod u+x {exe_dir}/{jobname}.sh")
-    
+
     # submit jobs
     print(f"submitting {jobname}")
     subprocess.run(["condor_submit", local_condor])
