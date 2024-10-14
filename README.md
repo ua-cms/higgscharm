@@ -5,12 +5,8 @@ Python package for analyzing H+c events. The package uses a columnar framework t
 
 ### Processors
 
-The available processors are:
-* `ztomumu`: Select events with Z($\mu \mu$) final events
-* `zplusjet`: Select events with Z($\mu \mu$)+c final events (a candidate Z and one c-tagged jet)
-* `signal`: Select events with H(ZZ)+c final events (a candidate Higgs and one c-tagged jet)
-* `tag_eff`: Save jet features needed to compute efficiency maps
-* `taggers`: Save CvsL and CvsB distributions for the DeepJet, ParticleNet and RobustParticleTransformer taggers
+The available processors for 2022 and 2022EE years are:
+* `ztoll`: Select events with Z($\rightarrow \ell \ell$) final events
 
 To run a processor:
 ```
@@ -22,14 +18,14 @@ git clone -b t2b_iihe https://github.com/deoache/higgscharm.git
 cd higgscharm
 
 # submit condor jobs for some processor and dataset
-python3 submit_condor.py --processor <processor> --dataset_name <dataset name> --year <year>
+python3 submit_condor.py --processor ztoll --dataset_name <dataset name> --year <year> --lepton_flavor <lepton flavor>
 ```    
-You can find the available datasets at [analysis/configs/dataset/2022EE](https://github.com/deoache/higgscharm/tree/main/analysis/configs/dataset/2022EE). The `tag_eff` processor requires additional arguments: `--tagger` (deepjet, pnet or part), `--flavor` (c or b), and `--wp` (loose, medium or tight).
+where `--lepton_flavor` could be `muon` or `electron`. You can find the available datasets at analysis/configs/dataset/<year>.
 
-Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs`. Once you have run the corresponding datasets for a processor, you can get the results (plots) by typing:
-``` 
+Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs`. Once you have run the corresponding datasets for a processor, you can get the results by typing:
+```
 singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask-almalinux8:latest
 
-python3 run_postprocess.py --processor <processor> --year <year>
+python3 run_postprocess.py --processor <processor> --year <year> --lepton_flavor <lepton flavor>
 ``` 
-The plots will be saved in the same directory as the output files
+The results will be saved in the same directory as the output files
