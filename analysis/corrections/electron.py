@@ -1,8 +1,8 @@
-import json
 import correctionlib
 import numpy as np
 import awkward as ak
 import dask_awkward as dak
+import correctionlib.schemav2 as cs
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.utils import get_pog_json
@@ -10,7 +10,7 @@ from analysis.corrections.utils import get_pog_json
 
 class ElectronWeights:
     """
-    Electron weights class
+    Electron ID, Reco and HLT weights class
 
     Parameters:
     -----------
@@ -236,3 +236,84 @@ class ElectronWeights:
             ak.prod(ak.where(electron_pt_mask, sf, ak.ones_like(sf)), axis=1), value=1
         )
         return weights
+
+
+class ElectronSS:
+    """
+    Electron Scale and Smearing (energy scale and resolution) corrector
+
+    more info: https://twiki.cern.ch/twiki/bin/view/CMS/EgammSFandSSRun3#Scale_factors_and_correction_AN1
+
+    coffea0.7 example: https://gitlab.cern.ch/cms-analysis/general/HiggsDNA/-/blob/master/higgs_dna/systematics/electron_systematics.py?ref_type=heads
+    """
+
+    def __init__(
+        self,
+        events: ak.Array,
+        year: str,
+        variation: str = "nominal",
+    ) -> None:
+        self.events = events
+        self.year = year
+        self.variation = variation
+        # get correction set
+        self.cset = correctionlib.CorrectionSet.from_file(
+            get_pog_json(json_name="electron_scale", year=self.year)
+        )
+
+    def apply_scale(self):
+        """
+        from https://twiki.cern.ch/twiki/bin/view/CMS/EgammSFandSSRun3#Scale_factors_and_correction_AN1:
+
+             'Note that we deal with pt instead of energy in the code below. When dealing with nanoAOD in a columnar format,
+             this makes sense as pt is an actual field of the photon and electron collections. Scales and smearings are equal
+             for pt and energy as they are directly linearly proportional. Changing the pt also automatically changes the energy
+             when loading the nanoAOD in the framework below due to Lorentzvector behaviours'.
+
+        """
+        scale = dak.map_partitions(
+            self.cset["Scale"].evaluate,
+            "total_correction",
+            self.events.Electron.seedGain,
+            self.events.run,
+            self.events.Electron.eta + self.events.Electron.deltaEtaSC,
+            self.events.Electron.r9,
+            self.events.pt,
+        )
+        if variation == "nominal":
+            # scale is multiplicative correction, unlike smearing, it is deterministic
+            self.events["Electron", "pt"] = self.events.Electron * scale
+
+        # uncertainties: TO DO (https://cms-talk.web.cern.ch/t/pnoton-energy-corrections-in-nanoaod-v11/34327/2)
+
+    def apply_smearing(self):
+        # rho is internal scale and smearing lingo. It does not correspond to the pileup rho energy density,
+        # instead it is the standard deviation of the Gaussian used to draw the smearing
+        rho = dak.map_partitions(
+            self.cset["Smearing"].evaluate,
+            "rho",
+            self.events.Electron.eta + self.events.Electron.deltaEtaSC,
+            self.events.Electron.r9,
+        )
+        # The smearing is done statistically, so we need some random numbers
+        # https://cms-nanoaod.github.io/correctionlib/schemav2.html#hashprng
+        # https://cms-nanoaod.github.io/correctionlib/correctionlib_tutorial.html#Resolution-models
+        rng = cs.Correction(
+            name="resrng",
+            description="Deterministic smearing value generator",
+            version=1,
+            inputs=[
+                cs.Variable(name="rho", type="real", description="Unsmeared jet pt"),
+            ],
+            output=cs.Variable(name="rng", type="real"),
+            data=cs.HashPRNG(
+                nodetype="hashprng",
+                inputs=["rho"],
+                distribution="normal",
+            ),
+        )
+        smearing = rng.to_evaluator().evaluate(rho)
+        if self.variation == "nominal":
+            self.events["Electron", "pt"] = self.events.Electron * smearing
+
+        # uncertainties: TO DO

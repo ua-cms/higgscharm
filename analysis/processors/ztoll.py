@@ -15,8 +15,8 @@ from analysis.working_points import working_points
 from analysis.processors.utils import fill_histogram
 from analysis.utils.trigger_matching import trigger_match
 from analysis.corrections.muon import MuonWeights
-from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.pileup import add_pileup_weight
+from analysis.corrections.electron import ElectronWeights, ElectronSS
 
 
 PFNanoAODSchema.warn_missing_crossrefs = False
@@ -81,7 +81,23 @@ class ZtoLLProcessor(processor.ProcessorABC):
         nevents = ak.num(events, axis=0)
         output["metadata"] = {}
         output["metadata"].update({"raw_initial_nevents": nevents})
-
+        
+        # -------------------------------------------------------------
+        # Object corrections
+        # -------------------------------------------------------------
+        # electron scale and smearing corrections
+        electron_ss = ElectronSS(
+            events=events,
+            year=self.year,
+            variation="nominal",
+        )
+        if is_mc:
+            # energies in MC are smeared
+            electron_ss.apply_smearing()
+        else:
+            # energies in data are scaled
+            electron_ss.apply_scale()
+            
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
