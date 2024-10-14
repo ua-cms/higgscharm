@@ -282,7 +282,7 @@ class ElectronSS:
         )
         if variation == "nominal":
             # scale is multiplicative correction, unlike smearing, it is deterministic
-            self.events["Electron", "pt"] = self.events.Electron * scale
+            self.events["Electron", "pt"] = self.events.Electron.pt * scale
 
         # uncertainties: TO DO (https://cms-talk.web.cern.ch/t/pnoton-energy-corrections-in-nanoaod-v11/34327/2)
 
@@ -314,6 +314,6 @@ class ElectronSS:
         )
         smearing = rng.to_evaluator().evaluate(rho)
         if self.variation == "nominal":
-            self.events["Electron", "pt"] = self.events.Electron * smearing
+            self.events["Electron", "pt"] = self.events.Electron.pt * smearing
 
         # uncertainties: TO DO
