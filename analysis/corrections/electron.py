@@ -278,9 +278,9 @@ class ElectronSS:
             self.events.run,
             self.events.Electron.eta + self.events.Electron.deltaEtaSC,
             self.events.Electron.r9,
-            self.events.pt,
+            self.events.Electron.pt,
         )
-        if variation == "nominal":
+        if self.variation == "nominal":
             # scale is multiplicative correction, unlike smearing, it is deterministic
             self.events["Electron", "pt"] = self.events.Electron.pt * scale
 
