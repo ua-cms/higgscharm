@@ -5,10 +5,10 @@ Python package for analyzing H+c events. The package uses a columnar framework t
 
 ### Processors
 
-The available processors for 2022 and 2022EE years are:
+The available processor is:
 * `ztoll`: Select events with Z($\rightarrow \ell \ell$) final events
 
-To run a processor:
+To run the processor:
 ```
 # connect to T2B
 ssh -X -o ServerAliveInterval=100 <your_username>@m0.iihe.ac.be
@@ -20,7 +20,11 @@ cd higgscharm
 # submit condor jobs for some processor and dataset
 python3 submit_condor.py --processor ztoll --dataset_name <dataset name> --year <year> --lepton_flavor <lepton flavor>
 ```    
-where `--lepton_flavor` could be `muon` or `electron`. You can find the available datasets at analysis/configs/dataset/<year>.
+where 
+* `--lepton_flavor`: `muon` or `electron`. 
+* `--year`: `2022` or `2022EE`
+
+You can find the available datasets at `analysis/configs/dataset/<year>`
 
 Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs`. Once you have run the corresponding datasets for a processor, you can get the results by typing:
 ```
