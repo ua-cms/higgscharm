@@ -50,11 +50,8 @@ data_hist_kwargs = {
     "linestyle": "none",
     "marker": ".",
 }
-year_map = {
-    "2022": "2022preEE", 
-    "2022EE": "2022postEE", 
-    "full2022": "2022"
-}
+year_map = {"2022": "2022preEE", "2022EE": "2022postEE", "full2022": "2022"}
+
 
 class Plotter:
 
@@ -67,7 +64,9 @@ class Plotter:
         wp: str,
         year: str,
         lumi: int,
-        cat_axis: tuple
+        cat_axis: tuple,
+        lepton_flavor: str,
+        output_dir: str = None,
     ):
         self.processor = processor
         self.processed_histograms = processed_histograms
@@ -77,7 +76,9 @@ class Plotter:
         self.year = year
         self.lumi = lumi
         self.cat_axis = cat_axis
-        
+        self.lepton_flavor = lepton_flavor
+        self.output_dir = output_dir
+
     def get_feature_hists(self, feature: str) -> dict:
         """get nominal and variations histograms"""
         # https://cms-analysis.docs.cern.ch/guidelines/plotting/colors/
@@ -110,9 +111,13 @@ class Plotter:
                 for key in histogram_dicts:
                     if feature in histogram_dicts[key].axes.name:
                         if self.cat_axis:
-                            histogram = histogram_dicts[key].project(feature, "variation", self.cat_axis[0])
+                            histogram = histogram_dicts[key].project(
+                                feature, "variation", self.cat_axis[0]
+                            )
                         else:
-                            histogram = histogram_dicts[key].project(feature, "variation")
+                            histogram = histogram_dicts[key].project(
+                                feature, "variation"
+                            )
                         break
             if self.cat_axis:
                 if process != "Data":
@@ -120,12 +125,24 @@ class Plotter:
                         if variation == "nominal":
                             # add nominal histograms, their labels and colors
                             feature_hists["mc"]["nominal"]["histograms"].append(
-                                histogram[{"variation": "nominal", self.cat_axis[0]: self.cat_axis[1]}]
+                                histogram[
+                                    {
+                                        "variation": "nominal",
+                                        self.cat_axis[0]: self.cat_axis[1],
+                                    }
+                                ]
                             )
                             feature_hists["mc"]["nominal"]["labels"].append(process)
-                            feature_hists["mc"]["nominal"]["colors"].append(next(colors))
+                            feature_hists["mc"]["nominal"]["colors"].append(
+                                next(colors)
+                            )
                         else:
-                            variation_hist = histogram[{"variation": variation, self.cat_axis[0]: self.cat_axis[1]}]
+                            variation_hist = histogram[
+                                {
+                                    "variation": variation,
+                                    self.cat_axis[0]: self.cat_axis[1],
+                                }
+                            ]
                             if variation in feature_hists["mc"]["variations"]:
                                 feature_hists["mc"]["variations"][variation].append(
                                     variation_hist
@@ -135,7 +152,9 @@ class Plotter:
                                     variation_hist
                                 ]
                 else:
-                    feature_hists["data"] = histogram[{"variation": "nominal", self.cat_axis[0]: self.cat_axis[1]}]
+                    feature_hists["data"] = histogram[
+                        {"variation": "nominal", self.cat_axis[0]: self.cat_axis[1]}
+                    ]
             else:
                 if process != "Data":
                     for variation in histogram.axes["variation"]:
@@ -145,7 +164,9 @@ class Plotter:
                                 histogram[{"variation": "nominal"}]
                             )
                             feature_hists["mc"]["nominal"]["labels"].append(process)
-                            feature_hists["mc"]["nominal"]["colors"].append(next(colors))
+                            feature_hists["mc"]["nominal"]["colors"].append(
+                                next(colors)
+                            )
                         else:
                             variation_hist = histogram[{"variation": variation}]
                             if variation in feature_hists["mc"]["variations"]:
@@ -159,7 +180,6 @@ class Plotter:
                 else:
                     feature_hists["data"] = histogram[{"variation": "nominal"}]
         return feature_hists
-    
 
     def plot_feature_hist(
         self,
@@ -226,7 +246,7 @@ class Plotter:
             )
             down_variation_values = np.abs(min_values - mc_histogram_values)
             bin_error_down += down_variation_values**2
-            
+
         band_up = mc_histogram_values + np.sqrt(bin_error_up)
         band_down = mc_histogram_values - np.sqrt(bin_error_down)
 
@@ -270,7 +290,7 @@ class Plotter:
             )
         except ValueError:
             print(f"(no poisson-ratio error for {feature})")
-            
+
         # plot ratio uncertaity band
         ratio_up = np.concatenate([[0], band_up / mc_histogram_values])
         ratio_down = np.concatenate([[0], band_down / mc_histogram_values])
@@ -285,7 +305,7 @@ class Plotter:
             edgecolor="k",
             linewidth=0,
         )
-        
+
         # plot horizontal reference lines
         xmin, xmax = rax.get_xlim()
         rax.hlines(1, xmin, xmax, color="k", linestyle=":")
@@ -335,7 +355,7 @@ class Plotter:
             ax.legend(loc="upper center", ncol=ncols)
         else:
             ax.legend(loc="best", ncol=1)
-            
+
         # set axes labels
         ax.set(xlabel=None, ylabel="Events")
         formatter = ticker.ScalarFormatter()
@@ -345,24 +365,18 @@ class Plotter:
 
         # add CMS info
         hep.cms.lumitext(
-            f"{self.lumi * 1e-3:.1f} fb$^{{-1}}$ ({year_map[self.year]}, 13.6 TeV)", ax=ax
+            f"{self.lumi * 1e-3:.1f} fb$^{{-1}}$ ({year_map[self.year]}, 13.6 TeV)",
+            ax=ax,
         )
         hep.cms.text("Preliminary", ax=ax)
 
         # save histograms
         if savefig:
-            processor_output_dir = paths.processor_path(
-                processor=self.processor,
-                tagger=self.tagger,
-                flavor=self.flavor,
-                wp=self.wp,
-                year=self.year,
-            )
-            fname = f"{processor_output_dir}/{self.processor}_{feature}"
+            fname = f"{self.output_dir}/{self.processor}_{feature}"
             if self.tagger and self.wp:
                 fname += f"_{self.tagger}_{self.wp}"
             if self.cat_axis:
                 fname += f"_{self.cat_axis[0]}_{self.cat_axis[1]}"
             fig.savefig(f"{fname}_{year_map[self.year]}.png")
-            #fig.savefig(f"{fname}_{year_map[self.year]}.pdf")
+            # fig.savefig(f"{fname}_{year_map[self.year]}.pdf")
         plt.close()

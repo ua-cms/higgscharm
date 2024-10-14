@@ -1,4 +1,5 @@
 import argparse
+from analysis.utils import paths
 from analysis.configs import load_config
 from analysis.postprocess.plotter import Plotter
 from analysis.postprocess.postprocessor import Postprocessor
@@ -14,7 +15,9 @@ def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
         wp=args.wp,
         year=args.year,
         lumi=lumi,
-        cat_axis=cat_axis
+        cat_axis=cat_axis,
+        lepton_flavor=args.lepton_flavor,
+        output_dir=args.output_dir,
     )
     print_header("plotting histograms")
     for key, features in histograms_config.layout.items():
@@ -29,7 +32,15 @@ def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
 
 
 def main(args):
-    # process output histograms
+    if not args.output_dir:
+        args.output_dir = paths.processor_path(
+            processor=args.processor,
+            tagger=args.tagger,
+            flavor=args.flavor,
+            wp=args.wp,
+            year=args.year,
+            lepton_flavor=args.lepton_flavor,
+        )
     if args.year != "full2022":
         postprocessor = Postprocessor(
             processor=args.processor,
@@ -38,9 +49,10 @@ def main(args):
             wp=args.wp,
             year=args.year,
             output_dir=args.output_dir,
+            lepton_flavor=args.lepton_flavor,
         )
-        processed_histograms = postprocessor.process_histograms()
-        lumi = postprocessor.lumi
+        processed_histograms = postprocessor.histograms
+        lumi = postprocessor.luminosities["Total"]
     else:
         lumi = 0
         pre_processed_histograms = {}
@@ -52,10 +64,11 @@ def main(args):
                 wp=args.wp,
                 year=year,
                 output_dir=args.output_dir,
+                lepton_flavor=args.lepton_flavor,
             )
-            pre_processed_histograms[year] = postprocessor.process_histograms()
-            lumi += postprocessor.lumi
-            
+            pre_processed_histograms[year] = postprocessor.histograms
+            lumi += postprocessor.luminosities["Total"]
+
         accumulated_processed_histograms = {}
         for sample in pre_processed_histograms["2022"]:
             accumulated_processed_histograms[sample] = {}
@@ -65,8 +78,7 @@ def main(args):
                     + pre_processed_histograms["2022EE"][sample][feature]
                 )
         processed_histograms = accumulated_processed_histograms
-            
-    # plot histograms
+
     histograms_config = load_config(config_type="histogram", config_name=args.processor)
     if histograms_config.add_cat_axis:
         for k in histograms_config.add_cat_axis:
@@ -76,7 +88,6 @@ def main(args):
                 plot(args, processed_histograms, histograms_config, lumi, (k, category))
     else:
         plot(args, processed_histograms, histograms_config, lumi, None)
-        
 
 
 if __name__ == "__main__":
@@ -85,15 +96,15 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        default="ztomumu",
-        help="processor to be used {signal, tag_eff, taggers, zplusjet}",
+        default="ztoll",
+        help="processor to be used {ztoll, ...}",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
         default="2022EE",
-        help="year of the data {2022EE}",
+        help="year of the data {2022, 2022EE, full2022}",
     )
     parser.add_argument(
         "--tagger",
@@ -122,6 +133,13 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="Path to the outputs directory",
+    )
+    parser.add_argument(
+        "--lepton_flavor",
+        dest="lepton_flavor",
+        type=str,
+        default="muon",
+        help="lepton flavor {muon, electron}",
     )
     args = parser.parse_args()
     main(args)

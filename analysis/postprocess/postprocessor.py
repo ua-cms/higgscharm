@@ -1,6 +1,6 @@
 import glob
-import json
-from analysis.utils import paths
+import numpy as np
+import pandas as pd
 from analysis.configs import load_config
 from analysis.postprocess.utils import open_output, print_header, accumulate
 
@@ -10,53 +10,55 @@ class Postprocessor:
         self,
         processor: str,
         year: str,
+        lepton_flavor: str,
+        output_dir: str,
         tagger: str = None,
         flavor: str = None,
         wp: str = None,
-        output_dir: str = None,
     ):
         self.processor = processor
         self.year = year
-        if output_dir:
-            self.output_dir = f"{output_dir}/{processor}/{year}"
-        else:
-            self.output_dir = paths.processor_path(
-                processor=processor,
-                tagger=tagger,
-                flavor=flavor,
-                wp=wp,
-                year=year,
-            )
-            
-    def process_histograms(self) -> dict:
-        """group scaled histograms by process"""
-        self.group_outputs()
-        self.scale_histograms()
-        
-        print_header("grouping scaled histograms by sample")
-        
-        processed_histograms = {}
-        for sample in self.scaled_histograms:
-            dataset_config = load_config(
-                config_type="dataset", config_name=sample, year=self.year
-            )
-            process = dataset_config.process
-            if process not in processed_histograms:
-                print(f"Initializing {process} histograms with {sample} histograms")
-                processed_histograms[process] = [self.scaled_histograms[sample]]
-            else:
-                print(f"Appending {sample} histograms to {process} histograms")
-                processed_histograms[process].append(self.scaled_histograms[sample])
-        for process in processed_histograms:
-            processed_histograms[process] = accumulate(
-                processed_histograms[process]
-            )
-        print(f"\nProcesses grouped: {list(processed_histograms.keys())}\n")
-        return processed_histograms
+        self.output_dir = output_dir
 
-    def group_outputs(self) -> tuple:
+        self.run_postprocess()
+
+    def run_postprocess(self):
+        print_header("grouping outputs by sample")
+        self.group_outputs()
+
+        print_header("scaling outputs by sample")
+        self.set_lumixsec_weights()
+        self.scale()
+
+        print_header("grouping outputs by process")
+        self.histograms = self.group_by_process(self.scaled_histograms)
+        print(pd.Series(self.process_samples).to_string(dtype=False))
+
+        print_header(f"Cutflow")
+        processed_cutflow = self.group_by_process(self.scaled_cutflow)
+        self.cutflow_df = pd.DataFrame(processed_cutflow)
+        self.cutflow_df["Total Background"] = self.cutflow_df.drop(columns="Data").sum(
+            axis=1
+        )
+        self.cutflow_df = self.cutflow_df[
+            ["Data", "Total Background"]
+            + [
+                process
+                for process in self.cutflow_df.columns
+                if process not in ["Data", "Total Background"]
+            ]
+        ]
+        print(self.cutflow_df.map(lambda x: f"{x:.3f}" if pd.notnull(x) else ""))
+        self.cutflow_df.to_csv(f"{self.output_dir}/cutflow.csv")
+
+        print_header(f"Results")
+        results_df = self.get_results_report()
+        print(results_df.map(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
+        results_df.to_csv(f"{self.output_dir}/results.csv")
+
+    def group_outputs(self):
         """
-        group output .pkl files and group histograms, lumi, and sum of weights by sample
+        group and accumulate output files by sample
         """
         print(f"reading outputs from {self.output_dir}")
         extension = ".pkl"
@@ -64,8 +66,6 @@ class Postprocessor:
         n_output_files = len(output_files)
         assert n_output_files != 0, "No output files found"
 
-        print_header(f"grouping {self.year} outputs by sample")
-        
         # group output file paths by sample name
         grouped_outputs = {}
         for output_file in output_files:
@@ -86,78 +86,257 @@ class Postprocessor:
             )
             dataset_nfiles = dataset_config.partitions
             output_nfiles = len(grouped_outputs[sample])
-            print(f"{sample}: {output_nfiles} (missing files: {dataset_nfiles - output_nfiles})")
-        
-        # open output dictionaries partitions ({<sample>_<i-th>: {"histograms": {"pt": Hist(...), ...}, "sumw": x, "lumi": y}})
-        # and group histograms and sumw by <sample>
+            print(
+                f"{sample}: {output_nfiles} (missing files: {dataset_nfiles - output_nfiles})"
+            )
+
+        # open output dictionaries with layout:
+        #      {<sample>_<i-th>: {"histograms": {"pt": Hist(...), ...}, "metadata": {"sumw": x, ...}}})
+        # group and accumulate histograms and metadata by <sample>
+        self.metadata = {}
+        self.histograms = {}
+        grouped_metadata = {}
         grouped_histograms = {}
-        accumulated_histograms = {}
-        grouped_sumw = {}
-        accumulated_sumw = {}
-        grouped_lumi = {}
-        accumulated_lumi = {}
+        print_header("Reading and accumulating outputs by sample")
         for sample in grouped_outputs:
+            print(f"{sample}...")
             grouped_histograms[sample] = []
-            grouped_sumw[sample] = []
-            grouped_lumi[sample] = []
+            grouped_metadata[sample] = {}
             for fname in grouped_outputs[sample]:
                 output = open_output(fname)
                 if output:
                     output_dataset_key = list(output.keys())[0]
-                    grouped_sumw[sample].append(float(output[output_dataset_key]["sumw"]))
+                    # group histograms by sample
                     grouped_histograms[sample].append(
                         output[output_dataset_key]["histograms"]
                     )
-                    if "lumi" in output[output_dataset_key]:
-                        grouped_lumi[sample].append(float(output[output_dataset_key]["lumi"]))
-            # accumuBaseExceptionlate sample histograms and sumw
-            accumulated_sumw[sample] = accumulate(grouped_sumw[sample])
-            accumulated_histograms[sample] = accumulate(
-                grouped_histograms[sample]
-            )
-            if sample.startswith("Muon"):
-                accumulated_lumi[sample] = accumulate(grouped_lumi[sample])
-        self.accumulated_histograms = accumulated_histograms
-        self.accumulated_sumw = accumulated_sumw
-        self.accumulated_lumi = accumulated_lumi
+                    # group metadata by sample
+                    for meta_key in output[output_dataset_key]["metadata"]:
+                        if meta_key in grouped_metadata[sample]:
+                            grouped_metadata[sample][meta_key].append(
+                                output[output_dataset_key]["metadata"][meta_key]
+                            )
+                        else:
+                            grouped_metadata[sample][meta_key] = [
+                                output[output_dataset_key]["metadata"][meta_key]
+                            ]
+            # accumulate histograms and metadata by sample
+            self.histograms[sample] = accumulate(grouped_histograms[sample])
+            self.metadata[sample] = {}
+            for meta_key in grouped_metadata[sample]:
+                self.metadata[sample][meta_key] = accumulate(
+                    grouped_metadata[sample][meta_key]
+                )
 
-        
-    def set_weights(self):
-        """
-        compute luminosity and set xsec-lumi weights
-
-        set attributes:
-            weights (dict)
-            lumi (float)
-        """
-        # get integrated luminosity (/pb) in data 
-        self.lumi = sum(self.accumulated_lumi.values())
-        # set lumi-xsec weights
+    def set_lumixsec_weights(self):
+        """compute luminosity and xsec-lumi weights"""
+        # get integrated luminosity (/pb)
+        self.luminosities = {}
+        for sample, metadata in self.metadata.items():
+            if "lumi" in metadata:
+                self.luminosities[sample] = float(metadata["lumi"])
+        self.luminosities["Total"] = np.sum(list(self.luminosities.values()))
+        print(pd.DataFrame({"luminosity [/pb]": self.luminosities}))
+        print()
+        # compute lumi-xsec weights
         self.weights = {}
         self.xsecs = {}
-        for sample, sumw in self.accumulated_sumw.items():
+        self.sumw = {}
+        for sample, metadata in self.metadata.items():
             dataset_config = load_config(
                 config_type="dataset", config_name=sample, year=self.year
             )
             self.weights[sample] = 1
             self.xsecs[sample] = dataset_config.xsec
+            self.sumw[sample] = metadata["sumw"]
             if dataset_config.era == "MC":
-                self.weights[sample] = (self.lumi * dataset_config.xsec) / sumw
+                self.weights[sample] = (
+                    self.luminosities["Total"] * self.xsecs[sample]
+                ) / self.sumw[sample]
 
-        
-    def scale_histograms(self):
-        """scale histograms to lumi-xsec"""
-        self.set_weights()
-        print_header(f"scaling histograms to lumi-xsec weights")
-        print(f"luminosities (/pb): {json.dumps(self.accumulated_lumi, indent=2)}")
-        print(f"total luminosity (/fb): {self.lumi * 1e-3}")
-        print(f"sumw of weights: {json.dumps(self.accumulated_sumw, indent=2)}")
-        print(f"cross sections: {json.dumps(self.xsecs, indent=2)}")
-        print(f"lumi-xsec weights: {json.dumps(self.weights, indent=2)}")
+    def scale(self):
+        """scale histograms and cutflow to lumi-xsec"""
+        scale_info = pd.DataFrame(
+            {
+                "xsec [pb]": self.xsecs,
+                "sumw": self.sumw,
+                "weight": self.weights,
+            }
+        )
+        print(
+            scale_info.drop(
+                [data_key for data_key in self.luminosities if data_key != "Total"]
+            ).map(lambda x: f"{x:.5f}" if pd.notnull(x) else "")
+        )
         self.scaled_histograms = {}
-        for sample, features in self.accumulated_histograms.items():
+        self.scaled_cutflow = {}
+        for sample, features in self.histograms.items():
+            # scale histograms
             self.scaled_histograms[sample] = {}
             for feature in features:
                 self.scaled_histograms[sample][feature] = (
-                    self.accumulated_histograms[sample][feature] * self.weights[sample]
+                    self.histograms[sample][feature] * self.weights[sample]
                 )
+            # scale cutflow
+            self.scaled_cutflow[sample] = {}
+            for cut, nevents in self.metadata[sample]["cutflow"].items():
+                self.scaled_cutflow[sample][cut] = nevents * self.weights[sample]
+
+    def group_by_process(self, to_group):
+        """group and accumulate histograms by process"""
+        group = {}
+        self.process_samples = {}
+        for sample in to_group:
+            dataset_config = load_config(
+                config_type="dataset", config_name=sample, year=self.year
+            )
+            process = dataset_config.process
+            if process not in group:
+                group[process] = [to_group[sample]]
+                self.process_samples[process] = [sample]
+            else:
+                group[process].append(to_group[sample])
+                self.process_samples[process].append(sample)
+
+        for process in group:
+            group[process] = accumulate(group[process])
+
+        return group
+
+    def get_results_report(self):
+        nevents = {}
+        stat_errors = {}
+        for process, samples in self.process_samples.items():
+            nevents[process] = 0
+            stat_errors[process] = 0
+            for sample in samples:
+                dataset_config = load_config(
+                    config_type="dataset", config_name=sample, year=self.year
+                )
+                # compute number of events after selection
+                final_nevents = (
+                    self.metadata[sample]["weighted_final_nevents"]
+                    * self.weights[sample]
+                )
+                nevents[process] += final_nevents
+                # compute number of raw initial and final events to compute statistical error
+                stat_error = np.sqrt(self.metadata[sample]["raw_final_nevents"])
+                if dataset_config.era == "MC":
+                    stat_error /= self.metadata[sample]["raw_initial_nevents"]
+                    stat_error *= self.luminosities["Total"] * self.xsecs[sample]
+                stat_errors[process] += stat_error**2
+            stat_errors[process] = np.sqrt(stat_errors[process])
+
+        # initialize results table with number of events and statistical uncertainty
+        results_df = pd.DataFrame({"events": nevents, "stat unc": stat_errors})
+        # add background percentage
+        bkg_process = [p for p in results_df.index if p != "Data"]
+        results_df["percentage"] = (
+            results_df.loc[bkg_process, "events"]
+            / results_df.loc[bkg_process, "events"].sum()
+        ) * 100
+        # add total background
+        results_df.loc["Total Background", "events"] = np.sum(
+            results_df.loc[bkg_process, "events"]
+        )
+        results_df.loc["Total Background", "stat unc"] = np.sqrt(
+            np.sum(results_df.loc[bkg_process, "stat unc"] ** 2)
+        )
+        # add Data/Bkg ratio and its uncertainty
+        data = results_df.loc["Data", "events"]
+        data_unc = results_df.loc["Data", "stat unc"]
+        bkg = results_df.loc["Total Background", "events"]
+        bkg_unc = results_df.loc["Total Background", "stat unc"]
+        results_df.loc["Data/Background", "events"] = data / bkg
+        results_df.loc["Data/Background", "stat unc"] = (data / bkg) * np.sqrt(
+            (data_unc / data) ** 2 + (bkg_unc / bkg) ** 2
+        )
+        # sort by percentage
+        results_df = results_df.loc[
+            bkg_process + ["Total Background", "Data", "Data/Background"]
+        ]
+        results_df = results_df.sort_values(by="percentage", ascending=False)
+
+        # compute systematic uncertainty
+        nominal, syst = {}, {}
+        for process, hist_dict in self.histograms.items():
+            if process == "Data":
+                continue
+            syst[process] = {}
+            # get some helper histogram to extract nominal and variations values
+            for histo_key, histo in hist_dict.items():
+                axis_names = [axis for axis in histo.axes.name if axis != "variation"]
+                helper_histo = histo_key
+                helper_axis = axis_names[0]
+                break
+            # get nominal values by process
+            nominal[process] = (
+                self.histograms[process][helper_histo][{"variation": "nominal"}]
+                .project(helper_axis)
+                .values()
+            )
+            # get variations values by process
+            for variation in self.histograms[process][helper_histo].axes["variation"]:
+                if variation == "nominal":
+                    continue
+                variation_hist = self.histograms[process][helper_histo][
+                    {"variation": variation}
+                ].project(helper_axis)
+                if variation in syst:
+                    syst[process][variation].append(variation_hist)
+                else:
+                    syst[process][variation] = [variation_hist]
+        # accumulate variations
+        syst_variations = {}
+        for process in syst:
+            syst_variations[process] = {}
+            for variation in syst[process]:
+                syst_variations[process][variation] = accumulate(
+                    syst[process][variation]
+                )
+        # compute up/down variations
+        bin_error_up, bin_error_down = {}, {}
+        band_up, band_down = {}, {}
+        for process in syst_variations:
+            bin_error_up[process] = 0
+            bin_error_down[process] = 0
+            for variation in syst_variations[process]:
+                syst_values = syst_variations[process][variation].values()
+                # add up variation
+                max_syst_values = np.max(
+                    np.stack([nominal[process], syst_values]), axis=0
+                )
+                max_syst_values = np.abs(max_syst_values - nominal[process])
+                bin_error_up[process] += max_syst_values**2
+                # add down variation
+                min_syst_values = np.min(
+                    np.stack([nominal[process], syst_values]), axis=0
+                )
+                min_syst_values = np.abs(min_syst_values - nominal[process])
+                bin_error_down[process] += min_syst_values**2
+
+            band_up[process] = np.sum(np.sqrt(np.sqrt(bin_error_up[process]) ** 2))
+            band_down[process] = np.sum(np.sqrt(np.sqrt(bin_error_down[process]) ** 2))
+
+        # add sys uncertainties to results table
+        results_df.loc["Total Background", "syst unc up"] = 0
+        results_df.loc["Total Background", "syst unc down"] = 0
+        for process in syst_variations:
+            error_up = band_up[process]
+            error_down = band_down[process]
+            results_df.loc[process, "syst unc up"] = error_up
+            results_df.loc[process, "syst unc down"] = error_down
+            results_df.loc["Total Background", "syst unc up"] += error_up**2
+            results_df.loc["Total Background", "syst unc down"] += error_down**2
+
+        results_df.loc["Total Background", "syst unc up"] = np.sqrt(
+            results_df.loc["Total Background", "syst unc up"]
+        )
+        results_df.loc["Total Background", "syst unc down"] = np.sqrt(
+            results_df.loc["Total Background", "syst unc down"]
+        )
+
+        results_df = results_df.loc[
+            :, ["events", "percentage", "stat unc", "syst unc up", "syst unc down"]
+        ]
+        return results_df
