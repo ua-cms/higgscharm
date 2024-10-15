@@ -63,8 +63,8 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        default="tag_eff",
-        help="processor to be used {signal, tag_eff, taggers, zplusjet, ztomumu, flavor}",
+        default="ztoll",
+        help="processor to be used {ztoll}",
     )
     parser.add_argument(
         "--dataset_name",
