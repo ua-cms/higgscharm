@@ -14,7 +14,6 @@ from analysis.filesets.utils import build_single_fileset, divide_list
 
 def main(args):
     args = vars(args)
-    
     # set output path
     processor_output_path = paths.processor_path(
         processor=args["processor"],
@@ -25,28 +24,24 @@ def main(args):
         lepton_flavor=args["lepton_flavor"],
     )
     args["output_path"] = str(processor_output_path)
-        
-    # split dataset into batches
-    dataset_config = load_config(
-        config_type="dataset", config_name=args["dataset_name"], year=args["year"]
-    )
-    fileset = build_single_fileset(name=dataset_config.name, year=dataset_config.year)
-    root_files = list(fileset[dataset_config.name]["files"].keys())
-    npartitions, root_files_list = divide_list(root_files)
 
+    # split dataset into batches
+    dataset_name = args["dataset_name"]
+    fileset = build_single_fileset(name=dataset_name, year=args["year"])
+    root_files = list(fileset[dataset_name]["files"].keys())
+    root_files_list = divide_list(root_files)
+    print(fileset)
     # run over batches
     for i, partition in enumerate(root_files_list, start=1):
         partition_fileset = deepcopy(fileset)
-        if npartitions > 1:
-            partition_fileset[f"{dataset_config.name}_{i}"] = partition_fileset[
-                dataset_config.name
-            ]
-            del partition_fileset[dataset_config.name]
-            partition_fileset[f"{dataset_config.name}_{i}"]["files"] = {
+        if len(root_files_list) > 1:
+            partition_fileset[f"{dataset_name}_{i}"] = partition_fileset[dataset_name]
+            del partition_fileset[dataset_name]
+            partition_fileset[f"{dataset_name}_{i}"]["files"] = {
                 p: "Events" for p in partition
             }
         dataset_runnable_key = [key for key in partition_fileset][0]
-                
+
         # set condor and submit args
         args["dataset_name"] = dataset_runnable_key
         args["cmd"] = (
@@ -64,8 +59,7 @@ def main(args):
             # we use json.dumps() to switch from single to double quotes within the dictionary
             f"--partition_fileset '{json.dumps(partition_fileset)}' "
         )
-        if dataset_config.stepsize:
-            args["cmd"] += f"--stepsize {dataset_config.stepsize} "
+        args["cmd"] += f"--stepsize {args['stepsize']} "
         submit_condor(args)
 
 
@@ -126,6 +120,13 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="output path",
+    )
+    parser.add_argument(
+        "--stepsize",
+        dest="stepsize",
+        type=str,
+        default="50000",
+        help="stepsize",
     )
     args = parser.parse_args()
     main(args)
