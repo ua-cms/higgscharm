@@ -14,8 +14,4 @@ dataset_config = DatasetConfig(
     xsec=6.115,
     partitions=1,
     stepsize=50_000,
-    filenames=(
-        "MC_defaultAK4_1.root",
-        "MC_defaultAK4_2.root",
-    )
 )
