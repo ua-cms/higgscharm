@@ -16,11 +16,12 @@ def build_single_fileset(name: str, year: str) -> dict:
             year of the dataset {2022EE, 2022, 2023}
     """
     dataset_config = load_config(config_type="dataset", config_name=name, year=year)
+    root_files = glob.glob(f"{dataset_config.path}*.root")
     return {
         dataset_config.name: {
             "files": {
-                dataset_config.path + root_file: dataset_config.key
-                for root_file in dataset_config.filenames
+                root_file: dataset_config.key
+                for root_file in root_files
             },
             "metadata": {
                 "short_name": dataset_config.name,

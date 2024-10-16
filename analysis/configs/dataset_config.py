@@ -22,8 +22,6 @@ class DatasetConfig:
             number of partitions when building the dataset
         stepsize: 
             step size to use in the dataset preprocessing
-        filenames: 
-            names of the ROOT files
     """
     def __init__(
         self,
@@ -36,7 +34,6 @@ class DatasetConfig:
         xsec: float,
         partitions: int,
         stepsize: int,
-        filenames: tuple,
     ) -> None:
         if path[-1] != "/":
             raise ValueError(f"Dataset path has to end with '/'. Got: {path}")
@@ -50,7 +47,6 @@ class DatasetConfig:
         self.xsec = xsec
         self.partitions = partitions
         self.stepsize = stepsize
-        self.filenames = filenames
 
     def __repr__(self):
         return f"DatasetConfig({self.name}, {self.year}, {self.stepsize})"
