@@ -6,7 +6,7 @@ dataset_config = DatasetConfig(
     path=(
         "/pnfs/iihe/cms/store/user/daocampo/PFNano_Run3/"
         "mc_summer22EE_MINIAODv4/ggZH_Hto2B_Zto2L_M-125_TuneCP5_13p6TeV_powheg-pythia8/"
-        "Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6_ext1-v3_BTV_Run3_2022_Comm_MINIAODv4/240605_075714/0000/"
+        "Run3Summer22EEMiniAODv4-130X_mcRun3_2022_realistic_postEE_v6_ext1-v3_BTV_Run3_2022_Comm_MINIAODv4/240605_075714/"
     ),
     key="Events",
     year="2022EE",
