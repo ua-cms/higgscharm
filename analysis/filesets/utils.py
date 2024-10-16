@@ -53,12 +53,22 @@ def build_full_dataset(year: str) -> None:
     return full_fileset
 
 
-def divide_list(lst: list, n: int) -> list:
-    """Divide a list into n sublists"""
+def divide_list(lst: list) -> list:
+    """Divide a list into sublists such that each sublist has at least 20 elements."""
+    if len(lst) < 20:
+        return 1, [lst]
+    
+    # Dynamically calculate the number of sublists such that each has at least 20 elements
+    n = len(lst) // 20  # This gives the number of groups with at least 20 elements
+    if len(lst) % 20 != 0:
+        n += 1  # Increase n by 1 if there is a remainder, to accommodate extra elements
+    
+    # Divide the list into 'n' sublists
     size = len(lst) // n
     remainder = len(lst) % n
     result = []
     start = 0
+    
     for i in range(n):
         if i < remainder:
             end = start + size + 1
@@ -66,4 +76,5 @@ def divide_list(lst: list, n: int) -> list:
             end = start + size
         result.append(lst[start:end])
         start = end
-    return result
+    
+    return n, result

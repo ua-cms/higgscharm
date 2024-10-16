@@ -11,6 +11,5 @@ dataset_config = DatasetConfig(
     year="2022",
     era="D",
     xsec=None,
-    partitions=15,
     stepsize=50_000,
 )

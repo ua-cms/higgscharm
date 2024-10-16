@@ -32,12 +32,12 @@ def main(args):
     )
     fileset = build_single_fileset(name=dataset_config.name, year=dataset_config.year)
     root_files = list(fileset[dataset_config.name]["files"].keys())
-    root_files_list = divide_list(root_files, dataset_config.partitions)
+    npartitions, root_files_list = divide_list(root_files)
 
     # run over batches
     for i, partition in enumerate(root_files_list, start=1):
         partition_fileset = deepcopy(fileset)
-        if dataset_config.partitions > 1:
+        if npartitions > 1:
             partition_fileset[f"{dataset_config.name}_{i}"] = partition_fileset[
                 dataset_config.name
             ]

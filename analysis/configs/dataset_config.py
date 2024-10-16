@@ -18,8 +18,6 @@ class DatasetConfig:
             Is the dataset MC?
         xsec: 
             dataset cross section
-        partitions: 
-            number of partitions when building the dataset
         stepsize: 
             step size to use in the dataset preprocessing
     """
@@ -32,7 +30,6 @@ class DatasetConfig:
         year: str,
         era: str,
         xsec: float,
-        partitions: int,
         stepsize: int,
     ) -> None:
         if path[-1] != "/":
@@ -45,7 +42,6 @@ class DatasetConfig:
         self.year = year
         self.era = era
         self.xsec = xsec
-        self.partitions = partitions
         self.stepsize = stepsize
 
     def __repr__(self):
