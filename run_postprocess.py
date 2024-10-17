@@ -31,49 +31,15 @@ def main(args):
     if not args.output_dir:
         args.output_dir = paths.processor_path(
             processor=args.processor,
-            tagger=args.tagger,
-            flavor=args.flavor,
-            wp=args.wp,
             year=args.year,
-            lepton_flavor=args.lepton_flavor,
         )
-    if args.year != "full2022":
-        postprocessor = Postprocessor(
-            processor=args.processor,
-            tagger=args.tagger,
-            flavor=args.flavor,
-            wp=args.wp,
-            year=args.year,
-            output_dir=args.output_dir,
-            lepton_flavor=args.lepton_flavor,
-        )
-        processed_histograms = postprocessor.histograms
-        lumi = postprocessor.luminosities["Total"]
-    else:
-        lumi = 0
-        pre_processed_histograms = {}
-        for year in ["2022", "2022EE"]:
-            postprocessor = Postprocessor(
-                processor=args.processor,
-                tagger=args.tagger,
-                flavor=args.flavor,
-                wp=args.wp,
-                year=year,
-                output_dir=args.output_dir,
-                lepton_flavor=args.lepton_flavor,
-            )
-            pre_processed_histograms[year] = postprocessor.histograms
-            lumi += postprocessor.luminosities["Total"]
-
-        accumulated_processed_histograms = {}
-        for sample in pre_processed_histograms["2022"]:
-            accumulated_processed_histograms[sample] = {}
-            for feature in pre_processed_histograms["2022"][sample]:
-                accumulated_processed_histograms[sample][feature] = (
-                    pre_processed_histograms["2022"][sample][feature]
-                    + pre_processed_histograms["2022EE"][sample][feature]
-                )
-        processed_histograms = accumulated_processed_histograms
+    postprocessor = Postprocessor(
+        processor=args.processor,
+        year=args.year,
+        output_dir=args.output_dir,
+    )
+    processed_histograms = postprocessor.histograms
+    lumi = postprocessor.luminosities["Total"]
 
     processor_config = load_config(
         config_type="processor", config_name=args.processor, year=args.year

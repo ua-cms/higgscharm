@@ -59,13 +59,9 @@ class Plotter:
         self,
         processor: str,
         processed_histograms: dict,
-        tagger: str,
-        flavor: str,
-        wp: str,
         year: str,
         lumi: int,
         cat_axis: tuple,
-        lepton_flavor: str,
         output_dir: str = None,
     ):
         self.processor = processor

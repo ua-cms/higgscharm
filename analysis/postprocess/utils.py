@@ -7,10 +7,10 @@ def open_output(fname: str) -> dict:
         output = pickle.load(f)
     return output
 
-def print_header(text):
-    print("-" * 40)
+def print_header(text, lenght=90):
+    print("-" * lenght)
     print(text)
-    print("-" * 40)
+    print("-" * lenght)
 
 def accumulate(to_accumulate: list):
     if isinstance(to_accumulate[0], dict):
