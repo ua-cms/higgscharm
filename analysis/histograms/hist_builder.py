@@ -25,7 +25,7 @@ class HistBuilder:
             axis_args["name"] = name
             hist_type = axis_config[name]["type"]
             for arg_name, arg_value in axis_config[name].items():
-                if arg_name == "type":
+                if arg_name in ["type", "expression"]:
                     continue
                 axis_args[arg_name] = arg_value
         hist_args = {k: v for k, v in axis_args.items()}

@@ -5,7 +5,7 @@ def load_config(config_type: str, config_name: str, year: str = None):
     """
     load processor or histogram configuration
     """
-    path = f"analysis.{config_type}s.configs."
+    path = f"analysis.configs.{config_type}."
     if config_type == "histogram":
         path += config_name
     else:

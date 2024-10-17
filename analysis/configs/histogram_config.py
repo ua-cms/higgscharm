@@ -1,20 +1,20 @@
 class HistogramConfig:
     """
     config class for a Histogram
-     
+
     Attributes:
     -----------
         axes:
-                dictionary with axis info like {"type": <type>, **args} 
+                dictionary with axis info like {"type": <type>, **args}
                 <type> is a hist.axis type: Regular, IntCategory, StrCategory, Variable
 
                 Example:
                     axes = {
                         "jet_pt": {
-                            "type": "Regular", 
-                            "bins": 30, 
-                            "start": 30, 
-                            "stop": 200, 
+                            "type": "Regular",
+                            "bins": 30,
+                            "start": 30,
+                            "stop": 200,
                             "label": r"Jet $p_T$ [GeV]"
                         },
                         "jet_eta": {
@@ -25,7 +25,7 @@ class HistogramConfig:
                             "label": "Jet $\eta$",
                         },
                         "njets": {
-                            "type": "IntCategory", 
+                            "type": "IntCategory",
                             "categories": np.arange(0, 16),
                             "label": "$N_{jets}$"
                         }
@@ -39,10 +39,11 @@ class HistogramConfig:
             if True histograms will include a StrCategory axis for systematics
         add_weight:
             if True hist.storage.Weight() will be added to the histograms
-        
+
     """
+
     def __init__(
-        self, 
+        self,
         axes: dict,
         layout: dict,
         add_syst_axis: bool,
