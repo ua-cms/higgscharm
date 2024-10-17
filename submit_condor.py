@@ -6,9 +6,8 @@ import pathlib
 import argparse
 import subprocess
 from copy import deepcopy
-from analysis.utils import paths
 from condor.utils import submit_condor
-from analysis.configs import load_config
+from analysis.utils import paths, load_config
 from analysis.filesets.utils import build_single_fileset, divide_list
 
 
@@ -30,7 +29,6 @@ def main(args):
     fileset = build_single_fileset(name=dataset_name, year=args["year"])
     root_files = list(fileset[dataset_name]["files"].keys())
     root_files_list = divide_list(root_files)
-    print(fileset)
     # run over batches
     for i, partition in enumerate(root_files_list, start=1):
         partition_fileset = deepcopy(fileset)
@@ -41,7 +39,6 @@ def main(args):
                 p: "Events" for p in partition
             }
         dataset_runnable_key = [key for key in partition_fileset][0]
-
         # set condor and submit args
         args["dataset_name"] = dataset_runnable_key
         args["cmd"] = (
