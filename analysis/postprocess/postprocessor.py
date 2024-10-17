@@ -1,7 +1,6 @@
 import glob
 import numpy as np
 import pandas as pd
-from analysis.configs import load_config
 from analysis.postprocess.utils import open_output, print_header, accumulate
 
 
@@ -10,16 +9,19 @@ class Postprocessor:
         self,
         processor: str,
         year: str,
-        lepton_flavor: str,
         output_dir: str,
-        tagger: str = None,
-        flavor: str = None,
-        wp: str = None,
     ):
         self.processor = processor
         self.year = year
         self.output_dir = output_dir
 
+        # get datasets configs
+        main_dir = Path.cwd()
+        fileset_path = Path(f"{main_dir}/analysis/filesets")
+        with open(f"{fileset_path}/{year}_fileset.json", "r") as f:
+            self.dataset_config = json.load(f)
+
+        # run postprocessor
         self.run_postprocess()
 
     def run_postprocess(self):
@@ -80,15 +82,6 @@ class Postprocessor:
 
         print(f"{n_output_files} output files were found:")
         n_grouped_outputs = {}
-        for sample in grouped_outputs:
-            dataset_config = load_config(
-                config_type="dataset", config_name=sample, year=self.year
-            )
-            dataset_nfiles = dataset_config.partitions
-            output_nfiles = len(grouped_outputs[sample])
-            print(
-                f"{sample}: {output_nfiles} (missing files: {dataset_nfiles - output_nfiles})"
-            )
 
         # open output dictionaries with layout:
         #      {<sample>_<i-th>: {"histograms": {"pt": Hist(...), ...}, "metadata": {"sumw": x, ...}}})
@@ -143,13 +136,10 @@ class Postprocessor:
         self.xsecs = {}
         self.sumw = {}
         for sample, metadata in self.metadata.items():
-            dataset_config = load_config(
-                config_type="dataset", config_name=sample, year=self.year
-            )
             self.weights[sample] = 1
-            self.xsecs[sample] = dataset_config.xsec
+            self.xsecs[sample] = self.dataset_config[sample]["xsec"]
             self.sumw[sample] = metadata["sumw"]
-            if dataset_config.era == "MC":
+            if self.dataset_config[sample]["era"] == "MC":
                 self.weights[sample] = (
                     self.luminosities["Total"] * self.xsecs[sample]
                 ) / self.sumw[sample]
@@ -187,10 +177,7 @@ class Postprocessor:
         group = {}
         self.process_samples = {}
         for sample in to_group:
-            dataset_config = load_config(
-                config_type="dataset", config_name=sample, year=self.year
-            )
-            process = dataset_config.process
+            process = self.dataset_config[sample]["process"]
             if process not in group:
                 group[process] = [to_group[sample]]
                 self.process_samples[process] = [sample]
@@ -210,9 +197,6 @@ class Postprocessor:
             nevents[process] = 0
             stat_errors[process] = 0
             for sample in samples:
-                dataset_config = load_config(
-                    config_type="dataset", config_name=sample, year=self.year
-                )
                 # compute number of events after selection
                 final_nevents = (
                     self.metadata[sample]["weighted_final_nevents"]
@@ -221,7 +205,7 @@ class Postprocessor:
                 nevents[process] += final_nevents
                 # compute number of raw initial and final events to compute statistical error
                 stat_error = np.sqrt(self.metadata[sample]["raw_final_nevents"])
-                if dataset_config.era == "MC":
+                if self.dataset_config[sample]["era"] == "MC":
                     stat_error /= self.metadata[sample]["raw_initial_nevents"]
                     stat_error *= self.luminosities["Total"] * self.xsecs[sample]
                 stat_errors[process] += stat_error**2
