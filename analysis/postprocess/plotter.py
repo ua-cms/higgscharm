@@ -70,13 +70,9 @@ class Plotter:
     ):
         self.processor = processor
         self.processed_histograms = processed_histograms
-        self.tagger = tagger
-        self.flavor = flavor
-        self.wp = wp
         self.year = year
         self.lumi = lumi
         self.cat_axis = cat_axis
-        self.lepton_flavor = lepton_flavor
         self.output_dir = output_dir
 
     def get_feature_hists(self, feature: str) -> dict:
@@ -373,8 +369,6 @@ class Plotter:
         # save histograms
         if savefig:
             fname = f"{self.output_dir}/{self.processor}_{feature}"
-            if self.tagger and self.wp:
-                fname += f"_{self.tagger}_{self.wp}"
             if self.cat_axis:
                 fname += f"_{self.cat_axis[0]}_{self.cat_axis[1]}"
             fig.savefig(f"{fname}_{year_map[self.year]}.png")
