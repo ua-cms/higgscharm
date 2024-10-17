@@ -111,7 +111,7 @@ def get_lumi_mask(events, goldenjson):
     if is_mc:
         lumi_mask = ak.ones_like(events.PV.npvsGood)
     else:
-        lumi_info = LumiMask(self.config.lumimask)
+        lumi_info = LumiMask(goldenjson)
         lumi_mask = lumi_info(events.run, events.luminosityBlock)
     return lumi_mask == 1
 
