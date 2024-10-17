@@ -3,9 +3,9 @@ import importlib.util
 
 def load_config(config_type: str, config_name: str, year: str = None):
     """
-    load dataset, processor or histogram configuration
+    load processor or histogram configuration
     """
-    path = f"analysis.configs.{config_type}."
+    path = f"analysis.{config_type}s.configs."
     if config_type == "histogram":
         path += config_name
     else:
