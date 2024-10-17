@@ -15,7 +15,7 @@ def submit_condor(args: dict) -> None:
         jobname += f'_{args["nfile"]}'
 
     # create logs directory
-    log_dir = condor_dir / "logs" / args["processor"] / args["year"] / args["dataset"]
+    log_dir = condor_dir / "logs" / args["processor"] / args["year"]
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
 
