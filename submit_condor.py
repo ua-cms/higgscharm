@@ -1,13 +1,8 @@
-import os
-import glob
 import json
-import gzip
-import pathlib
 import argparse
-import subprocess
 from copy import deepcopy
 from condor.utils import submit_condor
-from analysis.utils import paths, load_config
+from analysis.utils import paths
 from analysis.filesets.utils import build_single_fileset, divide_list
 
 
@@ -16,38 +11,33 @@ def main(args):
     # set output path
     processor_output_path = paths.processor_path(
         processor=args["processor"],
-        tagger=args["tagger"],
-        flavor=args["flavor"],
-        wp=args["wp"],
         year=args["year"],
-        lepton_flavor=args["lepton_flavor"],
     )
     args["output_path"] = str(processor_output_path)
 
     # split dataset into batches
-    dataset_name = args["dataset_name"]
-    fileset = build_single_fileset(name=dataset_name, year=args["year"])
-    root_files = list(fileset[dataset_name]["files"].keys())
+    dataset = args["dataset"]
+    fileset = build_single_fileset(name=dataset, year=args["year"])
+    root_files = list(fileset[dataset]["files"].keys())
     root_files_list = divide_list(root_files)
     # run over batches
     for i, partition in enumerate(root_files_list, start=1):
         partition_fileset = deepcopy(fileset)
         if len(root_files_list) > 1:
-            partition_fileset[f"{dataset_name}_{i}"] = partition_fileset[dataset_name]
-            del partition_fileset[dataset_name]
-            partition_fileset[f"{dataset_name}_{i}"]["files"] = {
+            partition_fileset[f"{dataset}_{i}"] = partition_fileset[dataset]
+            del partition_fileset[dataset]
+            partition_fileset[f"{dataset}_{i}"]["files"] = {
                 p: "Events" for p in partition
             }
         dataset_runnable_key = [key for key in partition_fileset][0]
         # set condor and submit args
-        args["dataset_name"] = dataset_runnable_key
+        args["dataset"] = dataset_runnable_key
         args["cmd"] = (
             "python3 submit.py "
             f"--processor {args['processor']} "
             f"--year {args['year']} "
-            f"--lepton_flavor {args['lepton_flavor']} "
             f"--output_path {args['output_path']} "
-            f"--dataset_name {dataset_runnable_key} "
+            f"--dataset {dataset_runnable_key} "
             f"--tagger {args['tagger']} "
             f"--wp {args['wp']} "
             f"--flavor {args['flavor']} "
@@ -66,50 +56,22 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        default="",
-        help="processor to be used {signal, tag_eff, taggers, zplusjet}",
+        default="ztomumu",
+        help="processor to be used {ztomumu}",
     )
     parser.add_argument(
-        "--dataset_name",
-        dest="dataset_name",
+        "--dataset",
+        dest="dataset",
         type=str,
         default="",
-        help="dataset_name",
+        help="dataset",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
         default="2022EE",
-        help="year of the data {2022EE}",
-    )
-    parser.add_argument(
-        "--lepton_flavor",
-        dest="lepton_flavor",
-        type=str,
-        default="muon",
-        help="lepton flavor {muon, electron}",
-    )
-    parser.add_argument(
-        "--tagger",
-        dest="tagger",
-        type=str,
-        default=None,
-        help="tagger {pnet, part, deepjet}",
-    )
-    parser.add_argument(
-        "--wp",
-        dest="wp",
-        type=str,
-        default=None,
-        help="working point {loose, medium, tight}",
-    )
-    parser.add_argument(
-        "--flavor",
-        dest="flavor",
-        type=str,
-        default=None,
-        help="Hadron flavor {c, b}",
+        help="year of the data {2022, 2022EE}",
     )
     parser.add_argument(
         "--output_path",

@@ -13,10 +13,6 @@ class Paths:
         self,
         processor: str,
         year: str,
-        lepton_flavor: str = None,
-        tagger: str = None,
-        flavor: str = None,
-        wp: str = None,
     ) -> pathlib.Path:
         """
         Safely return a path by creating the parent directories to avoid errors when writing to the path.
@@ -34,10 +30,6 @@ class Paths:
                 elem
                 for elem in [
                     processor,
-                    lepton_flavor,
-                    tagger,
-                    flavor,
-                    wp,
                     year,
                 ]
                 if elem is not None
