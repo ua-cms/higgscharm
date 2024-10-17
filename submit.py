@@ -75,8 +75,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--stepsize",
         dest="stepsize",
-        type=str,
-        default="50000",
+        type=int,
+        default=50_000,
         help="stepsize",
     )
     args = parser.parse_args()
