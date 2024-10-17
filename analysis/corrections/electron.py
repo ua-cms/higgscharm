@@ -6,6 +6,7 @@ import correctionlib.schemav2 as cs
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.utils import get_pog_json
+from analysis.utils import trigger_match
 
 
 class ElectronWeights:
@@ -14,8 +15,8 @@ class ElectronWeights:
 
     Parameters:
     -----------
-        electrons:
-            electrons collection
+        events:
+            events collection
         weights:
             Weights container
         year:
@@ -30,21 +31,24 @@ class ElectronWeights:
 
     def __init__(
         self,
-        electrons: ak.Array,
+        events: ak.Array,
         weights: Type[Weights],
         year: str = "2022EE",
         variation: str = "nominal",
         id_wp: str = "medium",
+        hlt_paths: str = ["Ele30_WPTight_Gsf"],
     ) -> None:
-        self.electrons = electrons
+        self.events = events
+        self.electrons = events.Electron
         self.weights = weights
         self.year = year
         self.variation = variation
         self.id_wp = id_wp
+        self.hlt_paths = hlt_paths
         # set id working points
         self.id_wps = {
-            "wp80iso": electrons.mvaIso_WP80,
-            "wp90iso": electrons.mvaIso_WP90,
+            "wp80iso": self.electrons.mvaIso_WP80,
+            "wp90iso": self.electrons.mvaIso_WP90,
         }
         self.year_map = {"2022EE": "2022Re-recoE+PromptFG", "2022": "2022Re-recoBCD"}
 
@@ -212,9 +216,21 @@ class ElectronWeights:
         cset = correctionlib.CorrectionSet.from_file(
             get_pog_json(json_name="electron_hlt", year=self.year)
         )
+        # get electrons matched to trigger objects
+        trig_match_mask = ak.zeros_like(self.events.PV.npvsGood, dtype="bool")
+        for hlt_path in self.hlt_paths:
+            if hlt_path in self.events.HLT.fields:
+                trig_obj_mask = trigger_match(
+                    leptons=self.electrons,
+                    trigobjs=self.events.TrigObj,
+                    hlt_path=hlt_path,
+                )
+                trig_match_mask = trig_match_mask | trig_obj_mask
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = self.electrons.pt > 25.0
-        in_electrons = self.electrons.mask[electron_pt_mask]
+        in_electrons = self.electrons.mask[
+            electron_pt_mask & (dak.sum(trig_match_mask, axis=-1) > 0)
+        ]
 
         # get electrons pT and abseta (replace None values with some 'in-limit' value)
         electron_pt = ak.fill_none(in_electrons.pt, 25)

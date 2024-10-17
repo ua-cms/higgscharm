@@ -79,7 +79,7 @@ class ZtoLLProcessor(processor.ProcessorABC):
         nevents = ak.num(events, axis=0)
         output["metadata"] = {}
         output["metadata"].update({"raw_initial_nevents": nevents})
-        
+
         # -------------------------------------------------------------
         # Object corrections
         # -------------------------------------------------------------
@@ -95,7 +95,7 @@ class ZtoLLProcessor(processor.ProcessorABC):
         else:
             # energies in data are scaled
             electron_ss.apply_scale()
-            
+
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
@@ -127,11 +127,13 @@ class ZtoLLProcessor(processor.ProcessorABC):
             elif self.lepton_flavor == "electron":
                 # add electron Id, Reco and HLT weights
                 electron_weights = ElectronWeights(
-                    electrons=events.Electron,
+                    events=events,
                     year=self.year,
                     weights=weights_container,
                     variation="nominal",
                     id_wp=self.config.selection["electron"]["id_wp"],
+                    hlt_paths=self.config.hlt_paths["electron"],
+                    
                 )
                 electron_weights.add_id_weights()
                 electron_weights.add_hlt_weights()
@@ -295,7 +297,9 @@ class ZtoLLProcessor(processor.ProcessorABC):
             feature_map = {
                 "z_mass": dilepton.z.p4.mass[region_selection],
                 "leading_lepton_pt": dilepton.z.leading_lepton.pt[region_selection],
-                "subleading_lepton_pt": dilepton.z.subleading_lepton.pt[region_selection],
+                "subleading_lepton_pt": dilepton.z.subleading_lepton.pt[
+                    region_selection
+                ],
                 "lepton_pt": leptons.pt[region_selection],
                 "lepton_eta": leptons.eta[region_selection],
                 "lepton_phi": leptons.phi[region_selection],
