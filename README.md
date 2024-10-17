@@ -19,9 +19,14 @@ cd higgscharm
 
 # submit condor jobs for some processor and dataset
 python3 submit_condor.py --processor ztomumu --dataset <dataset name> --year <year> 
-```    
-* Data samples: `MuonC` and `MuonD` for `2022`. `MuonE`, `MuonF` and `MuonD` for `2022EE`
-* Background samples: `DYto2L_2Jets_10to50` and `DYto2L_2Jets_50` for `2022` and `2022EE`
+```
+Samples:
+* 2022:
+    * Data: `MuonC`, `MuonD`.
+    * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
+* 2022EE:
+    * Data: `MuonE`, `MuonF`, `MuonG`
+    * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
 
 Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs`. Once you have run the corresponding datasets for a processor, you can get the results by typing:
 ```
