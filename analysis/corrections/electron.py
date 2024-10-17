@@ -6,7 +6,7 @@ import correctionlib.schemav2 as cs
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.utils import get_pog_json
-from analysis.utils import trigger_match
+from analysis.utils.trigger_matching import trigger_match
 
 
 class ElectronWeights:

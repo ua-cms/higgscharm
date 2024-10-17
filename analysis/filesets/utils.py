@@ -3,7 +3,7 @@ import json
 import argparse
 from pathlib import Path
 from copy import deepcopy
-from analysis.configs.load_config import load_config
+from analysis.utils import load_config
 
 
 def build_single_fileset(name: str, year: str) -> dict:
@@ -17,7 +17,7 @@ def build_single_fileset(name: str, year: str) -> dict:
             year of the dataset {2022EE, 2022, 2023}
     """
     main_dir = Path.cwd()
-    fileset_path = Path(f"{main_dir}/analysis/configs/dataset/{year}")
+    fileset_path = Path(f"{main_dir}/analysis/filesets/configs/{year}")
     with open(f"{fileset_path}/datasets.json", "r") as f:
         dataset_config = json.load(f)[name]
 
