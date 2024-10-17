@@ -2,7 +2,7 @@ import numpy as np
 import awkward as ak
 from copy import deepcopy
 from coffea import processor
-from analysis.configs import load_config
+from analysis.utils import load_config
 from analysis.histograms import HistBuilder
 from analysis.working_points import working_points
 from analysis.corrections.jerc import apply_jerc_corrections

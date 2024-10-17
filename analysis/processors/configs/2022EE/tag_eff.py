@@ -1,4 +1,4 @@
-from analysis.configs.processor_config import ProcessorConfig
+from analysis.processors.configs.processor_config import ProcessorConfig
 
 processor_config = ProcessorConfig(
     lumimask=None,

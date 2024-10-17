@@ -9,10 +9,9 @@ from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.lumi_tools import LumiData, LumiList, LumiMask
-from analysis.configs import load_config
-from analysis.histograms import HistBuilder
+from analysis.utils import load_config, trigger_match
 from analysis.working_points import working_points
-from analysis.utils.trigger_matching import trigger_match
+from analysis.histograms import HistBuilder, fill_histogram
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
