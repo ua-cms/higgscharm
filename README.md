@@ -2,11 +2,15 @@
 
 Python package for analyzing H+c events. The package uses a columnar framework to process input tree-based BTV-PFNano files using the [coffea](https://coffeateam.github.io/coffea/) and [scikit-hep](https://scikit-hep.org) Python libraries.
 
+- [Processors](Processors)
+- [Postprocessing](Postprocessing)
 
 ### Processors
 
-The available processor is:
-* `ztomumu`: Select events in a Z($\rightarrow \mu \mu$) region
+* `ztomumu`: Select events in a $Z\rightarrow \mu \mu$ region
+
+The processor is defined through a configuration file (located in `analysis/configs/processor/<year>/ztomumu.py`) in which the selection, analysis variables, output histograms, triggers, among other characteristics are specified (see [here](https://github.com/deoache/higgscharm/blob/dask/analysis/configs/README.md) for a detailed description)
+
 
 To run the processor:
 ```
@@ -20,7 +24,7 @@ cd higgscharm
 # submit condor jobs for some processor and dataset
 python3 submit_condor.py --processor ztomumu --dataset <dataset name> --year <year> 
 ```
-Samples:
+Datasets:
 * 2022:
     * Data: `MuonC`, `MuonD`.
     * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
@@ -28,7 +32,12 @@ Samples:
     * Data: `MuonE`, `MuonF`, `MuonG`
     * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
 
-Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs`. Once you have run the corresponding datasets for a processor, you can get the results by typing:
+Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs`. 
+
+
+### Postprocessing
+
+Once you have run the corresponding datasets for a processor, you can get the results by typing:
 ```
 singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask-almalinux8:latest
 
