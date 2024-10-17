@@ -10,26 +10,17 @@ def submit_condor(args: dict) -> None:
     condor_dir = pathlib.Path(f"{main_dir}/condor")
 
     # set jobname
-    jobname = f'{args["processor"]}_{args["dataset_name"]}'
-    if args["processor"] in ["ztoll"]:
-        jobname += f'_{args["lepton_flavor"]}'
+    jobname = f'{args["processor"]}_{args["dataset"]}'
     if "nfile" in args:
         jobname += f'_{args["nfile"]}'
 
     # create logs directory
-    log_dir = condor_dir / "logs" / args["processor"] / args["year"]
-    if args["processor"] in ["ztoll"]:
-        log_dir /= args["lepton_flavor"]
-    log_dir /= args["dataset_name"]
-
+    log_dir = condor_dir / "logs" / args["processor"] / args["year"] / args["dataset"]
     if not log_dir.exists():
         log_dir.mkdir(parents=True)
 
     # creal local condor submit file
-    exe_dir = condor_dir / args["processor"]
-    if args["processor"] in ["ztoll"]:
-        exe_dir /= args["lepton_flavor"]
-    exe_dir /= args["year"]
+    exe_dir = condor_dir / args["processor"] / args["year"]
     if not exe_dir.exists():
         exe_dir.mkdir(parents=True)
     local_condor = f"{exe_dir}/{jobname}.sub"
