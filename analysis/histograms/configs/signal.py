@@ -1,5 +1,5 @@
 import numpy as np
-from analysis.histograms.configs.histogram_config import HistogramConfig
+from analysis.histograms.histogram_config import HistogramConfig
 
 
 histogram_config = HistogramConfig(
