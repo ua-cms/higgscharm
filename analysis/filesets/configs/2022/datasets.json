@@ -22,5 +22,17 @@
       "era":"D",
       "xsec":"None",
       "path":"/pnfs/iihe/cms/store/user/daocampo/PFNano_Run3/data_2022_MINIAODv4/Muon/Run2022D-22Sep2023-v1_BTV_Run3_2022_Comm_MINIAODv4/240429_092058/"
+   },
+   "EGammaC":{
+      "process":"Data",
+      "era":"D",
+      "xsec":"None",
+      "path":"/pnfs/iihe/cms/store/user/daocampo/PFNano_Run3/data_2022_MINIAODv4/EGamma/Run2022C-22Sep2023-v1_BTV_Run3_2022_Comm_MINIAODv4/241015_092807/"
+   },
+   "EGammaD":{
+      "process":"Data",
+      "era":"D",
+      "xsec":"None",
+      "path":"/pnfs/iihe/cms/store/user/daocampo/PFNano_Run3/data_2022_MINIAODv4/EGamma/Run2022D-22Sep2023-v1_BTV_Run3_2022_Comm_MINIAODv4/241015_092815/"
    }
 }
