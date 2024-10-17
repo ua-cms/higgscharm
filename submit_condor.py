@@ -38,9 +38,6 @@ def main(args):
             f"--year {args['year']} "
             f"--output_path {args['output_path']} "
             f"--dataset {dataset_runnable_key} "
-            f"--tagger {args['tagger']} "
-            f"--wp {args['wp']} "
-            f"--flavor {args['flavor']} "
             # dictionaries must be passed as a string enclosed in single quotes,
             # with strings within the dictionary enclosed in double quotes.
             # we use json.dumps() to switch from single to double quotes within the dictionary
