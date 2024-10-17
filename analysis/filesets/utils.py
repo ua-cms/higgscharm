@@ -3,7 +3,6 @@ import json
 import argparse
 from pathlib import Path
 from copy import deepcopy
-from analysis.utils import load_config
 
 
 def build_single_fileset(name: str, year: str) -> dict:
@@ -14,11 +13,11 @@ def build_single_fileset(name: str, year: str) -> dict:
         name:
             name of the dataset
         year:
-            year of the dataset {2022EE, 2022, 2023}
+            year of the dataset {2022EE, 2022}
     """
     main_dir = Path.cwd()
-    fileset_path = Path(f"{main_dir}/analysis/filesets/configs/{year}")
-    with open(f"{fileset_path}/datasets.json", "r") as f:
+    fileset_path = Path(f"{main_dir}/analysis/filesets")
+    with open(f"{fileset_path}/{year}_fileset.json", "r") as f:
         dataset_config = json.load(f)[name]
 
     # check for .root files in the specified path
