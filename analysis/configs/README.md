@@ -90,7 +90,7 @@ layout="individual"
  'muon_pt': Hist(Variable([30, 60, 90, 120, 150, 180, 210, 240, 300, 500], name='muon_pt', label='$p_T(\\mu)$ [GeV]'), storage=Weight()) # Sum: WeightedSum(value=0, variance=0),
  'jet_flavor': Hist(IntCategory([], growth=True, name='jet_flavor', label='Jet Hadron Flavor'), storage=Weight()) # Sum: WeightedSum(value=0, variance=0)}
 ```
-**Stacked axes**
+**Stacked axis**
 ```
 layout = {
     "muon": ["muon_pt", "muon_eta"],
