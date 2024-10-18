@@ -55,3 +55,13 @@ class HistogramConfig:
         self.add_syst_axis = add_syst_axis
         self.add_weight = add_weight
         self.add_cat_axis = add_cat_axis
+
+    def to_dict(self):
+        """Convert HistogramConfig to a dictionary."""
+        return {
+            "add_syst_axis": self.add_syst_axis,
+            "add_weight": self.add_weight,
+            "add_cat_axis": self.add_cat_axis,
+            "axes": self.axes,
+            "layout": self.layout,
+        }
