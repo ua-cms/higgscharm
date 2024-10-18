@@ -56,7 +56,7 @@ processor_config = ProcessorConfig(
                 "bins": 50,
                 "start": 24,
                 "stop": 300,
-                "label": r"$p_T(\ell_1)$ [GeV]",
+                "label": r"$p_T(\mu_1)$ [GeV]",
                 "expression": "objects['dimuons'].z.leading_lepton.pt",
             },
             "subleading_muon_pt": {
@@ -64,7 +64,7 @@ processor_config = ProcessorConfig(
                 "bins": 50,
                 "start": 24,
                 "stop": 300,
-                "label": r"$p_T(\ell_2)$ [GeV]",
+                "label": r"$p_T(\mu_2)$ [GeV]",
                 "expression": "objects['dimuons'].z.subleading_lepton.pt",
             },
             "muon_pt": {
@@ -72,7 +72,7 @@ processor_config = ProcessorConfig(
                 "bins": 50,
                 "start": 24,
                 "stop": 300,
-                "label": r"$p_T(\ell)$ [GeV]",
+                "label": r"$p_T(\mu)$ [GeV]",
                 "expression": "objects['muons'].pt",
             },
             "muon_eta": {
@@ -80,7 +80,7 @@ processor_config = ProcessorConfig(
                 "bins": 50,
                 "start": -2.5,
                 "stop": 2.5,
-                "label": "$\eta(\ell)$",
+                "label": "$\eta(\mu)$",
                 "expression": "objects['muons'].eta",
             },
             "muon_phi": {
@@ -88,7 +88,7 @@ processor_config = ProcessorConfig(
                 "bins": 50,
                 "start": -np.pi,
                 "stop": np.pi,
-                "label": "$\phi(\ell)$",
+                "label": "$\phi(\mu)$",
                 "expression": "objects['muons'].phi",
             },
         },
