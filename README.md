@@ -49,23 +49,22 @@ The BTV-PFNano datasets have been produced following https://github.com/cms-btv-
     "path": "/pnfs/iihe/cms/store/user/<username>/PFNano_Run3/path_to_dataset/"
 }
 ```
-In some cases, root files corresponding to a dataset are stored in multiple folders that share the same parent folder. In these cases, `path` must point to this parent folder.
+* In some cases, root files corresponding to a dataset are stored in multiple folders that share the same parent folder. In such cases, `path` must point to this parent folder.
 
-For the `ztomumu` processor you need to run the following datasets:
-* 2022:
-    * Data: `MuonC`, `MuonD`.
-    * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
-* 2022EE:
-    * Data: `MuonE`, `MuonF`, `MuonG`
-    * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
+* For the `ztomumu` processor you should run using the following datasets:
+    * 2022:
+        * Data: `MuonC`, `MuonD`.
+        * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
+    * 2022EE:
+        * Data: `MuonE`, `MuonF`, `MuonG`
+        * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
 
 ### Postprocessing
 
 Once you have run the corresponding datasets for a processor, you can get the results by typing:
 ```bash
 singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask-almalinux8:latest
+
+python3 run_postprocess.py --processor ztomumu --year <year>
 ``` 
-```bash
-singularity > python3 run_postprocess.py --processor ztomumu --year <year>
-```
-Results will be saved in the same directory as the output files
+Results (plots, cutflow and results tables, processor config and postprocessor output) will be saved in the same directory as the output files
