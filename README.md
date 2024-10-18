@@ -51,7 +51,7 @@ The BTV-PFNano datasets have been produced following https://github.com/cms-btv-
 ```
 * In some cases, root files corresponding to a dataset are stored in multiple folders that share the same parent folder. In such cases, `path` must point to this parent folder.
 
-* For the `ztomumu` processor you should run using the following datasets:
+* For the `ztomumu` processor you should use the following datasets (check the [2022 Summary Table Slide](https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit#slide=id.g289f499aa6b_2_52)):
     * 2022:
         * Data: `MuonC`, `MuonD`.
         * Background: `DYto2L_2Jets_10to50`, `DYto2L_2Jets_50`
