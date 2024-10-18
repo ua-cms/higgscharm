@@ -2,9 +2,9 @@
 
 Python package for analyzing H+c events. The package uses a columnar framework to process input tree-based BTV-PFNano files using [Coffea](https://coffeateam.github.io/coffea/) and [scikit-hep](https://scikit-hep.org) Python libraries.
 
-- [Processors](Processors)
-- [Datasets](Datasets)
-- [Postprocessing](Postprocessing)
+- [Processors](#Processors)
+- [Datasets](#Datasets)
+- [Postprocessing](#Postprocessing)
 
 ### Processors
 
