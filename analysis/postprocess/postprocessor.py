@@ -1,5 +1,6 @@
 import json
 import glob
+import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -36,7 +37,7 @@ class Postprocessor:
 
         print_header("grouping outputs by process")
         self.histograms = self.group_by_process(self.scaled_histograms)
-        print(pd.Series(self.process_samples).to_string(dtype=False))
+        logging.info(pd.Series(self.process_samples).to_string(dtype=False))
 
         print_header(f"Cutflow")
         processed_cutflow = self.group_by_process(self.scaled_cutflow)
@@ -52,19 +53,19 @@ class Postprocessor:
                 if process not in ["Data", "Total Background"]
             ]
         ]
-        print(self.cutflow_df.map(lambda x: f"{x:.3f}" if pd.notnull(x) else ""))
+        logging.info(self.cutflow_df.map(lambda x: f"{x:.3f}" if pd.notnull(x) else ""))
         self.cutflow_df.to_csv(f"{self.output_dir}/cutflow.csv")
 
         print_header(f"Results")
         results_df = self.get_results_report()
-        print(results_df.map(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
+        logging.info(results_df.map(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
         results_df.to_csv(f"{self.output_dir}/results.csv")
 
     def group_outputs(self):
         """
         group and accumulate output files by sample
         """
-        print(f"reading outputs from {self.output_dir}")
+        logging.info(f"reading outputs from {self.output_dir}")
         extension = ".pkl"
         output_files = glob.glob(f"{self.output_dir}/*{extension}", recursive=True)
         n_output_files = len(output_files)
@@ -82,7 +83,7 @@ class Postprocessor:
             else:
                 grouped_outputs[sample_name] = [output_file]
 
-        print(f"{n_output_files} output files were found:")
+        logging.info(f"{n_output_files} output files were found:")
         n_grouped_outputs = {}
 
         # open output dictionaries with layout:
@@ -94,7 +95,7 @@ class Postprocessor:
         grouped_histograms = {}
         print_header("Reading and accumulating outputs by sample")
         for sample in grouped_outputs:
-            print(f"{sample}...")
+            logging.info(f"{sample}...")
             grouped_histograms[sample] = []
             grouped_metadata[sample] = {}
             for fname in grouped_outputs[sample]:
@@ -131,8 +132,7 @@ class Postprocessor:
             if "lumi" in metadata:
                 self.luminosities[sample] = float(metadata["lumi"])
         self.luminosities["Total"] = np.sum(list(self.luminosities.values()))
-        print(pd.DataFrame({"luminosity [/pb]": self.luminosities}))
-        print()
+        logging.info(pd.DataFrame({"luminosity [/pb]": self.luminosities}))
         # compute lumi-xsec weights
         self.weights = {}
         self.xsecs = {}
@@ -155,7 +155,7 @@ class Postprocessor:
                 "weight": self.weights,
             }
         )
-        print(
+        logging.info(
             scale_info.drop(
                 [data_key for data_key in self.luminosities if data_key != "Total"]
             ).map(lambda x: f"{x:.5f}" if pd.notnull(x) else "")

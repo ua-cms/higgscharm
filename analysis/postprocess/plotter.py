@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 import mplhep as hep
 import matplotlib.pyplot as plt
@@ -5,6 +6,7 @@ from matplotlib import ticker
 from analysis.utils import paths
 from analysis.postprocess.utils import accumulate
 from hist.intervals import poisson_interval, ratio_uncertainty
+from analysis.postprocess.utils import setup_logger
 
 
 np.seterr(invalid="ignore")
@@ -180,6 +182,7 @@ class Plotter:
         yratio_limits: str = None,
         savefig: bool = True,
     ):
+        setup_logger(self.output_dir)
         # compute nominal (MC and Data) and variation (MC) histograms
         feature_hists = self.get_feature_hists(feature)
         # MC
@@ -281,7 +284,7 @@ class Plotter:
                 color="k",
             )
         except ValueError:
-            print(f"(no poisson-ratio error for {feature})")
+            logging.info(f"(no poisson-ratio error for {feature})")
 
         # plot ratio uncertaity band
         ratio_up = np.concatenate([[0], band_up / mc_histogram_values])

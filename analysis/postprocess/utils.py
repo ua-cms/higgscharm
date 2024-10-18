@@ -1,16 +1,31 @@
+import os
 import hist
 import pickle
+import logging
 import numpy as np
+
+
+def setup_logger(output_dir):
+    """Set up the logger to log to a file in the specified output directory."""
+    output_file_path = os.path.join(output_dir, "output.txt")
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(message)s",
+        handlers=[logging.FileHandler(output_file_path), logging.StreamHandler()],
+    )
+
 
 def open_output(fname: str) -> dict:
     with open(fname, "rb") as f:
         output = pickle.load(f)
     return output
 
-def print_header(text, lenght=90):
-    print("-" * lenght)
-    print(text)
-    print("-" * lenght)
+
+def print_header(text):
+    logging.info("-" * 90)
+    logging.info(text)
+    logging.info("-" * 90)
+
 
 def accumulate(to_accumulate: list):
     if isinstance(to_accumulate[0], dict):
