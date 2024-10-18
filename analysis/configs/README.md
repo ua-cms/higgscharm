@@ -1,4 +1,6 @@
-## Processor config
+### Processor config
+
+Processor's selection, variables, output histograms, triggers, among other features are defined through a configuration file:
 
 * `goldenjson`: Path to the goldenjson of the specific year, used to compute the luminosity mask (for luminosity calibration)
 * `lumidata`: Luminosity file (see [here](https://github.com/deoache/higgscharm/blob/dask/analysis/data/README.md)) used to compute the integrated luminosity using [Coffea's lumi tools](https://coffeateam.github.io/coffea/modules/coffea.lumi_tools.html).
