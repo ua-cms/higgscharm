@@ -54,7 +54,7 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="ztomumu",
-        help="processor to be used {ztomumu}",
+        help="processor to be used {ztomumu, ztoee}",
     )
     parser.add_argument(
         "--dataset",

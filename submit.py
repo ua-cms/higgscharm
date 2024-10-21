@@ -3,6 +3,7 @@ import dask
 import pickle
 import argparse
 from coffea.nanoevents import PFNanoAODSchema
+from analysis.processors.ztoee import ZToEEProcessor
 from analysis.processors.ztomumu import ZToMuMuProcessor
 from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
 
@@ -24,6 +25,7 @@ def main(args):
     # process dataset runnable and save output to a pickle file
     processors = {
         "ztomumu": ZToMuMuProcessor(year=args.year),
+        "ztoee": ZToEEProcessor(year=args.year),
     }
     to_compute = apply_to_fileset(
         processors[args.processor],
@@ -43,8 +45,8 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        default="ztoll",
-        help="processor to be used {ztoll}",
+        default="ztomumu",
+        help="processor to be used {ztomumu, ztoee}",
     )
     parser.add_argument(
         "--dataset",
