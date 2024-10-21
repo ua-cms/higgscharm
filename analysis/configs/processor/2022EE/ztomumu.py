@@ -48,7 +48,7 @@ processor_config = ProcessorConfig(
                 "bins": 100,
                 "start": 10,
                 "stop": 150,
-                "label": r"$m(Z)$ [GeV]",
+                "label": r"$m(\mu\mu)$ [GeV]",
                 "expression": "objects['dimuons'].z.p4.mass",
             },
             "leading_muon_pt": {
