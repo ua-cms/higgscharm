@@ -303,7 +303,7 @@ class ElectronSS:
         # uncertainties: TO DO (https://cms-talk.web.cern.ch/t/pnoton-energy-corrections-in-nanoaod-v11/34327/2)
 
     def apply_smearing(self):
-        # rho is internal scale and smearing lingo. It does not correspond to the pileup rho energy density,
+        # rho does not correspond to the pileup rho energy density,
         # instead it is the standard deviation of the Gaussian used to draw the smearing
         rho = dak.map_partitions(
             self.cset["Smearing"].evaluate,
@@ -319,7 +319,7 @@ class ElectronSS:
             description="Deterministic smearing value generator",
             version=1,
             inputs=[
-                cs.Variable(name="rho", type="real", description="Unsmeared jet pt"),
+                cs.Variable(name="rho", type="real", description="standard deviation"),
             ],
             output=cs.Variable(name="rng", type="real"),
             data=cs.HashPRNG(
