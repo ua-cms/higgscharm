@@ -5,6 +5,7 @@ import dask_awkward as dak
 import correctionlib.schemav2 as cs
 from typing import Type
 from coffea.analysis_tools import Weights
+from analysis.corrections.met import update_met
 from analysis.corrections.utils import get_pog_json
 from analysis.utils.trigger_matching import trigger_match
 
@@ -287,6 +288,12 @@ class ElectronSS:
              when loading the nanoAOD in the framework below due to Lorentzvector behaviours'.
 
         """
+        # define Electron pt_raw field (needed for MET recalculation)
+        self.events["Electron", "pt_raw"] = (
+            ak.ones_like(self.events.Electron.pt) * self.events.Electron.pt
+        )
+
+        # compute scale factor
         scale = dak.map_partitions(
             self.cset["Scale"].evaluate,
             "total_correction",
@@ -300,9 +307,17 @@ class ElectronSS:
             # scale is multiplicative correction, unlike smearing, it is deterministic
             self.events["Electron", "pt"] = self.events.Electron.pt * scale
 
+        # propagate electron pT corrections to MET
+        update_met(events=self.events, lepton="Electron")
+
         # uncertainties: TO DO (https://cms-talk.web.cern.ch/t/pnoton-energy-corrections-in-nanoaod-v11/34327/2)
 
     def apply_smearing(self):
+        # define Electron pt_raw field (needed for MET recalculation)
+        self.events["Electron", "pt_raw"] = (
+            ak.ones_like(self.events.Electron.pt) * self.events.Electron.pt
+        )
+
         # rho does not correspond to the pileup rho energy density,
         # instead it is the standard deviation of the Gaussian used to draw the smearing
         rho = dak.map_partitions(
@@ -314,22 +329,37 @@ class ElectronSS:
         # The smearing is done statistically, so we need some random numbers
         # https://cms-nanoaod.github.io/correctionlib/schemav2.html#hashprng
         # https://cms-nanoaod.github.io/correctionlib/correctionlib_tutorial.html#Resolution-models
-        rng = cs.Correction(
+        resrng = cs.Correction(
             name="resrng",
             description="Deterministic smearing value generator",
             version=1,
             inputs=[
-                cs.Variable(name="rho", type="real", description="standard deviation"),
+                cs.Variable(
+                    name="pt", type="real", description="Unsmeared electron pt"
+                ),
+                cs.Variable(
+                    name="eta", type="real", description="electron pseudorapdity"
+                ),
+                cs.Variable(
+                    name="phi", type="real", description="electron phi (entropy source)"
+                ),
             ],
             output=cs.Variable(name="rng", type="real"),
             data=cs.HashPRNG(
                 nodetype="hashprng",
-                inputs=["rho"],
+                inputs=["pt", "eta", "phi"],
                 distribution="normal",
             ),
         )
-        smearing = rng.to_evaluator().evaluate(rho)
+        smearing = 1 + rho * resrng.to_evaluator().evaluate(
+            self.events.Electron.pt,
+            self.events.Electron.eta + self.events.Electron.deltaEtaSC,
+            self.events.Electron.phi,
+        )
         if self.variation == "nominal":
             self.events["Electron", "pt"] = self.events.Electron.pt * smearing
+
+        # propagate electron pT corrections to MET
+        update_met(events=self.events, lepton="Electron")
 
         # uncertainties: TO DO

@@ -55,8 +55,7 @@ class ZToEEProcessor(processor.ProcessorABC):
         )
         if is_mc:
             # energies in MC are smeared
-            # electron_ss.apply_smearing()
-            pass
+            electron_ss.apply_smearing()
         else:
             # energies in data are scaled
             electron_ss.apply_scale()
