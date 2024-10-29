@@ -1,0 +1,87 @@
+goldenjson: analysis/data/Cert_Collisions2022_355100_362760_Golden.txt
+lumidata: analysis/data/lumi2022.csv
+hlt_paths:
+  - Ele30_WPTight_Gsf
+object_selection:
+  leptons:
+    field: events.Electron
+    cuts:
+      pt: events.Electron.pt > 30
+      abseta: np.abs(events.Electron.eta) < 2.4
+      electron_id: wp90iso
+  dileptons:
+    field: select_dileptons
+    cuts:
+      dr: ((LorentzVector.delta_r(objects['dileptons'].z.leading_lepton, objects['dileptons'].z.subleading_lepton) > 0.02))
+      mass_window: (objects['dileptons'].z.p4.mass < 120.0) & (objects['dileptons'].z.p4.mass > 60.0)
+event_selection:
+  atleast_one_goodvertex: events.PV.npvsGood > 0
+  lumimask: get_lumi_mask(events, goldenjson)
+  trigger: get_trigger_mask(events, hlt_paths)
+  trigger_matching: get_trigger_match_mask(events, events.Electron, hlt_paths)
+  two_leptons: ak.num(objects['leptons']) == 2
+  one_z: ak.num(objects['dileptons'].z.p4) == 1
+histogram_config:
+  add_syst_axis: true
+  add_weight: true
+  add_cat_axis: null
+  axes:
+    dielectron_mass:
+      type: Regular
+      bins: 100
+      start: 10
+      stop: 150
+      label: r"$m(ee)$ [GeV]"
+      expression: objects['dileptons'].z.p4.mass
+    dielectron_pt:
+      type: Regular
+      bins: 50
+      start: 30
+      stop: 300
+      label: r"$p_T(ee)$ [GeV]",
+      expression: objects['dileptons'].z.p4.pt
+    leading_electron_pt:
+      type: Regular
+      bins: 50
+      start: 30
+      stop: 300
+      label: r"$p_T(e_1)$ [GeV]"
+      expression: objects['dileptons'].z.leading_lepton.pt
+    subleading_electron_pt:
+      type: Regular
+      bins: 50
+      start: 30
+      stop: 300
+      label: r"$p_T(e_2)$ [GeV]"
+      expression: objects['dileptons'].z.subleading_lepton.pt
+    electron_pt:
+      type: Regular
+      bins: 50
+      start: 30
+      stop: 300
+      label: r"$p_T(e)$ [GeV]"
+      expression: objects['leptons'].pt
+    electron_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: "$\eta(e)$"
+      expression: objects['leptons'].eta
+    electron_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: r"$\phi(e)$"
+      expression: objects['leptons'].phi
+  layout:
+    zcandidate:
+      - dielectron_mass
+      - dielectron_pt
+      - leading_electron_pt
+      - subleading_electron_pt
+    electron:
+      - electron_pt
+      - electron_eta
+      - electron_phi
