@@ -61,14 +61,14 @@ if __name__ == "__main__":
         dest="dataset",
         type=str,
         default="",
-        help="name of the dataset",
+        help="dataset name",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
         default="2022postEE",
-        help="year of the data {2022preEE, 2022postEE} (default 2022postEE)",
+        help="dataset year {2022preEE, 2022postEE} (default 2022postEE)",
     )
     parser.add_argument(
         "--stepsize",
