@@ -1,4 +1,3 @@
----
 goldenjson: analysis/data/Cert_Collisions2022_355100_362760_Golden.txt
 lumidata: analysis/data/lumi2022.csv
 hlt_paths:
