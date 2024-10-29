@@ -54,35 +54,28 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="ztomumu",
-        help="processor to be used {ztomumu, ztoee}",
+        help="processor to be used {ztomumu, ztoee} (default ztomumu)",
     )
     parser.add_argument(
         "--dataset",
         dest="dataset",
         type=str,
         default="",
-        help="dataset",
+        help="name of the dataset",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
-        default="2022EE",
-        help="year of the data {2022, 2022EE}",
-    )
-    parser.add_argument(
-        "--output_path",
-        dest="output_path",
-        type=str,
-        default=None,
-        help="output path",
+        default="2022postEE",
+        help="year of the data {2022preEE, 2022postEE} (default 2022postEE)",
     )
     parser.add_argument(
         "--stepsize",
         dest="stepsize",
         type=int,
         default=50_000,
-        help="stepsize",
+        help="stepsize param for coffea.dataset_tools.preprocess function",
     )
     args = parser.parse_args()
     main(args)
