@@ -22,7 +22,7 @@ def add_pileup_weight(
         weights_container:
             Weight object from coffea.analysis_tools
         year:
-            dataset year {2022EE}
+            dataset year {2022preEE, 2022postEE}
         variation:
             if 'nominal' (default) add 'nominal', 'up' and 'down'
             variations to weights container. else, add only 'nominal' weights.
@@ -32,8 +32,8 @@ def add_pileup_weight(
         get_pog_json(json_name="pileup", year=year)
     )
     year_to_corr = {
-        "2022": "Collisions2022_355100_357900_eraBCD_GoldenJson",
-        "2022EE": "Collisions2022_359022_362760_eraEFG_GoldenJson",
+        "2022preEE": "Collisions2022_355100_357900_eraBCD_GoldenJson",
+        "2022postEE": "Collisions2022_359022_362760_eraEFG_GoldenJson",
     }
     # get number of true interactions
     nti = events.Pileup.nTrueInt

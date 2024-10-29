@@ -12,8 +12,8 @@ POG_JSONS = {
     "ctag": ["BTV", "ctagging.json.gz"]
 }
 POG_YEARS = {
-    "2022": "2022_Summer22",
-    "2022EE": "2022_Summer22EE",
+    "2022preEE": "2022_Summer22",
+    "2022postEE": "2022_Summer22EE",
 }
 
 def get_pog_json(json_name: str, year: str) -> str:

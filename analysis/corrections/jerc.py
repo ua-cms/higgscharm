@@ -11,39 +11,39 @@ from coffea.jetmet_tools import JECStack, CorrectedJetsFactory
 
 JEC_PARAMS = {
     "runs": {
-        "2022": ["C", "D"],
-        "2022EE": ["E", "F", "G"],
+        "2022preEE": ["C", "D"],
+        "2022postEE": ["E", "F", "G"],
     },
     "jec_levels_mc": {
-        "2022": ["L1FastJet", "L2Relative", "L3Absolute"],
-        "2022EE": ["L1FastJet", "L2Relative", "L3Absolute"],
+        "2022preEE": ["L1FastJet", "L2Relative", "L3Absolute"],
+        "2022postEE": ["L1FastJet", "L2Relative", "L3Absolute"],
     },
     "jec_levels_data": {
-        "2022": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
-        "2022EE": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
+        "2022preEE": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
+        "2022postEE": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
     },
     # I modified the original names since coffea jetmet_tools requires file names
     # of "5 words in length" ('Summer22EE22Sep2023_V2_MC_L1FastJet_AK4PFPuppi.jec')
     "jec_tags": {
-        "2022": "Summer2222Sep2023_V2_MC",
-        "2022EE": "Summer22EE22Sep2023_V2_MC",
+        "2022preEE": "Summer2222Sep2023_V2_MC",
+        "2022postEE": "Summer22EE22Sep2023_V2_MC",
     },
     "jer_tags": {
-        "2022": "Summer2222Sep2023_JRV1_MC",
-        "2022EE": "Summer22EE22Sep2023_JRV1_MC",
+        "2022preEE": "Summer2222Sep2023_JRV1_MC",
+        "2022postEE": "Summer22EE22Sep2023_JRV1_MC",
     },
     "jec_data_tags": {
-        "2022": {
+        "2022preEE": {
             "Summer2222Sep2023_RunCD_V2_DATA": ["C", "D"]
         },
-        "2022EE": {
+        "2022postEE": {
             "Summer22EE22Sep2023_RunE_V2_DATA": ["E"],
             "Summer22EE22Sep2023_RunF_V2_DATA": ["F"],
             "Summer22EE22Sep2023_RunG_V2_DATA": ["G"],
         },
     },
     "jec_variations": {
-        "2022": [
+        "2022preEE": [
             "AbsoluteMPFBias",
             "AbsoluteScale",
             "AbsoluteStat",
@@ -73,7 +73,7 @@ JEC_PARAMS = {
             "TimePtEta",
             "Total",
         ],
-        "2022EE": [
+        "2022postEE": [
             "AbsoluteMPFBias",
             "AbsoluteScale",
             "AbsoluteStat",
@@ -185,7 +185,7 @@ def get_jet_evaluator(year):
 def apply_jerc_corrections(
     events,
     era="MC",
-    year="2022EE",
+    year="2022postEE",
     apply_jec=True,
     apply_jer=False,
     apply_junc=False,

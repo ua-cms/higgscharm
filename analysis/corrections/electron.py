@@ -7,7 +7,7 @@ from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.met import update_met
 from analysis.corrections.utils import get_pog_json
-from analysis.utils.trigger_matching import trigger_match
+from analysis.selections.utils import trigger_match
 
 
 class ElectronWeights:
@@ -21,7 +21,7 @@ class ElectronWeights:
         weights:
             Weights container
         year:
-            Year of the dataset {2022EE, 2022}
+            Year of the dataset {2022postEE, 2022preEE}
         variation:
             syst variation
         id_wp:
@@ -34,7 +34,7 @@ class ElectronWeights:
         self,
         events: ak.Array,
         weights: Type[Weights],
-        year: str = "2022EE",
+        year: str = "2022postEE",
         variation: str = "nominal",
         id_wp: str = "medium",
         hlt_paths: str = ["Ele30_WPTight_Gsf"],
@@ -51,7 +51,7 @@ class ElectronWeights:
             "wp80iso": self.electrons.mvaIso_WP80,
             "wp90iso": self.electrons.mvaIso_WP90,
         }
-        self.year_map = {"2022EE": "2022Re-recoE+PromptFG", "2022": "2022Re-recoBCD"}
+        self.year_map = {"2022postEE": "2022Re-recoE+PromptFG", "2022preEE": "2022Re-recoBCD"}
 
     def add_id_weights(self):
         """

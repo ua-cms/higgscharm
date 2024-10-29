@@ -16,8 +16,8 @@ def jetvetomaps_mask(jets: ak.Array, year: str, mapname: str = "jetvetomap"):
     taken from: https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/summaries/JME_2022_Summer22EE_jetvetomaps.html
     """
     vetomap_names = {
-        "2022": "Summer22_23Sep2023_RunCD_V1",
-        "2022EE": "Summer22EE_23Sep2023_RunEFG_V1",
+        "2022preEE": "Summer22_23Sep2023_RunCD_V1",
+        "2022postEE": "Summer22EE_23Sep2023_RunEFG_V1",
     }
     cset = correctionlib.CorrectionSet.from_file(get_pog_json("jetvetomaps", year))
 

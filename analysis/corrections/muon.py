@@ -7,23 +7,23 @@ from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.working_points import working_points
 from analysis.corrections.utils import get_pog_json
-from analysis.utils.trigger_matching import trigger_match
+from analysis.selections.utils import trigger_match
 
 
 ID_CORRECTIONS = {
-    "2022": {
+    "2022preEE": {
         "loose": "NUM_LooseID_DEN_TrackerMuons",
         "medium": "NUM_MediumID_DEN_TrackerMuons",
         "tight": "NUM_TightID_DEN_TrackerMuons",
     },
-    "2022EE": {
+    "2022postEE": {
         "loose": "NUM_LooseID_DEN_TrackerMuons",
         "medium": "NUM_MediumID_DEN_TrackerMuons",
         "tight": "NUM_TightID_DEN_TrackerMuons",
     },
 }
 ISO_CORRECTIONS = {
-    "2022": {
+    "2022preEE": {
         "loose": {
             "loose": "NUM_LoosePFIso_DEN_LooseID",
             "medium": "NUM_LoosePFIso_DEN_MediumID",
@@ -40,7 +40,7 @@ ISO_CORRECTIONS = {
             "tight": "NUM_TightPFIso_DEN_TightID",
         },
     },
-    "2022EE": {
+    "2022postEE": {
         "loose": {
             "loose": "NUM_LoosePFIso_DEN_LooseID",
             "medium": "NUM_LoosePFIso_DEN_MediumID",
@@ -71,7 +71,7 @@ class MuonWeights:
         weights:
             Weights container
         year:
-            Year of the dataset {2022, 2022EE}
+            Year of the dataset {2022preEE, 2022postEE}
         variation:
             syst variation
         id_wp:
@@ -80,7 +80,7 @@ class MuonWeights:
             Iso working point {loose, medium, tight}
 
     more info at:
-    https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/summaries/MUO_2022_Summer22EE_muon_Z.html
+    https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/summaries/MUO_2022preEE_Summer22EE_muon_Z.html
     """
 
     def __init__(
