@@ -35,89 +35,89 @@ histogram_config:
       bins: 100
       start: 10
       stop: 150
-      label: r"$m(\mu\mu)$ [GeV]"
+      label: $m(\mu\mu)$ [GeV]
       expression: objects['dileptons'].z.p4.mass
     dimuon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
-      label: r"$p_T(\mu\mu)$ [GeV]",
+      label: $p_T(\mu\mu)$ [GeV]
       expression: objects['dileptons'].z.p4.pt
     leading_muon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
-      label: r"$p_T(\mu_1)$ [GeV]"
+      label: $p_T(\mu_1)$ [GeV]
       expression: objects['dileptons'].z.l1.pt
     subleading_muon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
-      label: r"$p_T(\mu_2)$ [GeV]"
+      label: $p_T(\mu_2)$ [GeV]
       expression: objects['dileptons'].z.l2.pt
     muon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
-      label: r"$p_T(\mu)$ [GeV]"
+      label: $p_T(\mu)$ [GeV]
       expression: objects['leptons'].pt
     muon_eta:
       type: Regular
       bins: 50
       start: -2.5
       stop: 2.5
-      label: r"$\eta(\mu)$"
+      label: $\eta(\mu)$
       expression: objects['leptons'].eta
     muon_phi:
       type: Regular
       bins: 50
       start: -3.14159
       stop: 3.14159
-      label: r"$\phi(\mu)$"
+      label: $\phi(\mu)$
       expression: objects['leptons'].phi
     jet_pt:
       type: Regular
       bins: 50
       start: 20
       stop: 500
-      label: r"$p_T(j)$ [GeV]"
+      label: $p_T(j)$ [GeV]
       expression: objects['jets'].pt
     jet_eta:
       type: Regular
       bins: 50
       start: -5
       stop: 5
-      label: r"$\eta(j)$"
+      label: $\eta(j)$
       expression: objects['jets'].eta
     jet_phi:
       type: Regular
       bins: 50
       start: -3.14159
       stop: 3.14159
-      label: r"$\phi(j)$"
+      label: $\phi(j)$
       expression: objects['jets'].phi
     jet_cvsl:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: r"ParticleNet CvsL"
+      label: ParticleNet CvsL
       expression: objects['jets'].btagPNetCvL
     jet_cvsb:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: r"ParticleNet CvsB"
+      label: ParticleNet CvsB
       expression: objects['jets'].btagPNetCvB
     jet_multiplicity:
       type: IntCategory
       categories: []
       growth: true
-      label: "N(j)"
+      label: $N(j)$
       expression: ak.num(objects['jets'])
   layout: individual
