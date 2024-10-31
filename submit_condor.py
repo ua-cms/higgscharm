@@ -4,9 +4,10 @@ from copy import deepcopy
 from condor.utils import submit_condor
 from analysis.utils import paths
 from analysis.filesets.utils import build_single_fileset, divide_list
-
+from checker import run_checker
 
 def main(args):
+    run_checker(args)
     args = vars(args)
     # set output path
     processor_output_path = paths.processor_path(
