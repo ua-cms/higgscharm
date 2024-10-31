@@ -52,7 +52,6 @@ data_hist_kwargs = {
     "linestyle": "none",
     "marker": ".",
 }
-year_map = {"2022": "2022preEE", "2022EE": "2022postEE", "full2022": "2022"}
 
 
 class Plotter:
@@ -360,7 +359,7 @@ class Plotter:
 
         # add CMS info
         hep.cms.lumitext(
-            f"{self.lumi * 1e-3:.1f} fb$^{{-1}}$ ({year_map[self.year]}, 13.6 TeV)",
+            f"{self.lumi * 1e-3:.1f} fb$^{{-1}}$ ({self.year}, 13.6 TeV)",
             ax=ax,
         )
         hep.cms.text("Preliminary", ax=ax)
@@ -370,6 +369,5 @@ class Plotter:
             fname = f"{self.output_dir}/{self.processor}_{feature}"
             if self.cat_axis:
                 fname += f"_{self.cat_axis[0]}_{self.cat_axis[1]}"
-            fig.savefig(f"{fname}_{year_map[self.year]}.png")
-            # fig.savefig(f"{fname}_{year_map[self.year]}.pdf")
+            fig.savefig(f"{fname}_{self.year}.png")
         plt.close()
