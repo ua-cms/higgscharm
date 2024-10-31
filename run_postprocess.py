@@ -4,7 +4,7 @@ import yaml
 import logging
 import argparse
 from analysis.utils import paths
-from analysis.configs import load_config
+from analysis.configs import ProcessorConfigBuilder
 from analysis.postprocess.plotter import Plotter
 from analysis.postprocess.postprocessor import Postprocessor
 from analysis.postprocess.utils import print_header, accumulate, setup_logger
@@ -29,8 +29,8 @@ def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
         output_dir=args.output_dir,
     )
     print_header("plotting histograms")
-    for key, features in histograms_config.layout.items():
-        for feature in features:
+    if histograms_config.layout == "individual":
+        for feature in histograms_config.axes:
             logging.info(feature)
             plotter.plot_feature_hist(
                 feature=feature,
@@ -38,6 +38,16 @@ def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
                 yratio_limits=(0, 2),
                 savefig=True,
             )
+    else:
+        for key, features in histograms_config.layout.items():
+            for feature in features:
+                logging.info(feature)
+                plotter.plot_feature_hist(
+                    feature=feature,
+                    feature_label=histograms_config.axes[feature]["label"],
+                    yratio_limits=(0, 2),
+                    savefig=True,
+                )
 
 
 def main(args):
@@ -53,9 +63,8 @@ def main(args):
     setup_logger(args.output_dir)
 
     # save processor config
-    processor_config = load_config(
-        config_type="processor", config_name=args.processor, year=args.year
-    )
+    config_builder = ProcessorConfigBuilder(processor=args.processor, year=args.year)
+    processor_config = config_builder.build_processor_config()
     with open(f"{args.output_dir}/config.yaml", "w") as file:
         file.write(processor_config.to_yaml())
 
@@ -86,14 +95,14 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="ztoll",
-        help="processor to be used {ztomumu}",
+        help="processor to be used {ztomumu, ztoee}",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
-        default="2022EE",
-        help="year of the data {2022, 2022EE, full2022}",
+        default="2022postEE",
+        help="year of the data {2022preEE, 2022postEE}",
     )
     parser.add_argument(
         "--output_dir",
