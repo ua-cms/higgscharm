@@ -24,9 +24,12 @@ def get_flow_array(histogram, feature, feature_map):
 def fill_histogram(
     histograms, histogram_config, feature_map, weights, variation, flow=True
 ):
+    histogram_axes = histogram_config.axes
+    cat_types = ["IntCategory", "StrCategory"]
+
     if histogram_config.layout == "individual":
         for feature in histograms:
-            if flow:
+            if flow and histogram_axes[feature]["type"] not in cat_types:
                 feature_array = get_flow_array(
                     histogram=histograms[feature],
                     feature=feature,
@@ -49,7 +52,7 @@ def fill_histogram(
         for key, features in histogram_config.layout.items():
             fill_args = {}
             for feature in features:
-                if flow:
+                if flow and histogram_axes[feature]["type"] not in cat_types:
                     fill_args[feature] = get_flow_array(
                         histogram=histograms[key],
                         feature=feature,
