@@ -16,7 +16,7 @@ object_selection:
   dileptons:
     field: select_dileptons
     cuts:
-      dr: ((LorentzVector.delta_r(objects['dileptons'].z.e1, objects['dileptons'].z.e2) > 0.02))
+      dr: ((LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2) > 0.02))
       mass_window: (objects['dileptons'].z.p4.mass > 60.0) & (objects['dileptons'].z.p4.mass < 120.0)
 event_selection:
   atleast_one_goodvertex: events.PV.npvsGood > 0
@@ -50,14 +50,14 @@ histogram_config:
       start: 30
       stop: 300
       label: r"$p_T(\mu_1)$ [GeV]"
-      expression: objects['dileptons'].z.e1.pt
+      expression: objects['dileptons'].z.l1.pt
     subleading_muon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: r"$p_T(\mu_2)$ [GeV]"
-      expression: objects['dileptons'].z.e2.pt
+      expression: objects['dileptons'].z.l2.pt
     muon_pt:
       type: Regular
       bins: 50
