@@ -66,28 +66,28 @@ histogram_config:
       bins: 50
       start: 30
       stop: 300
-      label: r"$p_T(\mu)$ [GeV]"
+      label: $p_T(\mu)$ [GeV]
       expression: objects['leptons'].pt
     muon_eta:
       type: Regular
       bins: 50
       start: -2.5
       stop: 2.5
-      label: r"$\eta(\mu)$"
+      label: $\eta(\mu)$
       expression: objects['leptons'].eta
     muon_phi:
       type: Regular
       bins: 50
       start: -3.14159
       stop: 3.14159
-      label: r"$\phi(\mu)$"
+      label: $\phi(\mu)$
       expression: objects['leptons'].phi
     dimuon_mass:
       type: Regular
       bins: 100
       start: 10
       stop: 150
-      label: r"$m(\mu\mu)$ [GeV]"
+      label: $m(\mu\mu)$ [GeV]
       expression: objects['dileptons'].z.p4.mass
   layout:
     muon:
