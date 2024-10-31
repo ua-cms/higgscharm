@@ -83,8 +83,8 @@ class ObjectSelector:
             {
                 "z": ak.zip(
                     {
-                        "leading_lepton": dilepton[0],
-                        "subleading_lepton": dilepton[1],
+                        "e1": dilepton[0],
+                        "e2": dilepton[1],
                         "p4": dilepton[0] + dilepton[1],
                     }
                 ),
