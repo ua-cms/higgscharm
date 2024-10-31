@@ -1,7 +1,9 @@
 import glob
+import json
 import argparse
 import subprocess
 from pathlib import Path
+
 
 def main(args):
     """Helper function to resubmit condor jobs"""
@@ -13,24 +15,23 @@ def main(args):
     condor_path = f"{main_dir}/condor/{args.processor}/{args.year}"
     condor_files = glob.glob(f"{condor_path}/*.sub", recursive=True)
     total_files = len(condor_files)
-    print(f"Jobs to be run: {total_files}")
 
     # get jobs already run
-    dataset_path = f"{main_dir}/analysis/configs/dataset/{args.year}"
-    datasets = [
-        f.split("/")[-1].replace(".py", "")
-        for f in glob.glob(f"{dataset_path}/*.py", recursive=True)
-    ]
+    dataset_path = f"{main_dir}/analysis/filesets/{args.year}_fileset.json"
+    with open(dataset_path, "r") as f:
+        dataset_config = json.load(f)
+    datasets = dataset_config.keys()
+
     run_done = []
     for sample in datasets:
         output_list = glob.glob(f"{outputs_path}/*{sample}*.pkl")
         for f in output_list:
-            run_done.append(f.split("/")[-1].replace(".pkl", "").replace(f"{args.year}_", ""))
+            run_done.append(
+                f.split("/")[-1].replace(".pkl", "").replace(f"{args.year}_", "")
+            )
     total_run = len(run_done)
-    print(f"Jobs already run: {total_run}")
 
     # show (and optionally resubmit) missing jobs
-    print(f"Missing jobs {total_files - total_run}:")
     condor_files_keys = [
         f.split("/")[-1].replace(f"{args.processor}_", "").replace(".sub", "")
         for f in condor_files
@@ -41,7 +42,12 @@ def main(args):
             if args.resubmit == "True":
                 subprocess.run(["condor_submit", sub])
 
+    print(f"Jobs to be run: {total_files}")
+    print(f"Jobs already run: {total_run}")
+    print(f"Missing jobs {total_files - total_run}:")
 
+
+    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -55,22 +61,22 @@ if __name__ == "__main__":
         "--output_path",
         dest="output_path",
         type=str,
-        default="/pnfs/iihe/cms/store/user/daocampo/higgscharm_outputs",
+        # default="/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs",
         help="path to the outputs folder",
     )
     parser.add_argument(
         "--processor",
         dest="processor",
         type=str,
-        default="",
-        help="processor to be used",
+        default="ztoee",
+        help="processor to be used {ztomumu, ztoee}",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
-        default="",
-        help="year of the data {2022, 2022EE}",
+        default="2022postEE",
+        help="year of the data {2022preEE, 2022postEE}",
     )
     args = parser.parse_args()
     main(args)
