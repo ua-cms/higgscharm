@@ -16,10 +16,8 @@ object_selection:
   dileptons:
     field: select_dileptons
     cuts:
-      dr: ((LorentzVector.delta_r(objects['dileptons'].z.leading_lepton,
-        objects['dileptons'].z.subleading_lepton) > 0.02))
-      mass_window: (objects['dileptons'].z.p4.mass < 120.0) &
-        (objects['dileptons'].z.p4.mass > 60.0)
+      dr: ((LorentzVector.delta_r(objects['dileptons'].z.e1, objects['dileptons'].z.e2) > 0.02))
+      mass_window: (objects['dileptons'].z.p4.mass > 60.0) & (objects['dileptons'].z.p4.mass < 120.0)
 event_selection:
   atleast_one_goodvertex: events.PV.npvsGood > 0
   lumimask: get_lumi_mask(events, goldenjson)
@@ -52,14 +50,14 @@ histogram_config:
       start: 30
       stop: 300
       label: r"$p_T(\mu_1)$ [GeV]"
-      expression: objects['dileptons'].z.leading_lepton.pt
+      expression: objects['dileptons'].z.e1.pt
     subleading_muon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: r"$p_T(\mu_2)$ [GeV]"
-      expression: objects['dileptons'].z.subleading_lepton.pt
+      expression: objects['dileptons'].z.e2.pt
     muon_pt:
       type: Regular
       bins: 50
@@ -81,13 +79,46 @@ histogram_config:
       stop: 3.14159
       label: r"$\phi(\mu)$"
       expression: objects['leptons'].phi
-  layout:
-    zcandidate:
-      - dimuon_mass
-      - dimuon_pt
-      - leading_muon_pt
-      - subleading_muon_pt
-    muon:
-      - muon_pt
-      - muon_eta
-      - muon_phi
+    jet_pt:
+      type: Regular
+      bins: 50
+      start: 20
+      stop: 500
+      label: r"$p_T(j)$ [GeV]"
+      expression: objects['jets'].pt
+    jet_eta:
+      type: Regular
+      bins: 50
+      start: -5
+      stop: 5
+      label: r"$\eta(j)$"
+      expression: objects['jets'].eta
+    jet_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: r"$\phi(j)$"
+      expression: objects['jets'].phi
+    jet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: r"ParticleNet CvsL"
+      expression: objects['jets'].btagPNetCvL
+    jet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: r"ParticleNet CvsB"
+      expression: objects['jets'].btagPNetCvB
+    jet_multiplicity:
+      type: Regular
+      bins: 15
+      start: 0
+      stop: 15
+      label: "N(j)"
+      expression: ak.num(objects['jets'])
+  layout: individual
