@@ -115,10 +115,9 @@ histogram_config:
       label: r"ParticleNet CvsB"
       expression: objects['jets'].btagPNetCvB
     jet_multiplicity:
-      type: Regular
-      bins: 15
-      start: 0
-      stop: 15
-      label: "N(j)"
+      type: IntCategory
+      categories: []
+      growth: true
+      label: N(j)
       expression: ak.num(objects['jets'])
   layout: individual
