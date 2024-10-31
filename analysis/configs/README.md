@@ -27,12 +27,10 @@ object_selection:
   dileptons:
     field: select_dileptons
     cuts:
-      dr: ((LorentzVector.delta_r(objects['dileptons'].z.leading_lepton,
-        objects['dileptons'].z.subleading_lepton) > 0.02))
-      mass_window: (objects['dileptons'].z.p4.mass < 120.0) &
-        (objects['dileptons'].z.p4.mass > 60.0)
+      dr: ((LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2) > 0.02))
+      mass_window: (objects['dileptons'].z.p4.mass > 60.0) & (objects['dileptons'].z.p4.mass < 120.0)
 ```
-you start by defining the object name and then in `field` you define define how to select the object, either through a NanoAOD field or a custom object-selection function defined as a method of the [ObjectSelector](https://github.com/deoache/higgscharm/blob/T2B/analysis/selections/object_selections.py) class. Each object is added sequentially to a dictionary called `objects`, which can later be used to access the already selected objects: First, `muons` is selected as `events.Muon` (and added to `objects`), and subsequently we select `dileptons` using [`objects['leptons']`](https://github.com/deoache/higgscharm/blob/T2B/analysis/selections/object_selections.py#L65-L94).
+you start by defining the object name and then in `field` you define define how to select the object, either through a NanoAOD field or a custom object-selection function defined as a method of the [ObjectSelector](https://github.com/deoache/higgscharm/blob/T2B/analysis/selections/object_selections.py) class. Each object is added sequentially to a dictionary called `objects`, which can later be used to access the already selected objects.
 
 `cuts` defines the set of object-level cuts to apply. Similarly, you can use NanoAOD fields (`events.Muon.pt > 24`) to define a cut or any valid expression (`objects['dimuons'].z.p4.mass < 120.0`). Alternatively, you can also use a working point function (WPF) defined in the [WorkingPoints class](https://github.com/deoache/higgscharm/blob/T2B/analysis/working_points/working_points.py). For instance, given the WPF
 ```
@@ -63,34 +61,6 @@ histogram_config:
   add_weight: true
   add_cat_axis: null
   axes:
-    dimuon_mass:
-      type: Regular
-      bins: 100
-      start: 10
-      stop: 150
-      label: r"$m(\mu\mu)$ [GeV]"
-      expression: objects['dileptons'].z.p4.mass
-    dimuon_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
-      label: r"$p_T(\mu\mu)$ [GeV]",
-      expression: objects['dileptons'].z.p4.pt
-    leading_muon_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
-      label: r"$p_T(\mu_1)$ [GeV]"
-      expression: objects['dileptons'].z.leading_lepton.pt
-    subleading_muon_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
-      label: r"$p_T(\mu_2)$ [GeV]"
-      expression: objects['dileptons'].z.subleading_lepton.pt
     muon_pt:
       type: Regular
       bins: 50
@@ -112,15 +82,19 @@ histogram_config:
       stop: 3.14159
       label: r"$\phi(\mu)$"
       expression: objects['leptons'].phi
+    dimuon_mass:
+      type: Regular
+      bins: 100
+      start: 10
+      stop: 150
+      label: r"$m(\mu\mu)$ [GeV]"
+      expression: objects['dileptons'].z.p4.mass
   layout:
-    zcandidate:
-      - dimuon_mass
-      - dimuon_pt
-      - leading_muon_pt
-      - subleading_muon_pt
     muon:
       - muon_pt
       - muon_eta
       - muon_phi
+    zcandidate:
+      - dimuon_mass
 ```
-Note that the variable associated with the axis must be included through the `expression` field using the `objects` dictionary. Output histogram's layout is defined with the `layout` field. If you set `layout: individual` then you will get an individual histogram for each axis. Note that if you set `add_syst_axis: true`, a StrCategory axis `{"variable_name": {"type": "StrCategory", "categories": [], "growth": True}}` to store systematic variations will be added to each histogram.
+Note that the variable associated with the axis must be included through the `expression` field using the `objects` dictionary. Output histogram's layout is defined with the `layout` field. In the example above, our output dictionary will contain two histograms labelled `muon` and `zcandidate`, the first with the `muon_pt`, `muon_eta` and `muon_phi` axes, and the second with the `dimuon_mass` axis only (make sure to include axis with the same dimensions within a histogram). If you set `layout: individual` then the output dictionary will contain a histogram for each axis. Note that if you set `add_syst_axis: true`, a StrCategory axis `{"variable_name": {"type": "StrCategory", "categories": [], "growth": True}}` to store systematic variations will be added to each histogram.
