@@ -7,7 +7,7 @@ from analysis.utils import paths
 from analysis.configs import ProcessorConfigBuilder
 from analysis.postprocess.plotter import Plotter
 from analysis.postprocess.postprocessor import Postprocessor
-from analysis.postprocess.utils import print_header, accumulate, setup_logger
+from analysis.postprocess.utils import print_header, setup_logger
 
 
 def clear_output_directory(output_dir):
