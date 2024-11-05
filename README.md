@@ -72,7 +72,7 @@ In some cases, root files corresponding to a dataset are stored in multiple fold
 
 Once you have run the corresponding datasets for a processor, you can get the results by typing:
 ```bash
-singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask-almalinux8:latest
+singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-base-almalinux8:0.7.22-py3.8
 ``` 
 
 ```bash
