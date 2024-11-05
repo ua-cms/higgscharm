@@ -4,7 +4,8 @@ import logging
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from analysis.postprocess.utils import open_output, print_header, accumulate
+from coffea.processor import accumulate
+from analysis.postprocess.utils import open_output, print_header
 
 
 class Postprocessor:
@@ -53,12 +54,14 @@ class Postprocessor:
                 if process not in ["Data", "Total Background"]
             ]
         ]
-        logging.info(self.cutflow_df.map(lambda x: f"{x:.3f}" if pd.notnull(x) else ""))
+        logging.info(
+            self.cutflow_df.applymap(lambda x: f"{x:.3f}" if pd.notnull(x) else "")
+        )
         self.cutflow_df.to_csv(f"{self.output_dir}/cutflow.csv")
 
         print_header(f"Results")
         results_df = self.get_results_report()
-        logging.info(results_df.map(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
+        logging.info(results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
         results_df.to_csv(f"{self.output_dir}/results.csv")
 
     def group_outputs(self):
@@ -158,7 +161,7 @@ class Postprocessor:
         logging.info(
             scale_info.drop(
                 [data_key for data_key in self.luminosities if data_key != "Total"]
-            ).map(lambda x: f"{x:.5f}" if pd.notnull(x) else "")
+            ).applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else "")
         )
         self.scaled_histograms = {}
         self.scaled_cutflow = {}
