@@ -4,7 +4,7 @@ import mplhep as hep
 import matplotlib.pyplot as plt
 from matplotlib import ticker
 from analysis.utils import paths
-from analysis.postprocess.utils import accumulate
+from coffea.processor import accumulate
 from hist.intervals import poisson_interval, ratio_uncertainty
 from analysis.postprocess.utils import setup_logger
 
@@ -63,6 +63,7 @@ class Plotter:
         year: str,
         lumi: int,
         cat_axis: tuple,
+        log_scale: bool = False,
         output_dir: str = None,
     ):
         self.processor = processor
@@ -172,6 +173,10 @@ class Plotter:
                                 ]
                 else:
                     feature_hists["data"] = histogram[{"variation": "nominal"}]
+
+        # accumulate variations histograms
+        for variation, hist_list in feature_hists["mc"]["variations"].items():
+            feature_hists["mc"]["variations"][variation] = accumulate(hist_list)
         return feature_hists
 
     def plot_feature_hist(
@@ -184,7 +189,7 @@ class Plotter:
         setup_logger(self.output_dir)
         # compute nominal (MC and Data) and variation (MC) histograms
         feature_hists = self.get_feature_hists(feature)
-        # MC
+        # MC nominal
         nominal_mc_hists = feature_hists["mc"]["nominal"]["histograms"]
         mc_histogram = accumulate(nominal_mc_hists)
         mc_histogram_values = mc_histogram.values()
@@ -192,6 +197,7 @@ class Plotter:
         mc_histogram_edges = mc_histogram.axes.edges[0]
         mc_histogram_centers = mc_histogram.axes.centers[0]
         mc_histogram_widths = mc_histogram.axes.widths[0]
+        # MC variations
         variations_mc_hists = feature_hists["mc"]["variations"]
         # Data
         data_histogram = feature_hists["data"]
@@ -227,20 +233,21 @@ class Plotter:
         bin_error_down = np.abs(nom_stat_down - mc_histogram_values) ** 2
         # add variation errors to bin errors
         for variation, variation_hist in variations_mc_hists.items():
-            variation_values = variation_hist[0].values()
-            # add up variation
-            max_values = np.max(
-                np.stack([mc_histogram_values, variation_values]), axis=0
-            )
-            up_variation_values = np.abs(max_values - mc_histogram_values)
-            bin_error_up += up_variation_values**2
-            # add down variation
-            min_values = np.min(
-                np.stack([mc_histogram_values, variation_values]), axis=0
-            )
-            down_variation_values = np.abs(min_values - mc_histogram_values)
-            bin_error_down += down_variation_values**2
-
+            variation_values = variation_hist.values()
+            if "Up" in variation:
+                # add up variation
+                max_values = np.max(
+                    np.stack([mc_histogram_values, variation_values]), axis=0
+                )
+                up_variation_values = np.abs(max_values - mc_histogram_values)
+                bin_error_up += up_variation_values**2
+            else:
+                # add down variation
+                min_values = np.min(
+                    np.stack([mc_histogram_values, variation_values]), axis=0
+                )
+                down_variation_values = np.abs(min_values - mc_histogram_values)
+                bin_error_down += down_variation_values**2
         band_up = mc_histogram_values + np.sqrt(bin_error_up)
         band_down = mc_histogram_values - np.sqrt(bin_error_down)
 
@@ -343,12 +350,9 @@ class Plotter:
 
         # set legend layout
         if ("eta" in feature) or ("phi" in feature):
-            ncols = 4
-            ylim = ax.get_ylim()[1]
-            ax.set_ylim(0, ylim + 0.4 * ylim)
-            ax.legend(loc="upper center", ncol=ncols)
+            ax.legend(loc="lower left", frameon=True)
         else:
-            ax.legend(loc="best", ncol=1)
+            ax.legend()
 
         # set axes labels
         ax.set(xlabel=None, ylabel="Events")
@@ -356,6 +360,10 @@ class Plotter:
         formatter.set_scientific(False)
         ax.yaxis.set_major_formatter(formatter)
         rax.set(xlabel=feature_label, ylabel="Data / Pred", facecolor="white")
+
+        # set log scale
+        if log_scale:
+            ax.set_yscale("log")
 
         # add CMS info
         hep.cms.lumitext(
