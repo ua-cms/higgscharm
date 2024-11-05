@@ -74,22 +74,29 @@ class Plotter:
         self.output_dir = output_dir
 
     def get_feature_hists(self, feature: str) -> dict:
-        """get nominal and variations histograms"""
+        """
+        get nominal and variations histograms
+
         # https://cms-analysis.docs.cern.ch/guidelines/plotting/colors/
-        colors = iter(
-            [
-                "#3f90da",
-                "#ffa90e",
-                "#bd1f01",
-                "#94a4a2",
-                "#832db6",
-                "#a96b59",
-                "#e76300",
-                "#b9ac70",
-                "#717581",
-                "#92dadd",
-            ]
-        )
+        colors = [
+            "#3f90da",
+            "#ffa90e",
+            "#bd1f01",
+            "#94a4a2",
+            "#832db6",
+            "#a96b59",
+            "#e76300",
+            "#b9ac70",
+            "#717581",
+            "#92dadd",
+        ]
+        """
+        color_map = {
+            "DY+Jets": "#3f90da",
+            "tt": "#94a4a2",
+            "Single Top": "#bd1f01",
+            "Diboson": "#ffa90e",
+        }
         feature_hists = {
             "mc": {
                 "nominal": {"histograms": [], "labels": [], "colors": []},
@@ -128,7 +135,7 @@ class Plotter:
                             )
                             feature_hists["mc"]["nominal"]["labels"].append(process)
                             feature_hists["mc"]["nominal"]["colors"].append(
-                                next(colors)
+                                color_map[process]
                             )
                         else:
                             variation_hist = histogram[
@@ -159,7 +166,7 @@ class Plotter:
                             )
                             feature_hists["mc"]["nominal"]["labels"].append(process)
                             feature_hists["mc"]["nominal"]["colors"].append(
-                                next(colors)
+                                color_map[process]
                             )
                         else:
                             variation_hist = histogram[{"variation": variation}]
