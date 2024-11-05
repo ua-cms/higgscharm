@@ -65,8 +65,7 @@ def main(args):
     # save processor config
     config_builder = ProcessorConfigBuilder(processor=args.processor, year=args.year)
     processor_config = config_builder.build_processor_config()
-    with open(f"{args.output_dir}/config.yaml", "w") as file:
-        file.write(processor_config.to_yaml())
+    logging.info(processor_config.to_yaml())
 
     # process (group and accumulate) outputs
     postprocessor = Postprocessor(
