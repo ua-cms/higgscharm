@@ -46,25 +46,23 @@ Outputs will be stored at `/pnfs/iihe/cms/store/user/<your_username>/higgscharm_
 
 ### Datasets
 
-The BTV-PFNano datasets have been produced following https://github.com/cms-btv-pog/btvnano-prod and stored in T2B (check the [2022 Summary Table Slide](https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit#slide=id.g289f499aa6b_2_52)). After the production of a dataset is finished, it is added to `analysis/filesets/<year>_fieleset.json` with the following format:
+The BTV-PFNano datasets have been produced following https://github.com/cms-btv-pog/btvnano-prod and stored in T2B (check the [2022 Summary Table Slide](https://docs.google.com/presentation/d/1F4ndU7DBcyvrEEyLfYqb29NGkBPs20EAnBxe_l7AEII/edit#slide=id.g289f499aa6b_2_52)). After the production of a dataset is finished, it is added to `analysis/filesets/<year>_fieleset.yaml` with the following format:
 
 * Background MC
-```
-"DYto2L_2Jets_10to50":{
-    "process":"DY+Jets",
-    "era":"MC",
-    "xsec":20950.0,
-    "path":"/pnfs/iihe/cms/store/user/<your_username>/PFNano_Run3/path_to_dataset/"
-}
+```yaml
+DYto2L_2Jets_0J:
+  era: MC
+  path: /pnfs/iihe/cms/store/user/<your_username>/PFNano_Run3/path_to_dataset/
+  process: DY+Jets
+  xsec: 5378.0
 ```
 * Data
-```
-"MuonC":{
-    "process":"Data",
-    "era":"C",
-    "xsec":"None",
-    "path":"/pnfs/iihe/cms/store/user/<your_username>/PFNano_Run3/path_to_dataset/"
-}
+```yaml
+MuonE:
+  era: E
+  path: /pnfs/iihe/cms/store/user/<your_username>/PFNano_Run3/path_to_dataset/
+  process: Data
+  xsec: None
 ```
 In some cases, root files corresponding to a dataset are stored in multiple folders that share the same parent folder. In such cases, `path` must point to this parent folder.
 
