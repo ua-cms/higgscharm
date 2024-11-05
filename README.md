@@ -78,4 +78,4 @@ singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.h
 ```bash
 python3 run_postprocess.py --processor <processor> --year <year>
 ``` 
-Results will be saved to the same directory as the output files
+You can also add the `--log_scale` flag to change the y-axis to log scale. Results will be saved to the same directory as the output files
