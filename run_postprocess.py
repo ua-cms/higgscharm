@@ -36,7 +36,8 @@ def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
                 feature=feature,
                 feature_label=histograms_config.axes[feature]["label"],
                 yratio_limits=(0, 2),
-                savefig=True,
+                log_scale=args.log_scale,
+                savefig=args.savefig,
             )
     else:
         for key, features in histograms_config.layout.items():
@@ -46,7 +47,8 @@ def plot(args, processed_histograms, histograms_config, lumi, cat_axis=None):
                     feature=feature,
                     feature_label=histograms_config.axes[feature]["label"],
                     yratio_limits=(0, 2),
-                    savefig=True,
+                    log_scale=args.log_scale,
+                    savefig=args.savefig,
                 )
 
 
@@ -109,6 +111,16 @@ if __name__ == "__main__":
         type=str,
         default=None,
         help="Path to the outputs directory",
+    )
+    parser.add_argument(
+        "--log_scale",
+        action="store_true",
+        help="Enable log scale for y-axis",
+    )
+    parser.add_argument(
+        "--savefig",
+        action="store_true",
+        help="Enable histogram plot saving",
     )
     args = parser.parse_args()
     main(args)
