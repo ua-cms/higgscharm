@@ -1,5 +1,5 @@
 import glob
-import json
+import yaml
 import argparse
 import subprocess
 from pathlib import Path
@@ -17,9 +17,9 @@ def main(args):
     total_files = len(condor_files)
 
     # get jobs already run
-    dataset_path = f"{main_dir}/analysis/filesets/{args.year}_fileset.json"
+    dataset_path = f"{main_dir}/analysis/filesets/{args.year}_fileset.yaml"
     with open(dataset_path, "r") as f:
-        dataset_config = json.load(f)
+        dataset_config = yaml.safe_load(f)
     datasets = dataset_config.keys()
 
     run_done = []

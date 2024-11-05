@@ -1,4 +1,4 @@
-import json
+import yaml
 import glob
 import logging
 import numpy as np
@@ -22,8 +22,8 @@ class Postprocessor:
         # get datasets configs
         main_dir = Path.cwd()
         fileset_path = Path(f"{main_dir}/analysis/filesets")
-        with open(f"{fileset_path}/{year}_fileset.json", "r") as f:
-            self.dataset_config = json.load(f)
+        with open(f"{fileset_path}/{year}_fileset.yaml", "r") as f:
+            self.dataset_config = yaml.safe_load(f)
 
         # run postprocessor
         self.run_postprocess()

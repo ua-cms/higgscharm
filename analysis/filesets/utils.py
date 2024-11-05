@@ -1,5 +1,5 @@
 import glob
-import json
+import yaml
 import argparse
 from pathlib import Path
 from copy import deepcopy
@@ -17,8 +17,8 @@ def build_single_fileset(name: str, year: str) -> dict:
     """
     main_dir = Path.cwd()
     fileset_path = Path(f"{main_dir}/analysis/filesets")
-    with open(f"{fileset_path}/{year}_fileset.json", "r") as f:
-        dataset_config = json.load(f)[name]
+    with open(f"{fileset_path}/{year}_fileset.yaml", "r") as f:
+        dataset_config = yaml.safe_load(f)[name]
 
     # check for .root files in the specified path
     root_files = glob.glob(f"{dataset_config['path']}/*.root")
