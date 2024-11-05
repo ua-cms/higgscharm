@@ -48,7 +48,7 @@ class HistogramConfig:
         layout: dict,
         add_syst_axis: bool,
         add_weight: bool,
-        add_cat_axis: list[str],
+        add_cat_axis = None,
     ):
         self.axes = axes
         self.layout = layout
