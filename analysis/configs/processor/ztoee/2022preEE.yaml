@@ -8,7 +8,7 @@ object_selection:
     cuts:
       pt: events.Electron.pt > 30
       abseta: np.abs(events.Electron.eta) < 2.4
-      electron_id: wp90iso
+      electron_id: wp80iso
   dileptons:
     field: select_dileptons
     cuts:
@@ -23,6 +23,7 @@ event_selection:
   lumimask: get_lumi_mask(events, goldenjson)
   trigger: get_trigger_mask(events, hlt_paths)
   trigger_matching: get_trigger_match_mask(events, events.Electron, hlt_paths)
+  first_electron_pt: ak.firsts(objects['leptons'].pt) > 35
   two_leptons: ak.num(objects['leptons']) == 2
   one_z: ak.num(objects['dileptons'].z.p4) == 1
 histogram_config:
