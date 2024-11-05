@@ -63,7 +63,6 @@ class Plotter:
         year: str,
         lumi: int,
         cat_axis: tuple,
-        log_scale: bool = False,
         output_dir: str = None,
     ):
         self.processor = processor
@@ -191,6 +190,7 @@ class Plotter:
         feature: str,
         feature_label: str,
         yratio_limits: str = None,
+        log_scale: bool = False,
         savefig: bool = True,
     ):
         setup_logger(self.output_dir)
