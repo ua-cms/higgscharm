@@ -1,4 +1,4 @@
-import json
+import yaml
 
 def run_checker(args):
     # check processor
@@ -12,9 +12,9 @@ def run_checker(args):
     if args.year not in available_years:
         raise ValueError(f"Incorrect year. Available years are: {available_years}")
     # check sample
-    dataset_path = f"analysis/filesets/{args.year}_fileset.json"
+    dataset_path = f"analysis/filesets/{args.year}_fileset.yaml"
     with open(dataset_path, "r") as f:
-        dataset_config = json.load(f)
+        dataset_config = yaml.safe_load(f)
     available_datasets = list(dataset_config.keys())
     if args.dataset not in available_datasets:
         raise ValueError(
