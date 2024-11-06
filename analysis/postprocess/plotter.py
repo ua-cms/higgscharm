@@ -3,10 +3,10 @@ import numpy as np
 import mplhep as hep
 import matplotlib.pyplot as plt
 from matplotlib import ticker
-from analysis.utils import paths
 from coffea.processor import accumulate
-from hist.intervals import poisson_interval, ratio_uncertainty
 from analysis.postprocess.utils import setup_logger
+from hist.intervals import poisson_interval, ratio_uncertainty
+
 
 
 np.seterr(invalid="ignore")
