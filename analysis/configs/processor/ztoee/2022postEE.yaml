@@ -50,8 +50,15 @@ histogram_config:
       bins: 50
       start: 0
       stop: 5
-      label: $\Delta R(ee)$ [GeV]
+      label: $\Delta R(e_1, e_2)$
       expression: LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2)
+    dielectron_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(e_1, e_2)|$
+      expression: np.abs(objects['dileptons'].z.l1.eta - objects['dileptons'].z.l2.eta)
     leading_electron_pt:
       type: Regular
       bins: 50
