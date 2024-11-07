@@ -52,7 +52,7 @@ histogram_config:
       type: Regular
       bins: 50
       start: 0
-      stop: 1
+      stop: 5
       label: $\Delta R(\mu\mu)$ [GeV]
       expression: LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2)
     leading_muon_pt:
