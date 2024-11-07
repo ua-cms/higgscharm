@@ -6,9 +6,11 @@ from coffea import processor
 from coffea.nanoevents import PFNanoAODSchema
 from coffea.lumi_tools import LumiData, LumiList
 from coffea.analysis_tools import Weights, PackedSelection
+from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.configs import ProcessorConfigBuilder
-from analysis.corrections.electron import ElectronWeights, ElectronSS
 from analysis.corrections.pileup import add_pileup_weight
+from analysis.corrections.jerc import apply_jerc_corrections
+from analysis.corrections.electron import ElectronWeights, ElectronSS
 from analysis.histograms import HistBuilder, fill_histogram
 from analysis.selections import (
     ObjectSelector,
@@ -52,10 +54,24 @@ class ZToEEProcessor(processor.ProcessorABC):
         # -------------------------------------------------------------
         # Object corrections
         # -------------------------------------------------------------
+        # apply JEC/JER corrections
+        apply_jec = True
+        apply_jer = False
+        apply_junc = False
+        if is_mc:
+            apply_jer = True
+        apply_jerc_corrections(
+            events, 
+            era=events.metadata["metadata"]["era"], 
+            year=year,
+            apply_jec=apply_jec,
+            apply_jer=apply_jer,
+            apply_junc=apply_junc
+        )
         # electron scale and smearing corrections
         electron_ss = ElectronSS(
             events=events,
-            year=self.year,
+            year=year,
             variation="nominal",
         )
         if is_mc:

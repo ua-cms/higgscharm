@@ -6,9 +6,11 @@ from coffea import processor
 from coffea.nanoevents import PFNanoAODSchema
 from coffea.lumi_tools import LumiData, LumiList
 from coffea.analysis_tools import Weights, PackedSelection
+from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.configs import ProcessorConfigBuilder
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
+from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.histograms import HistBuilder, fill_histogram
 from analysis.selections import (
     ObjectSelector,
@@ -48,7 +50,24 @@ class ZToMuMuProcessor(processor.ProcessorABC):
         nevents = ak.num(events, axis=0)
         output["metadata"] = {}
         output["metadata"].update({"raw_initial_nevents": nevents})
-
+        
+        # --------------------------------------------------------------
+        # Object corrections
+        # --------------------------------------------------------------
+        # apply JEC/JER corrections
+        apply_jec = True
+        apply_jer = False
+        apply_junc = False
+        if is_mc:
+            apply_jer = True
+        apply_jerc_corrections(
+            events, 
+            era=events.metadata["metadata"]["era"], 
+            year=self.year,
+            apply_jec=apply_jec,
+            apply_jer=apply_jer,
+            apply_junc=apply_junc
+        )
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
