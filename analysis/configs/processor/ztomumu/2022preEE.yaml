@@ -18,6 +18,10 @@ object_selection:
     cuts:
       dr: ((LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2) > 0.02))
       mass_window: (objects['dileptons'].z.p4.mass > 60.0) & (objects['dileptons'].z.p4.mass < 120.0)
+  jets:
+    field: events.Jet
+    cuts:
+      min_pt: events.Jet.pt > 20
 event_selection:
   atleast_one_goodvertex: events.PV.npvsGood > 0
   lumimask: get_lumi_mask(events, goldenjson)
@@ -44,6 +48,13 @@ histogram_config:
       stop: 300
       label: $p_T(\mu\mu)$ [GeV]
       expression: objects['dileptons'].z.p4.pt
+    dimuon_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $\Delta R(\mu\mu)$ [GeV]
+      expression: LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2)
     leading_muon_pt:
       type: Regular
       bins: 50
@@ -58,6 +69,20 @@ histogram_config:
       stop: 300
       label: $p_T(\mu_2)$ [GeV]
       expression: objects['dileptons'].z.l2.pt
+    leading_muon_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\mu_1)$
+      expression: objects['dileptons'].z.l1.eta
+    subleading_muon_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\mu_2)$
+      expression: objects['dileptons'].z.l2.eta
     muon_pt:
       type: Regular
       bins: 50

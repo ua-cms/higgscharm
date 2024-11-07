@@ -45,6 +45,13 @@ histogram_config:
       stop: 300
       label: $p_T(ee)$ [GeV]
       expression: objects['dileptons'].z.p4.pt
+    dielectron_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $\Delta R(ee)$ [GeV]
+      expression: LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2)
     leading_electron_pt:
       type: Regular
       bins: 50
@@ -59,6 +66,20 @@ histogram_config:
       stop: 300
       label: $p_T(e_2)$ [GeV]
       expression: objects['dileptons'].z.l2.pt
+    leading_electron_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(e_1)$
+      expression: objects['dileptons'].z.l1.eta
+    subleading_electron_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(e_2)$
+      expression: objects['dileptons'].z.l2.eta
     electron_pt:
       type: Regular
       bins: 50
