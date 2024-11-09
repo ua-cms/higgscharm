@@ -153,3 +153,18 @@ histogram_config:
       label: $N(j)$
       expression: ak.num(objects['jets'])
   layout: individual
+run:
+  datasets:
+    background:
+      - WW
+      - WZ
+      - ZZ
+      - DYto2L_2Jets_50
+      - DYto2L_2Jets_10to50
+      - TWminusto2L2Nu
+      - TbarWplusto2L2Nu
+      - TTto2L2Nu
+    data:
+      - MuonE
+      - MuonF
+      - MuonG

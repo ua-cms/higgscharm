@@ -7,7 +7,7 @@ from analysis.configs.processor_config import ProcessorConfig
 class ProcessorConfigBuilder:
     
     def __init__(self, processor: str, year: str):
-        with importlib.resources.open_text(f"analysis.configs.processor.{processor}", f"{year}.yaml") as file:
+        with importlib.resources.open_text(f"analysis.configs.{processor}", f"{year}.yaml") as file:
             self.config = yaml.safe_load(file)
             
     def build_processor_config(self):
