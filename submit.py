@@ -1,42 +1,32 @@
 import json
-import dask
+import time
 import pickle
 import argparse
+from coffea import processor
+from humanfriendly import format_timespan
 from coffea.nanoevents import PFNanoAODSchema
 from analysis.processors.ztoee import ZToEEProcessor
 from analysis.processors.ztomumu import ZToMuMuProcessor
-from coffea.dataset_tools import preprocess, apply_to_fileset, max_chunks
 
 
 def main(args):
-    # build dataset runnable (preprocessed fileset)
-    dataset_runnable, _ = preprocess(
-        args.partition_fileset,
-        step_size=args.stepsize,
-        align_clusters=False,
-        files_per_batch=1,
-        save_form=False,
-    )
-    dataset_runnable[args.dataset]["metadata"] = {
-        "metadata": {
-            "era": args.partition_fileset[args.dataset]["metadata"]["metadata"]["era"]
-        }
-    }
-    # process dataset runnable and save output to a pickle file
     processors = {
         "ztomumu": ZToMuMuProcessor(year=args.year),
         "ztoee": ZToEEProcessor(year=args.year),
     }
-    to_compute = apply_to_fileset(
-        processors[args.processor],
-        max_chunks(dataset_runnable),
-        schemaclass=PFNanoAODSchema,
+    t0 = time.monotonic()
+    out = processor.run_uproot_job(
+        args.partition_fileset,
+        treename="Events",
+        processor_instance=processors[args.processor],
+        executor=processor.futures_executor,
+        executor_args={"schema": PFNanoAODSchema, "workers": 4},
     )
-    (computed,) = dask.compute(to_compute)
-
+    exec_time = format_timespan(time.monotonic() - t0)
+    print(f"Execution time: {exec_time}")
     save_path = f"{args.output_path}/{args.year}_{args.dataset}"
     with open(f"{save_path}.pkl", "wb") as handle:
-        pickle.dump(computed, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(out, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 if __name__ == "__main__":
@@ -66,20 +56,13 @@ if __name__ == "__main__":
         dest="year",
         type=str,
         default="",
-        help="year of the data {2022, 2022EE}",
+        help="year of the data {2022preEE, 2022postEE}",
     )
     parser.add_argument(
         "--output_path",
         dest="output_path",
         type=str,
         help="output path",
-    )
-    parser.add_argument(
-        "--stepsize",
-        dest="stepsize",
-        type=int,
-        default=50_000,
-        help="stepsize",
     )
     args = parser.parse_args()
     main(args)
