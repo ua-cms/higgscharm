@@ -32,7 +32,7 @@ Example:
 ssh -X -o ServerAliveInterval=100 <your_username>@m0.iihe.ac.be
 
 # clone the repository (if you have not done it yet)
-git clone -b T2B https://github.com/deoache/higgscharm.git
+git clone -b coffea.07 https://github.com/deoache/higgscharm.git
 cd higgscharm
 
 # submit condor jobs for some processor and dataset
@@ -70,7 +70,7 @@ In some cases, root files corresponding to a dataset are stored in multiple fold
 
 Once you have run the corresponding datasets for a processor, you can get the results by typing:
 ```bash
-singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-base-almalinux8:0.7.22-py3.8
+singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:0.7.22-py3.9-g7f049
 ``` 
 
 ```bash
