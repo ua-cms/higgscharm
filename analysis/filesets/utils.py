@@ -1,67 +1,3 @@
-import glob
-import yaml
-import argparse
-from pathlib import Path
-from copy import deepcopy
-
-
-def build_single_fileset(name: str, year: str) -> dict:
-    """
-    builds a fileset for a single dataset
-
-    Parameters:
-        name:
-            name of the dataset
-        year:
-            year of the dataset {2022EE, 2022}
-    """
-    main_dir = Path.cwd()
-    fileset_path = Path(f"{main_dir}/analysis/filesets")
-    with open(f"{fileset_path}/{year}_fileset.yaml", "r") as f:
-        dataset_config = yaml.safe_load(f)[name]
-
-    # check for .root files in the specified path
-    root_files = glob.glob(f"{dataset_config['path']}/*.root")
-    if not root_files:
-        # if no files found, check in the subdirectories
-        root_files = glob.glob(f"{dataset_config['path']}/*/*.root")
-    elif not root_files:
-        raise FileNotFoundError(
-            f"No .root files found in {dataset_config['path']} or its subdirectories."
-        )
-
-    return {
-        name: {
-            "files": {root_file: "Events" for root_file in root_files},
-            "metadata": {
-                "short_name": name,
-                "metadata": {
-                    "era": dataset_config["era"],
-                    "xsec": dataset_config["xsec"],
-                },
-            },
-        },
-    }
-
-
-def build_full_dataset(year: str) -> None:
-    """
-    builds and save a full fileset for a year
-
-    dataset_names =
-
-    full_fileset = {}
-    for dataset_name in dataset_names:
-        single_fileset = build_single_fileset(name=dataset_name, year=year)
-        if not full_fileset:
-            full_fileset = single_fileset
-        else:
-            full_fileset.update(single_fileset)
-    return full_fileset
-    """
-    pass
-
-
 def divide_list(lst: list) -> list:
     """Divide a list into sublists such that each sublist has at least 20 elements."""
     if len(lst) < 20:
@@ -85,5 +21,4 @@ def divide_list(lst: list) -> list:
             end = start + size
         result.append(lst[start:end])
         start = end
-
     return result
