@@ -5,6 +5,7 @@ import numpy as np
 import awkward as ak
 import importlib.resources
 from pathlib import Path
+from analysis.corrections.utils import get_era
 from coffea.lookup_tools import extractor
 from coffea.jetmet_tools import JECStack, CorrectedJetsFactory
 
@@ -33,9 +34,7 @@ JEC_PARAMS = {
         "2022postEE": "Summer22EE22Sep2023_JRV1_MC",
     },
     "jec_data_tags": {
-        "2022preEE": {
-            "Summer2222Sep2023_RunCD_V2_DATA": ["C", "D"]
-        },
+        "2022preEE": {"Summer2222Sep2023_RunCD_V2_DATA": ["C", "D"]},
         "2022postEE": {
             "Summer22EE22Sep2023_RunE_V2_DATA": ["E"],
             "Summer22EE22Sep2023_RunF_V2_DATA": ["F"],
@@ -176,7 +175,7 @@ def get_jet_evaluator(year):
                 for name in data
             ]
             jec_ext.add_weight_sets([f"* * {file}" for file in jec_data_files])
-            
+
     jec_ext.finalize()
     jet_evaluator = jec_ext.make_evaluator()
     return jet_evaluator
@@ -184,12 +183,14 @@ def get_jet_evaluator(year):
 
 def apply_jerc_corrections(
     events,
-    era="MC",
+    dataset,
     year="2022postEE",
     apply_jec=True,
     apply_jer=False,
     apply_junc=False,
 ):
+    # retrive era from dataset
+    era = get_era(dataset)
     # add requiered variables to Jet collection
     jets = events.Jet
     if apply_jec:
@@ -206,7 +207,7 @@ def apply_jerc_corrections(
             ak.fill_none(jets.matched_gen.pt, 0), np.float32
         )
     events["Jet", "rho"] = ak.ones_like(jets.pt) * events.Rho.fixedGridRhoFastjetAll
-    
+
     # set inputs for jec, jer and junc stack
     names = jec_names_and_sources(year)
     jet_evaluator = get_jet_evaluator(year)
@@ -238,7 +239,7 @@ def apply_jerc_corrections(
         jec_options.update(jec_input_options["jer"])
     if apply_junc:
         jec_options.update(jec_input_options["junc"])
-    
+
     # set jerc name map (I don't use JECStack.blank_name_map since it includes 'ptRaw' and 'massRaw' by default)
     jec_name_map = {
         "JetPt": "pt",
@@ -277,6 +278,6 @@ def apply_jerc_corrections(
                     jec_inputs_data[key] = jet_evaluator[key]
         jec_stack_data = JECStack(jec_inputs_data)
         jec_factory = CorrectedJetsFactory(jec_name_map, jec_stack_data)
-        
+
     # update Jet collection
-    events["Jet"] = jec_factory.build(events.Jet)
+    events["Jet"] = jec_factory.build(events.Jet, events.caches[0])

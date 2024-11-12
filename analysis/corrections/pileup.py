@@ -1,6 +1,5 @@
 import correctionlib
 import awkward as ak
-import dask_awkward as dak
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.utils import get_pog_json
@@ -38,11 +37,11 @@ def add_pileup_weight(
     # get number of true interactions
     nti = events.Pileup.nTrueInt
     # get nominal scale factors
-    nominal_sf = dak.map_partitions(cset[year_to_corr[year]].evaluate, nti, "nominal")
+    nominal_sf = cset[year_to_corr[year]].evaluate(ak.to_numpy(nti), "nominal")
     if variation == "nominal":
         # get up and down variations
-        up_sf = dak.map_partitions(cset[year_to_corr[year]].evaluate, nti, "up")
-        down_sf = dak.map_partitions(cset[year_to_corr[year]].evaluate, nti, "down")
+        up_sf = cset[year_to_corr[year]].evaluate(ak.to_numpy(nti), "up")
+        down_sf = cset[year_to_corr[year]].evaluate(ak.to_numpy(nti), "down")
         # add pileup scale factors to weights container
         weights_container.add(
             name="pileup",

@@ -1,13 +1,13 @@
 import correctionlib
 import numpy as np
 import awkward as ak
-import dask_awkward as dak
 import correctionlib.schemav2 as cs
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.met import update_met
-from analysis.corrections.utils import get_pog_json
 from analysis.selections.utils import trigger_match
+from analysis.corrections.utils import get_pog_json, unflat_sf
+from analysis.selections.event_selections import get_trigger_mask
 
 
 class ElectronWeights:
@@ -36,8 +36,7 @@ class ElectronWeights:
         weights: Type[Weights],
         year: str = "2022postEE",
         variation: str = "nominal",
-        id_wp: str = "medium",
-        hlt_paths: str = ["Ele30_WPTight_Gsf"],
+        id_wp: str = "wp80iso",
     ) -> None:
         self.events = events
         self.electrons = events.Electron
@@ -45,13 +44,19 @@ class ElectronWeights:
         self.year = year
         self.variation = variation
         self.id_wp = id_wp
-        self.hlt_paths = hlt_paths
+
+        self.flat_electrons = ak.flatten(events.Electron)
+        self.electrons_counts = ak.num(events.Electron)
+
         # set id working points
         self.id_wps = {
-            "wp80iso": self.electrons.mvaIso_WP80,
-            "wp90iso": self.electrons.mvaIso_WP90,
+            "wp80iso": self.flat_electrons.mvaIso_WP80,
+            "wp90iso": self.flat_electrons.mvaIso_WP90,
         }
-        self.year_map = {"2022postEE": "2022Re-recoE+PromptFG", "2022preEE": "2022Re-recoBCD"}
+        self.year_map = {
+            "2022postEE": "2022Re-recoE+PromptFG",
+            "2022preEE": "2022Re-recoBCD",
+        }
 
     def add_id_weights(self):
         """
@@ -99,15 +104,15 @@ class ElectronWeights:
                 weight=nominal_weights,
             )
 
-    def add_hlt_weights(self):
+    def add_hlt_weights(self, hlt_paths):
         """
         add electron HLT weights to weights container
         """
-        nominal_weights = self.get_hlt_weights(variation="sf")
+        nominal_weights = self.get_hlt_weights(variation="sf", hlt_paths=hlt_paths)
         if self.variation == "nominal":
             # get 'up' and 'down' weights
-            up_weights = self.get_hlt_weights(variation="sfup")
-            down_weights = self.get_hlt_weights(variation="sfdown")
+            up_weights = self.get_hlt_weights(variation="sfup", hlt_paths=hlt_paths)
+            down_weights = self.get_hlt_weights(variation="sfdown", hlt_paths=hlt_paths)
             # add scale factors to weights container
             self.weights.add(
                 name="electron_hlt",
@@ -134,27 +139,26 @@ class ElectronWeights:
         cset = correctionlib.CorrectionSet.from_file(
             get_pog_json(json_name="electron_id", year=self.year)
         )
-
         # get electrons that pass the id wp, and within SF binning
-        electron_pt_mask = self.electrons.pt > 10.0
+        electron_pt_mask = self.flat_electrons.pt > 10.0
         electron_id_mask = self.id_wps[self.id_wp]
         in_electron_mask = electron_pt_mask & electron_id_mask
-        in_electrons = self.electrons.mask[in_electron_mask]
+        in_electrons = self.flat_electrons.mask[in_electron_mask]
 
         # get electrons pT and abseta (replace None values with some 'in-limit' value)
         electron_pt = ak.fill_none(in_electrons.pt, 15.0)
-        electron_eta = in_electrons.eta
+        electron_eta = ak.fill_none(in_electrons.eta, 0)
 
-        sf = dak.map_partitions(
-            cset["Electron-ID-SF"].evaluate,
-            self.year_map[self.year],
-            variation,
-            self.id_wp,
-            electron_eta,
-            electron_pt,
-        )
-        weights = ak.fill_none(
-            ak.prod(ak.where(in_electron_mask, sf, ak.ones_like(sf)), axis=1), value=1
+        weights = unflat_sf(
+            cset["Electron-ID-SF"].evaluate(
+                self.year_map[self.year],
+                variation,
+                self.id_wp,
+                electron_eta,
+                electron_pt,
+            ),
+            in_electron_mask,
+            self.electrons_counts,
         )
         return weights
 
@@ -173,11 +177,14 @@ class ElectronWeights:
         )
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = {
-            "RecoBelow20": (self.electrons.pt > 10.0) & (self.electrons.pt < 20.0),
-            "Reco20to75": (self.electrons.pt > 20.0) & (self.electrons.pt < 75.0),
-            "RecoAbove75": self.electrons.pt > 75,
+            "RecoBelow20": (self.flat_electrons.pt > 10.0)
+            & (self.flat_electrons.pt < 20.0),
+            "Reco20to75": (self.flat_electrons.pt > 20.0)
+            & (self.flat_electrons.pt < 75.0),
+            "RecoAbove75": self.flat_electrons.pt > 75,
         }
-        in_electrons = self.electrons.mask[electron_pt_mask[reco_range]]
+        in_electrons_mask = electron_pt_mask[reco_range]
+        in_electrons = self.flat_electrons.mask[in_electrons_mask]
 
         # get electrons pT and abseta (replace None values with some 'in-limit' value)
         electron_pt_limits = {
@@ -186,25 +193,22 @@ class ElectronWeights:
             "RecoAbove75": 80,
         }
         electron_pt = ak.fill_none(in_electrons.pt, electron_pt_limits[reco_range])
-        electron_eta = in_electrons.eta
+        electron_eta = ak.fill_none(in_electrons.eta, 0)
 
-        sf = dak.map_partitions(
-            cset["Electron-ID-SF"].evaluate,
-            self.year_map[self.year],
-            variation,
-            reco_range,
-            electron_eta,
-            electron_pt,
-        )
-        weights = ak.fill_none(
-            ak.prod(
-                ak.where(electron_pt_mask[reco_range], sf, ak.ones_like(sf)), axis=1
+        weights = unflat_sf(
+            cset["Electron-ID-SF"].evaluate(
+                self.year_map[self.year],
+                variation,
+                reco_range,
+                electron_eta,
+                electron_pt,
             ),
-            value=1,
+            in_electrons_mask,
+            self.electrons_counts,
         )
         return weights
 
-    def get_hlt_weights(self, variation):
+    def get_hlt_weights(self, variation, hlt_paths):
         """
         Compute electron HLT weights
 
@@ -217,40 +221,42 @@ class ElectronWeights:
         cset = correctionlib.CorrectionSet.from_file(
             get_pog_json(json_name="electron_hlt", year=self.year)
         )
-        # get electrons matched to trigger objects
-        trig_match_mask = ak.zeros_like(self.events.PV.npvsGood, dtype="bool")
-        for hlt_path in self.hlt_paths:
+        # get trigger masks
+        trigger_mask = get_trigger_mask(self.events, hlt_paths)
+        trigger_mask = ak.flatten(ak.ones_like(self.electrons.pt) * trigger_mask) > 0
+        trigger_match_mask = np.zeros(len(self.events), dtype="bool")
+        for hlt_path in hlt_paths:
             if hlt_path in self.events.HLT.fields:
                 trig_obj_mask = trigger_match(
                     leptons=self.electrons,
                     trigobjs=self.events.TrigObj,
                     hlt_path=hlt_path,
                 )
-                trig_match_mask = trig_match_mask | trig_obj_mask
+                trigger_match_mask = trigger_match_mask | trig_obj_mask
+        trigger_match_mask = ak.flatten(trigger_match_mask)
         # get electrons that pass the id wp, and within SF binning
-        electron_pt_mask = self.electrons.pt > 25.0
-        in_electrons = self.electrons.mask[
-            electron_pt_mask & (dak.sum(trig_match_mask, axis=-1) > 0)
-        ]
+        electron_pt_mask = self.flat_electrons.pt > 25.0
+        in_electrons_mask = electron_pt_mask & trigger_mask & trigger_match_mask
+        in_electrons = self.flat_electrons.mask[in_electrons_mask]
 
         # get electrons pT and abseta (replace None values with some 'in-limit' value)
         electron_pt = ak.fill_none(in_electrons.pt, 25)
-        electron_eta = in_electrons.eta
+        electron_eta = ak.fill_none(in_electrons.eta, 0)
 
         hlt_path_id_map = {
             "wp80iso": "HLT_SF_Ele30_MVAiso80ID",
             "wp90iso": "HLT_SF_Ele30_MVAiso90ID",
         }
-        sf = dak.map_partitions(
-            cset["Electron-HLT-SF"].evaluate,
-            self.year_map[self.year],
-            variation,
-            hlt_path_id_map[self.id_wp],
-            electron_eta,
-            electron_pt,
-        )
-        weights = ak.fill_none(
-            ak.prod(ak.where(electron_pt_mask, sf, ak.ones_like(sf)), axis=1), value=1
+        weights = unflat_sf(
+            cset["Electron-HLT-SF"].evaluate(
+                self.year_map[self.year],
+                variation,
+                hlt_path_id_map[self.id_wp],
+                electron_eta,
+                electron_pt,
+            ),
+            in_electrons_mask,
+            self.electrons_counts,
         )
         return weights
 
@@ -273,6 +279,8 @@ class ElectronSS:
         self.events = events
         self.year = year
         self.variation = variation
+        self.flat_electrons = ak.flatten(events.Electron)
+        self.electrons_counts = ak.num(events.Electron)
         # get correction set
         self.cset = correctionlib.CorrectionSet.from_file(
             get_pog_json(json_name="electron_scale", year=self.year)
@@ -292,74 +300,57 @@ class ElectronSS:
         self.events["Electron", "pt_raw"] = (
             ak.ones_like(self.events.Electron.pt) * self.events.Electron.pt
         )
-
+        # get correction input variables
+        gain = self.flat_electrons.seedGain
+        run = np.repeat(self.events.run, self.electrons_counts)
+        etasc = self.flat_electrons.eta + self.flat_electrons.deltaEtaSC
+        r9 = self.flat_electrons.r9
+        pt = self.flat_electrons.pt
         # compute scale factor
-        scale = dak.map_partitions(
-            self.cset["Scale"].evaluate,
+        scale = self.cset["Scale"].evaluate(
             "total_correction",
-            self.events.Electron.seedGain,
-            self.events.run,
-            self.events.Electron.eta + self.events.Electron.deltaEtaSC,
-            self.events.Electron.r9,
-            self.events.Electron.pt,
+            gain,
+            run,
+            etasc,
+            r9,
+            pt,
         )
         if self.variation == "nominal":
             # scale is multiplicative correction, unlike smearing, it is deterministic
-            self.events["Electron", "pt"] = self.events.Electron.pt * scale
+            self.events["Electron", "pt"] = ak.unflatten(
+                self.flat_electrons.pt * scale, self.electrons_counts
+            )
+            # propagate electron pT corrections to MET
+            update_met(events=self.events, lepton="Electron")
+        else:
+            # uncertainties: TO DO (https://cms-talk.web.cern.ch/t/pnoton-energy-corrections-in-nanoaod-v11/34327/2)
+            pass
 
-        # propagate electron pT corrections to MET
-        update_met(events=self.events, lepton="Electron")
-
-        # uncertainties: TO DO (https://cms-talk.web.cern.ch/t/pnoton-energy-corrections-in-nanoaod-v11/34327/2)
-
-    def apply_smearing(self):
+    def apply_smearing(self, seed=42):
         # define Electron pt_raw field (needed for MET recalculation)
         self.events["Electron", "pt_raw"] = (
             ak.ones_like(self.events.Electron.pt) * self.events.Electron.pt
         )
+        # get correction input variables
+        etasc = self.flat_electrons.eta + self.flat_electrons.deltaEtaSC
+        r9 = self.flat_electrons.r9
 
         # rho does not correspond to the pileup rho energy density,
         # instead it is the standard deviation of the Gaussian used to draw the smearing
-        rho = dak.map_partitions(
-            self.cset["Smearing"].evaluate,
+        rho = self.cset["Smearing"].evaluate(
             "rho",
-            self.events.Electron.eta + self.events.Electron.deltaEtaSC,
-            self.events.Electron.r9,
+            etasc,
+            r9,
         )
         # The smearing is done statistically, so we need some random numbers
-        # https://cms-nanoaod.github.io/correctionlib/schemav2.html#hashprng
-        # https://cms-nanoaod.github.io/correctionlib/correctionlib_tutorial.html#Resolution-models
-        resrng = cs.Correction(
-            name="resrng",
-            description="Deterministic smearing value generator",
-            version=1,
-            inputs=[
-                cs.Variable(
-                    name="pt", type="real", description="Unsmeared electron pt"
-                ),
-                cs.Variable(
-                    name="eta", type="real", description="electron pseudorapdity"
-                ),
-                cs.Variable(
-                    name="phi", type="real", description="electron phi (entropy source)"
-                ),
-            ],
-            output=cs.Variable(name="rng", type="real"),
-            data=cs.HashPRNG(
-                nodetype="hashprng",
-                inputs=["pt", "eta", "phi"],
-                distribution="normal",
-            ),
-        )
-        smearing = 1 + rho * resrng.to_evaluator().evaluate(
-            self.events.Electron.pt,
-            self.events.Electron.eta + self.events.Electron.deltaEtaSC,
-            self.events.Electron.phi,
-        )
         if self.variation == "nominal":
-            self.events["Electron", "pt"] = self.events.Electron.pt * smearing
-
-        # propagate electron pT corrections to MET
-        update_met(events=self.events, lepton="Electron")
-
-        # uncertainties: TO DO
+            rng = np.random.default_rng(seed=seed)
+            smearing = rng.normal(loc=1.0, scale=rho)
+            self.events["Electron", "pt"] = ak.unflatten(
+                self.flat_electrons.pt * smearing, self.electrons_counts
+            )
+            # propagate electron pT corrections to MET
+            update_met(events=self.events, lepton="Electron")
+        else:
+            # uncertainties: TO DO
+            pass

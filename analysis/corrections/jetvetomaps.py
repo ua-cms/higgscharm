@@ -21,16 +21,15 @@ def jetvetomaps_mask(jets: ak.Array, year: str, mapname: str = "jetvetomap"):
     }
     cset = correctionlib.CorrectionSet.from_file(get_pog_json("jetvetomaps", year))
 
-    jet_eta_mask = np.abs(jets.eta) < 5.19
-    jet_phi_mask = np.abs(jets.phi) < 3.14
+    j, n = ak.flatten(jets), ak.num(jets)
+    jet_eta_mask = np.abs(j.eta) < 5.19
+    jet_phi_mask = np.abs(j.phi) < 3.14
 
     in_jet_mask = jet_eta_mask & jet_phi_mask
-    in_jets = jets.mask[in_jet_mask]
+    in_jets = j.mask[in_jet_mask]
 
     jets_eta = ak.fill_none(in_jets.eta, 0.0)
     jets_phi = ak.fill_none(in_jets.phi, 0.0)
 
-    vetomaps = dak.map_partitions(
-        cset[vetomap_names[year]].evaluate, mapname, jets_eta, jets_phi
-    )
-    return vetomaps == 0
+    vetomaps = cset[vetomap_names[year]].evaluate(mapname, jets_eta, jets_phi)
+    return ak.unflatten(vetomaps, n) == 0
