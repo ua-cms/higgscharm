@@ -34,13 +34,14 @@ class ZToMuMuProcessor(processor.ProcessorABC):
     def process(self, events):
         dataset = events.metadata["dataset"]
 
-        # get golden json, HLT paths and selections
+        # get golden json, triggers, selections and histograms
         year = self.year
         goldenjson = self.processor_config.goldenjson
         hlt_paths = self.processor_config.hlt_paths
         object_selections = self.processor_config.object_selection
         event_selections = self.processor_config.event_selection
-
+        histograms = deepcopy(self.histograms)
+        
         # check if dataset is MC or Data
         is_mc = hasattr(events, "genWeight")
 
@@ -149,7 +150,6 @@ class ZToMuMuProcessor(processor.ProcessorABC):
         # Histogram filling
         # --------------------------------------------------------------
         if final_nevents > 0:
-            histograms = deepcopy(self.histograms)
             # get analysis features
             feature_map = {}
             for feature, axis_info in self.histogram_config.axes.items():
