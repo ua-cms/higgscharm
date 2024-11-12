@@ -1,9 +1,7 @@
 import inspect
 import numpy as np
 import awkward as ak
-import dask_awkward as dak
 from coffea.nanoevents.methods import candidate
-from analysis.selections.utils import find_2lep
 from analysis.working_points import working_points
 from coffea.nanoevents.methods.vector import LorentzVector
 
@@ -36,7 +34,6 @@ class ObjectSelector:
                 self.objects[obj_name] = self.objects[obj_name][selection_mask]
         return self.objects
 
-    
     def get_selection_mask(self, events, obj_name, cuts):
         # bring 'objects' and to local scope
         objects = self.objects
@@ -61,7 +58,6 @@ class ObjectSelector:
             selection_mask = np.logical_and(selection_mask, mask)
         return selection_mask
 
-    
     def select_dileptons(self):
         leptons = ak.zip(
             {
@@ -76,19 +72,9 @@ class ObjectSelector:
         )
         # make sure they are sorted by transverse momentum
         leptons = leptons[ak.argsort(leptons.pt, axis=1)]
-        # find all dilepton candidates with helper function
-        dilepton = dak.map_partitions(find_2lep, leptons)
-        dilepton = [leptons[dilepton[idx]] for idx in "01"]
-        dilepton = ak.zip(
-            {
-                "z": ak.zip(
-                    {
-                        "l1": dilepton[0],
-                        "l2": dilepton[1],
-                        "p4": dilepton[0] + dilepton[1],
-                    }
-                ),
-                "pt": (dilepton[0] + dilepton[1]).pt,
-            }
-        )
-        self.objects["dileptons"] = dilepton
+        # create pair combinations with all muons
+        dileptons = ak.combinations(self.objects["leptons"], 2, fields=["l1", "l2"])
+        # add dimuon 4-momentum field
+        dileptons["z"] = dileptons.l1 + dileptons.l2
+        dileptons["pt"] = dileptons.z.pt
+        self.objects["dileptons"] = dileptons
