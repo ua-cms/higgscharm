@@ -41,56 +41,56 @@ histogram_config:
       start: 10
       stop: 150
       label: $m(\mu\mu)$ [GeV]
-      expression: objects['dileptons'].z.p4.mass
+      expression: objects['dileptons'].z.mass
     dimuon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: $p_T(\mu\mu)$ [GeV]
-      expression: objects['dileptons'].z.p4.pt
+      expression: objects['dileptons'].z.pt
     dimuon_dr:
       type: Regular
       bins: 50
       start: 0
       stop: 5
       label: $\Delta R(\mu_1, \mu_2)$
-      expression: LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2)
+      expression: LorentzVector.delta_r(objects['dileptons'].l1, objects['dileptons'].l2)
     dimuon_deta:
       type: Regular
       bins: 50
       start: 0
       stop: 5
       label: $|\Delta \eta(\mu_1, \mu_2)|$
-      expression: np.abs(objects['dileptons'].z.l1.eta - objects['dileptons'].z.l2.eta)
+      expression: np.abs(objects['dileptons'].l1.eta - objects['dileptons'].l2.eta)
     leading_muon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: $p_T(\mu_1)$ [GeV]
-      expression: objects['dileptons'].z.l1.pt
+      expression: objects['dileptons'].l1.pt
     subleading_muon_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: $p_T(\mu_2)$ [GeV]
-      expression: objects['dileptons'].z.l2.pt
+      expression: objects['dileptons'].l2.pt
     leading_muon_eta:
       type: Regular
       bins: 50
       start: -2.5
       stop: 2.5
       label: $\eta(\mu_1)$
-      expression: objects['dileptons'].z.l1.eta
+      expression: objects['dileptons'].l1.eta
     subleading_muon_eta:
       type: Regular
       bins: 50
       start: -2.5
       stop: 2.5
       label: $\eta(\mu_2)$
-      expression: objects['dileptons'].z.l2.eta
+      expression: objects['dileptons'].l2.eta
     muon_pt:
       type: Regular
       bins: 50
@@ -133,20 +133,48 @@ histogram_config:
       stop: 3.14159
       label: $\phi(j)$
       expression: objects['jets'].phi
-    jet_cvsl:
+    leading_jet_cvsl:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: ParticleNet CvsL
-      expression: objects['jets'].btagPNetCvL
-    jet_cvsb:
+      label: Leading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
+    leading_jet_cvsb:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: ParticleNet CvsB
-      expression: objects['jets'].btagPNetCvB
+      label: Leading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
+    subleading_jet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading JetCvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
+    subleading_jet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
+    jet_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(j_1, j_2)$
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].delta_r(ak.pad_none(objects['jets'], target=2)[:, 1])
+    jet_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(j_1, j_2)|$
+      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta - ak.pad_none(objects['jets'], target=2)[:, 1].eta)
     jet_multiplicity:
       type: IntCategory
       categories: []

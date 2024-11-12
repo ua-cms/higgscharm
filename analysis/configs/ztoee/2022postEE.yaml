@@ -130,20 +130,48 @@ histogram_config:
       stop: 3.14159
       label: $\phi(j)$
       expression: objects['jets'].phi
-    jet_cvsl:
+    leading_jet_cvsl:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: ParticleNet CvsL
-      expression: objects['jets'].btagPNetCvL
-    jet_cvsb:
+      label: Leading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
+    leading_jet_cvsb:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: ParticleNet CvsB
-      expression: objects['jets'].btagPNetCvB
+      label: Leading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
+    subleading_jet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading JetCvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
+    subleading_jet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
+    jet_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(j_1, j_2)$
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].delta_r(ak.pad_none(objects['jets'], target=2)[:, 1])
+    jet_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(j_1, j_2)|$
+      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta - ak.pad_none(objects['jets'], target=2)[:, 1].eta)
     jet_multiplicity:
       type: IntCategory
       categories: []
