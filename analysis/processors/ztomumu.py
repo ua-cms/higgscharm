@@ -1,6 +1,5 @@
 import numpy as np
 import awkward as ak
-import dask_awkward as dak
 from copy import deepcopy
 from coffea import processor
 from coffea.nanoevents import PFNanoAODSchema
@@ -33,6 +32,8 @@ class ZToMuMuProcessor(processor.ProcessorABC):
         self.histograms = HistBuilder(self.histogram_config).build_histogram()
 
     def process(self, events):
+        dataset = events.metadata["dataset"]
+
         # get golden json, HLT paths and selections
         year = self.year
         goldenjson = self.processor_config.goldenjson
@@ -47,10 +48,10 @@ class ZToMuMuProcessor(processor.ProcessorABC):
         output = {}
 
         # initialize metadata info
-        nevents = ak.num(events, axis=0)
+        nevents = len(events)
         output["metadata"] = {}
         output["metadata"].update({"raw_initial_nevents": nevents})
-        
+
         # --------------------------------------------------------------
         # Object corrections
         # --------------------------------------------------------------
@@ -61,12 +62,12 @@ class ZToMuMuProcessor(processor.ProcessorABC):
         if is_mc:
             apply_jer = True
         apply_jerc_corrections(
-            events, 
-            era=events.metadata["metadata"]["era"], 
-            year=self.year,
+            events,
+            year=year,
+            dataset=dataset,
             apply_jec=apply_jec,
             apply_jer=apply_jer,
-            apply_junc=apply_junc
+            apply_junc=apply_junc,
         )
         # --------------------------------------------------------------
         # Weights
@@ -125,7 +126,7 @@ class ZToMuMuProcessor(processor.ProcessorABC):
                 weights_container.weight()[event_selection.all(*current_selection)]
             )
         # save raw and weighted number of events after selection to metadata
-        final_nevents = dak.sum(region_selection)
+        final_nevents = np.sum(region_selection)
         weighted_final_nevents = ak.sum(weights_container.weight()[region_selection])
         output["metadata"].update(
             {
