@@ -12,8 +12,9 @@ object_selection:
   dileptons:
     field: select_dileptons
     cuts:
-      dr: ((LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2) > 0.02))
-      mass_window: (objects['dileptons'].z.p4.mass > 60.0) & (objects['dileptons'].z.p4.mass < 120.0)
+      dr: LorentzVector.delta_r(objects['dileptons'].l1, objects['dileptons'].l2) > 0.02
+      opp_charge: objects['dileptons'].l1.charge * objects['dileptons'].l2.charge < 0
+      mass_window: (objects['dileptons'].z.mass > 60.0) & (objects['dileptons'].z.mass < 120.0)
   jets:
     field: events.Jet
     cuts: 
@@ -37,56 +38,56 @@ histogram_config:
       start: 10
       stop: 150
       label: $m(ee)$ [GeV]
-      expression: objects['dileptons'].z.p4.mass
+      expression: objects['dileptons'].z.mass
     dielectron_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: $p_T(ee)$ [GeV]
-      expression: objects['dileptons'].z.p4.pt
+      expression: objects['dileptons'].z.pt
     dielectron_dr:
       type: Regular
       bins: 50
       start: 0
       stop: 5
       label: $\Delta R(e_1, e_2)$
-      expression: LorentzVector.delta_r(objects['dileptons'].z.l1, objects['dileptons'].z.l2)
+      expression: LorentzVector.delta_r(objects['dileptons'].l1, objects['dileptons'].l2)
     dielectron_deta:
       type: Regular
       bins: 50
       start: 0
       stop: 5
       label: $|\Delta \eta(e_1, e_2)|$
-      expression: np.abs(objects['dileptons'].z.l1.eta - objects['dileptons'].z.l2.eta)
+      expression: np.abs(objects['dileptons'].l1.eta - objects['dileptons'].l2.eta)
     leading_electron_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: $p_T(e_1)$ [GeV]
-      expression: objects['dileptons'].z.l1.pt
+      expression: objects['dileptons'].l1.pt
     subleading_electron_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: $p_T(e_2)$ [GeV]
-      expression: objects['dileptons'].z.l2.pt
+      expression: objects['dileptons'].l2.pt
     leading_electron_eta:
       type: Regular
       bins: 50
       start: -2.5
       stop: 2.5
       label: $\eta(e_1)$
-      expression: objects['dileptons'].z.l1.eta
+      expression: objects['dileptons'].l1.eta
     subleading_electron_eta:
       type: Regular
       bins: 50
       start: -2.5
       stop: 2.5
       label: $\eta(e_2)$
-      expression: objects['dileptons'].z.l2.eta
+      expression: objects['dileptons'].l2.eta
     electron_pt:
       type: Regular
       bins: 50
