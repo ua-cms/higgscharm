@@ -1,6 +1,4 @@
 import hist
-import hist.dask as hda
-
 
 class HistBuilder:
     def __init__(self, histogram_config):
@@ -43,7 +41,7 @@ class HistBuilder:
             if self.histogram_config.add_weight:
                 axes.append(hist.storage.Weight())
             
-            histograms[name] = hda.hist.Hist(*axes)
+            histograms[name] = hist.Hist(*axes)
         return histograms
     
     def build_stacked_histogram(self, axes_names):
@@ -57,7 +55,7 @@ class HistBuilder:
             axes.append(self.cat_axis)
         if self.histogram_config.add_weight:
             axes.append(hist.storage.Weight())
-        histograms = hda.hist.Hist(*axes)
+        histograms = hist.Hist(*axes)
         return histograms
 
     def build_histogram(self):
