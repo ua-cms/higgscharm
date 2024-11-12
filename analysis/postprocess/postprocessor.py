@@ -104,20 +104,19 @@ class Postprocessor:
             for fname in grouped_outputs[sample]:
                 output = open_output(fname)
                 if output:
-                    output_dataset_key = list(output.keys())[0]
                     # group histograms by sample
                     grouped_histograms[sample].append(
-                        output[output_dataset_key]["histograms"]
+                        output["histograms"]
                     )
                     # group metadata by sample
-                    for meta_key in output[output_dataset_key]["metadata"]:
+                    for meta_key in output["metadata"]:
                         if meta_key in grouped_metadata[sample]:
                             grouped_metadata[sample][meta_key].append(
-                                output[output_dataset_key]["metadata"][meta_key]
+                                output["metadata"][meta_key]
                             )
                         else:
                             grouped_metadata[sample][meta_key] = [
-                                output[output_dataset_key]["metadata"][meta_key]
+                                output["metadata"][meta_key]
                             ]
             # accumulate histograms and metadata by sample
             self.histograms[sample] = accumulate(grouped_histograms[sample])
