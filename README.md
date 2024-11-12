@@ -32,7 +32,7 @@ Example:
 ssh -X -o ServerAliveInterval=100 <your_username>@m0.iihe.ac.be
 
 # clone the repository (if you have not done it yet)
-git clone -b coffea.07 https://github.com/deoache/higgscharm.git
+git clone -b coffea0.7 https://github.com/deoache/higgscharm.git
 cd higgscharm
 
 # submit condor jobs for some processor and dataset
