@@ -40,7 +40,7 @@ def df_to_latex(df):
 """
 
     # Initialize variables to hold important values for later calculations
-    purity_value = None  # To store the purity value
+    purity_value = df.percentage.max()  # To store the purity value
     total_background_value = None  # To store the total background events
     data_value = None  # To store the data value
 
@@ -64,12 +64,8 @@ def df_to_latex(df):
         else:
             syst_unc_f = 'nan'
 
-        # Save purity value from DY+Jets (first row) for later
-        if label == "DY+Jets" and percentage is not None:
-            purity_value = percentage
-
         # Add sample rows to LaTeX output
-        if label in ['DY+Jets', 'tt', 'Single Top', 'Diboson']:
+        if label not in ['Data', 'Total Background', 'Data/Total Background']:
             output += f"{label} & ${events_f} \\pm {stat_unc_f} \\,(\\text{{stat}}) \\pm {syst_unc_f} \\,(\\text{{syst}})$\\\\\n"
 
     # Add line after sample rows before Total Background and Data
