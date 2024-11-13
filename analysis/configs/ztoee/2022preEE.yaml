@@ -149,7 +149,7 @@ histogram_config:
       bins: 50
       start: 0
       stop: 1
-      label: Subleading JetCvsL
+      label: Subleading Jet CvsL
       expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
     subleading_jet_cvsb:
       type: Regular
@@ -191,7 +191,6 @@ histogram_config:
         - 13
         - 14
         - 15
-      growth: true
       label: $N(j)$
       expression: ak.num(objects['jets'])
   layout: individual
