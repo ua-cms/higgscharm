@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from coffea.processor import accumulate
-from analysis.postprocess.utils import open_output, print_header
+from analysis.postprocess.utils import open_output, print_header, df_to_latex
 
 
 class Postprocessor:
@@ -63,6 +63,10 @@ class Postprocessor:
         results_df = self.get_results_report()
         logging.info(results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
         results_df.to_csv(f"{self.output_dir}/results.csv")
+        latex_table = df_to_latex(results_df)
+        with open(f'{self.output_dir}/results_latex.txt', 'w') as f:
+            f.write(latex_table)
+            
 
     def group_outputs(self):
         """
