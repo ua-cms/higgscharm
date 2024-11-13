@@ -239,13 +239,13 @@ class Postprocessor:
         data_unc = results_df.loc["Data", "stat unc"]
         bkg = results_df.loc["Total Background", "events"]
         bkg_unc = results_df.loc["Total Background", "stat unc"]
-        results_df.loc["Data/Background", "events"] = data / bkg
-        results_df.loc["Data/Background", "stat unc"] = (data / bkg) * np.sqrt(
+        results_df.loc["Data/Total Background", "events"] = data / bkg
+        results_df.loc["Data/Total Background", "stat unc"] = (data / bkg) * np.sqrt(
             (data_unc / data) ** 2 + (bkg_unc / bkg) ** 2
         )
         # sort by percentage
         results_df = results_df.loc[
-            bkg_process + ["Total Background", "Data", "Data/Background"]
+            bkg_process + ["Total Background", "Data", "Data/Total Background"]
         ]
         results_df = results_df.sort_values(by="percentage", ascending=False)
 
