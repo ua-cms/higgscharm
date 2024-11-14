@@ -24,16 +24,24 @@ object_selection:
     cuts:
       min_pt: events.Jet.pt > 20
 event_selection:
-  atleast_one_goodvertex: events.PV.npvsGood > 0
-  lumimask: get_lumi_mask(events, goldenjson)
-  trigger: get_trigger_mask(events, hlt_paths)
-  trigger_matching: get_trigger_match_mask(events, events.Muon, hlt_paths)
-  two_leptons: ak.num(objects['leptons']) == 2
-  one_z: ak.num(objects['dileptons'].z.p4) == 1
+  selections:
+    atleast_one_goodvertex: events.PV.npvsGood > 0
+    lumimask: get_lumi_mask(events, goldenjson)
+    trigger: get_trigger_mask(events, hlt_paths)
+    trigger_matching: get_trigger_match_mask(events, events.Muon, hlt_paths)
+    two_leptons: ak.num(objects['leptons']) == 2
+    one_z: ak.num(objects['dileptons'].z) == 1
+  categories:
+    ztomumu:
+      - atleast_one_goodvertex
+      - lumimask
+      - trigger
+      - trigger_matching
+      - two_leptons
+      - one_z
 histogram_config:
   add_syst_axis: true
   add_weight: true
-  add_cat_axis: null
   axes:
     dimuon_mass:
       type: Regular
@@ -183,7 +191,7 @@ histogram_config:
         - 2
         - 3
         - 4
-        - 5 
+        - 5
         - 6
         - 7
         - 8
