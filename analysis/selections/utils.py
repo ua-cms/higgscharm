@@ -50,3 +50,9 @@ def trigger_match(leptons, trigobjs, hlt_path):
     n_of_trigger_matches = ak.sum(pass_delta_r, axis=2)
     trig_matched_locs = n_of_trigger_matches >= 1
     return trig_matched_locs
+
+
+def delta_r_mask(first, second, threshold=0.4):
+    # select objects from 'first' which are at least 'threshold' away from all objects in 'second'.
+    mval = first.metric_table(second)
+    return ak.all(mval > threshold, axis=-1)
