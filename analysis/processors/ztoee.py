@@ -103,7 +103,7 @@ class ZToEEProcessor(processor.ProcessorABC):
                 year=self.year,
                 weights=weights_container,
                 variation="nominal",
-                id_wp=object_selections["leptons"]["cuts"]["electron_id"],
+                id_wp=object_selections["electrons"]["cuts"]["electron_id"],
             )
             electron_weights.add_id_weights()
             electron_weights.add_hlt_weights(hlt_paths)

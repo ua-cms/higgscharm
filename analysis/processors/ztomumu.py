@@ -91,8 +91,8 @@ class ZToMuMuProcessor(processor.ProcessorABC):
                 year=self.year,
                 variation="nominal",
                 weights=weights_container,
-                id_wp=object_selections["leptons"]["cuts"]["muon_id"],
-                iso_wp=object_selections["leptons"]["cuts"]["muon_iso"],
+                id_wp=object_selections["muons"]["cuts"]["muon_id"],
+                iso_wp=object_selections["muons"]["cuts"]["muon_iso"],
             )
             muon_weights.add_id_weights()
             muon_weights.add_iso_weights()
