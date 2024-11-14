@@ -48,20 +48,17 @@ class HistogramConfig:
         layout: dict,
         add_syst_axis: bool,
         add_weight: bool,
-        add_cat_axis = None,
     ):
         self.axes = axes
         self.layout = layout
         self.add_syst_axis = add_syst_axis
         self.add_weight = add_weight
-        self.add_cat_axis = add_cat_axis
 
     def to_dict(self):
         """Convert HistogramConfig to a dictionary."""
         return {
             "add_syst_axis": self.add_syst_axis,
             "add_weight": self.add_weight,
-            "add_cat_axis": self.add_cat_axis,
             "axes": self.axes,
             "layout": self.layout,
         }
