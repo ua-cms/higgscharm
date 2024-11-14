@@ -1,4 +1,5 @@
 import awkward as ak
+from coffea.nanoevents.methods import candidate
 
 
 def trigger_match(leptons, trigobjs, hlt_path):
@@ -56,3 +57,25 @@ def delta_r_mask(first, second, threshold=0.4):
     # select objects from 'first' which are at least 'threshold' away from all objects in 'second'.
     mval = first.metric_table(second)
     return ak.all(mval > threshold, axis=-1)
+
+
+def select_dileptons(objects, key):
+    leptons = ak.zip(
+        {
+            "pt": objects[key].pt,
+            "eta": objects[key].eta,
+            "phi": objects[key].phi,
+            "mass": objects[key].mass,
+            "charge": objects[key].charge,
+        },
+        with_name="PtEtaPhiMCandidate",
+        behavior=candidate.behavior,
+    )
+    # make sure they are sorted by transverse momentum
+    leptons = leptons[ak.argsort(leptons.pt, axis=1)]
+    # create pair combinations with all muons
+    dileptons = ak.combinations(objects[key], 2, fields=["l1", "l2"])
+    # add dimuon 4-momentum field
+    dileptons["z"] = dileptons.l1 + dileptons.l2
+    dileptons["pt"] = dileptons.z.pt
+    return dileptons
