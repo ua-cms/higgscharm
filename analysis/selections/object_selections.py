@@ -1,11 +1,10 @@
 import inspect
 import numpy as np
 import awkward as ak
-from analysis.selections import delta_r_mask
-from analysis.working_points import working_points
-from coffea.nanoevents.methods import candidate
-from coffea.nanoevents.methods.vector import LorentzVector
 
+from coffea.nanoevents.methods.vector import LorentzVector
+from analysis.working_points import working_points
+from analysis.selections import delta_r_mask, select_dileptons
 
 
 class ObjectSelector:
@@ -60,23 +59,18 @@ class ObjectSelector:
             selection_mask = np.logical_and(selection_mask, mask)
         return selection_mask
 
-    def select_dileptons(self):
-        leptons = ak.zip(
-            {
-                "pt": self.objects["leptons"].pt,
-                "eta": self.objects["leptons"].eta,
-                "phi": self.objects["leptons"].phi,
-                "mass": self.objects["leptons"].mass,
-                "charge": self.objects["leptons"].charge,
-            },
-            with_name="PtEtaPhiMCandidate",
-            behavior=candidate.behavior,
-        )
-        # make sure they are sorted by transverse momentum
-        leptons = leptons[ak.argsort(leptons.pt, axis=1)]
-        # create pair combinations with all muons
-        dileptons = ak.combinations(self.objects["leptons"], 2, fields=["l1", "l2"])
-        # add dimuon 4-momentum field
-        dileptons["z"] = dileptons.l1 + dileptons.l2
-        dileptons["pt"] = dileptons.z.pt
-        self.objects["dileptons"] = dileptons
+    
+    def select_dimuons(self):
+        if "muons" not in self.objects:
+            raise ValueError(
+                f"'muons' object has not been defined!"
+            )
+        self.objects["dimuons"] = select_dileptons(self.objects, "muons")
+        
+        
+    def select_dielectrons(self):
+        if "electrons" not in self.objects:
+            raise ValueError(
+                f"'electrons' object has not been defined!"
+            )
+        self.objects["dielectrons"] = select_dileptons(self.objects, "electrons")

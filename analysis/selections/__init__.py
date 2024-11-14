@@ -1,4 +1,4 @@
-from analysis.selections.utils import trigger_match, delta_r_mask
+from analysis.selections.utils import trigger_match, delta_r_mask, select_dileptons
 from analysis.selections.object_selections import ObjectSelector
 import analysis.selections.event_selections as event_selections
 get_lumi_mask = event_selections.get_lumi_mask
