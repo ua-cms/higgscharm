@@ -18,7 +18,10 @@ object_selection:
   jets:
     field: events.Jet
     cuts:
-      pt: events.Jet.pt > 20
+      min_pt: events.Jet.pt > 20
+      abseta: np.abs(events.Jet.eta) < 2.4
+      jet_id: tightlepveto
+      jet_muon_dr: delta_r_mask(events.Jet, objects['leptons'], 0.4)
 event_selection:
   selections:
     atleast_one_goodvertex: events.PV.npvsGood > 0
@@ -128,8 +131,8 @@ histogram_config:
     jet_eta:
       type: Regular
       bins: 50
-      start: -5
-      stop: 5
+      start: -2.4
+      stop: 2.4
       label: $\eta(j)$
       expression: objects['jets'].eta
     jet_phi:
