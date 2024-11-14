@@ -1,4 +1,11 @@
 class WorkingPoints:
+    
+    def jet_id(self, events, wp):
+        wps = {
+            "tightlepveto": events.Jet.jetId == 6,
+            "tight": events.Jet.jetId == 2,
+        }
+        return wps[wp]
 
     def electron_id(self, events, wp):
         wps = {
