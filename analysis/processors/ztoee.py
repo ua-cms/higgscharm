@@ -29,7 +29,7 @@ class ZToEEProcessor(processor.ProcessorABC):
         config_builder = ProcessorConfigBuilder(processor="ztoee", year=year)
         self.processor_config = config_builder.build_processor_config()
         self.histogram_config = self.processor_config.histogram_config
-        self.histograms = HistBuilder(self.histogram_config).build_histogram()
+        self.histograms = HistBuilder(self.processor_config).build_histogram()
 
     def process(self, events):
         dataset = events.metadata["dataset"]
@@ -39,9 +39,9 @@ class ZToEEProcessor(processor.ProcessorABC):
         goldenjson = self.processor_config.goldenjson
         hlt_paths = self.processor_config.hlt_paths
         object_selections = self.processor_config.object_selection
-        event_selections = self.processor_config.event_selection
+        event_selection = self.processor_config.event_selection
         histograms = deepcopy(self.histograms)
-        
+
         # check if dataset is MC or Data
         is_mc = hasattr(events, "genWeight")
 
@@ -117,40 +117,9 @@ class ZToEEProcessor(processor.ProcessorABC):
         sumw = ak.sum(weights_container.weight())
         output["metadata"].update({"sumw": sumw})
 
-        # --------------------------------------------------------------
-        # Object selection
-        # --------------------------------------------------------------
-        object_selector = ObjectSelector(object_selections, year)
-        objects = object_selector.select_objects(events)
-
-        # --------------------------------------------------------------
-        # Event selection
-        # --------------------------------------------------------------
-        event_selection = PackedSelection()
-        for selection, str_mask in event_selections.items():
-            event_selection.add(selection, eval(str_mask))
-        region_selection = event_selection.all(*event_selections.keys())
-
-        # save cutflow
-        output["metadata"].update({"cutflow": {"initial": sumw}})
-        current_selection = []
-        for cut_name in event_selections.keys():
-            current_selection.append(cut_name)
-            output["metadata"]["cutflow"][cut_name] = ak.sum(
-                weights_container.weight()[event_selection.all(*current_selection)]
-            )
-        # save raw and weighted number of events after selection to metadata
-        final_nevents = ak.sum(region_selection)
-        weighted_final_nevents = ak.sum(weights_container.weight()[region_selection])
-        output["metadata"].update(
-            {
-                "weighted_final_nevents": weighted_final_nevents,
-                "raw_final_nevents": final_nevents,
-            }
-        )
         # save integrated luminosity (/pb) to metadata
         if not is_mc:
-            lumi_mask = eval(event_selections["lumimask"])
+            lumi_mask = eval(event_selection["selections"]["lumimask"])
             lumi_data = LumiData(self.processor_config.lumidata)
             lumi_list = LumiList(
                 events[lumi_mask].run, events[lumi_mask].luminosityBlock
@@ -160,43 +129,81 @@ class ZToEEProcessor(processor.ProcessorABC):
             output["metadata"].update({"lumi": lumi})
 
         # --------------------------------------------------------------
-        # Histogram filling
+        # Object selection
         # --------------------------------------------------------------
-        if final_nevents > 0:
-            # get analysis features
-            feature_map = {}
-            for feature, axis_info in self.histogram_config.axes.items():
-                feature_map[feature] = eval(axis_info["expression"])[region_selection]
-            # fill histograms
-            if is_mc:
-                # get event weight systematic variations for MC samples
-                variations = ["nominal"] + list(weights_container.variations)
-                for variation in variations:
-                    if variation == "nominal":
-                        region_weight = weights_container.weight()[region_selection]
-                    else:
-                        region_weight = weights_container.weight(modifier=variation)[
-                            region_selection
-                        ]
+        object_selector = ObjectSelector(object_selections, year)
+        objects = object_selector.select_objects(events)
 
+        # --------------------------------------------------------------
+        # Event selection
+        # --------------------------------------------------------------
+        # itinialize selection manager
+        selection_manager = PackedSelection()
+        # add all selections to selector manager
+        for selection, mask in event_selection["selections"].items():
+            selection_manager.add(selection, eval(mask))
+        # run over each category
+        categories = event_selection["categories"]
+        for category, category_cuts in categories.items():
+            # get selection mask by category
+            category_mask = selection_manager.all(*category_cuts)
+            # save cutflow
+            output["metadata"][category] = {"cutflow": {"initial": sumw}}
+            selections = []
+            for cut_name in category_cuts:
+                selections.append(cut_name)
+                current_selection = selection_manager.all(*selections)
+                output["metadata"][category]["cutflow"][cut_name] = ak.sum(
+                    weights_container.weight()[current_selection]
+                )
+            # save number of events after selection to metadata
+            nevents_after = ak.sum(category_mask)
+            weighted_final_nevents = ak.sum(weights_container.weight()[category_mask])
+            output["metadata"][category].update(
+                {
+                    "weighted_final_nevents": weighted_final_nevents,
+                    "raw_final_nevents": nevents_after,
+                }
+            )
+            # --------------------------------------------------------------
+            # Histogram filling
+            # --------------------------------------------------------------
+            if nevents_after > 0:
+                # get analysis features
+                feature_map = {}
+                for feature, axis_info in self.histogram_config.axes.items():
+                    feature_map[feature] = eval(axis_info["expression"])[category_mask]
+                # fill histograms
+                if is_mc:
+                    # get event weight systematic variations for MC samples
+                    variations = ["nominal"] + list(weights_container.variations)
+                    for variation in variations:
+                        if variation == "nominal":
+                            region_weight = weights_container.weight()[category_mask]
+                        else:
+                            region_weight = weights_container.weight(
+                                modifier=variation
+                            )[category_mask]
+                        fill_histogram(
+                            histograms=histograms,
+                            histogram_config=self.histogram_config,
+                            feature_map=feature_map,
+                            weights=region_weight,
+                            variation=variation,
+                            category=category,
+                            flow=True,
+                        )
+                else:
+                    region_weight = weights_container.weight()[category_mask]
                     fill_histogram(
                         histograms=histograms,
                         histogram_config=self.histogram_config,
                         feature_map=feature_map,
                         weights=region_weight,
-                        variation=variation,
+                        variation="nominal",
+                        category=category,
                         flow=True,
                     )
-            else:
-                region_weight = weights_container.weight()[region_selection]
-                fill_histogram(
-                    histograms=histograms,
-                    histogram_config=self.histogram_config,
-                    feature_map=feature_map,
-                    weights=region_weight,
-                    variation="nominal",
-                    flow=True,
-                )
         # add histograms to output dictionary
         output["histograms"] = histograms
         return output
