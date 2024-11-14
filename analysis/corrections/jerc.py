@@ -9,19 +9,38 @@ from analysis.corrections.utils import get_era
 from coffea.lookup_tools import extractor
 from coffea.jetmet_tools import JECStack, CorrectedJetsFactory
 
-
+# Run3 recommendations: # https://cms-jerc.web.cern.ch/JEC/
 JEC_PARAMS = {
     "runs": {
         "2022preEE": ["C", "D"],
         "2022postEE": ["E", "F", "G"],
     },
+    # PUPPI jets do not need the L1 Pileup corrections
     "jec_levels_mc": {
-        "2022preEE": ["L1FastJet", "L2Relative", "L3Absolute"],
-        "2022postEE": ["L1FastJet", "L2Relative", "L3Absolute"],
+        "2022preEE": [
+            # "L1FastJet",
+            "L2Relative",
+            "L3Absolute",
+        ],
+        "2022postEE": [
+            # "L1FastJet",
+            "L2Relative",
+            "L3Absolute",
+        ],
     },
     "jec_levels_data": {
-        "2022preEE": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
-        "2022postEE": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
+        "2022preEE": [
+            # "L1FastJet",
+            "L2Relative",
+            "L3Absolute",
+            "L2L3Residual",
+        ],
+        "2022postEE": [
+            # "L1FastJet",
+            "L2Relative",
+            "L3Absolute",
+            "L2L3Residual",
+        ],
     },
     # I modified the original names since coffea jetmet_tools requires file names
     # of "5 words in length" ('Summer22EE22Sep2023_V2_MC_L1FastJet_AK4PFPuppi.jec')
@@ -41,6 +60,7 @@ JEC_PARAMS = {
             "Summer22EE22Sep2023_RunG_V2_DATA": ["G"],
         },
     },
+    # Do we need the PileUp* variations? (L1 Pileup corrections are turn off)
     "jec_variations": {
         "2022preEE": [
             "AbsoluteMPFBias",
