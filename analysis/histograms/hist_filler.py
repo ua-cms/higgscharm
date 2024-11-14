@@ -22,14 +22,11 @@ def get_flow_array(histogram, feature, feature_map):
 
 
 def fill_histogram(
-    histograms, histogram_config, feature_map, weights, variation, flow=True
+    histograms, histogram_config, feature_map, category, weights, variation, flow=True
 ):
-    histogram_axes = histogram_config.axes
-    cat_types = ["IntCategory", "StrCategory"]
-
     if histogram_config.layout == "individual":
         for feature in histograms:
-            if flow and histogram_axes[feature]["type"] not in cat_types:
+            if flow:
                 feature_array = get_flow_array(
                     histogram=histograms[feature],
                     feature=feature,
@@ -37,10 +34,14 @@ def fill_histogram(
                 )
             else:
                 feature_array = normalize(feature_map[feature])
-
+            # check if axis type is IntCategory
+            if histogram_config.axes[feature]["type"] == "IntCategory":
+                # convert to integer array
+                feature_array = ak.to_numpy(feature_array).astype(int)
             fill_args = {
                 feature: feature_array,
                 "variation": variation,
+                "category": category,
                 "weight": (
                     ak.flatten(ak.ones_like(feature_map[feature]) * weights)
                     if feature_map[feature].ndim == 2
@@ -52,7 +53,7 @@ def fill_histogram(
         for key, features in histogram_config.layout.items():
             fill_args = {}
             for feature in features:
-                if flow and histogram_axes[feature]["type"] not in cat_types:
+                if flow:
                     fill_args[feature] = get_flow_array(
                         histogram=histograms[key],
                         feature=feature,
@@ -60,10 +61,14 @@ def fill_histogram(
                     )
                 else:
                     fill_args[feature] = normalize(feature_map[feature])
-
+            # check if axis type is IntCategory
+            if histogram_config.axes[feature]["type"] == "IntCategory":
+                # convert to integer array
+                feature_array = ak.to_numpy(feature_array).astype(int)
             fill_args.update(
                 {
                     "variation": variation,
+                    "category": category,
                     "weight": (
                         ak.flatten(ak.ones_like(feature_map[feature]) * weights)
                         if feature_map[feature].ndim == 2
