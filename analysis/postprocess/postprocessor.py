@@ -38,7 +38,9 @@ class Postprocessor:
 
         print_header("grouping outputs by process")
         self.histograms = self.group_by_process(self.scaled_histograms)
-        logging.info(pd.Series(self.process_samples).to_string(dtype=False))
+        logging.info(
+            yaml.dump(self.process_samples, sort_keys=False, default_flow_style=False)
+        )
 
         print_header(f"Cutflow")
         processed_cutflow = self.group_by_process(self.scaled_cutflow)
