@@ -43,7 +43,7 @@ event_selection:
     two_muons: ak.num(objects['muons']) == 2
     one_z: ak.num(objects['dimuons'].z) == 1
   categories:
-    ztomumu:
+    base:
       - atleast_one_goodvertex
       - lumimask
       - trigger

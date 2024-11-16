@@ -44,7 +44,7 @@ event_selection:
     two_electrons: ak.num(objects['electrons']) == 2
     one_z: ak.num(objects['dielectrons'].z) == 1
   categories:
-    ztoee:
+    base:
       - atleast_one_goodvertex
       - lumimask
       - trigger
