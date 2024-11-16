@@ -2,11 +2,12 @@ import logging
 import numpy as np
 import mplhep as hep
 import matplotlib.pyplot as plt
+from pathlib import Path
 from matplotlib import ticker
 from coffea.processor import accumulate
-from analysis.postprocess.utils import setup_logger
+from analysis.configs import ProcessorConfigBuilder
+from analysis.postprocess.utils import setup_logger, divide_by_binwidth
 from hist.intervals import poisson_interval, ratio_uncertainty
-
 
 
 np.seterr(invalid="ignore")
@@ -62,154 +63,285 @@ class Plotter:
         processed_histograms: dict,
         year: str,
         lumi: int,
-        cat_axis: tuple,
         output_dir: str = None,
     ):
         self.processor = processor
         self.processed_histograms = processed_histograms
         self.year = year
         self.lumi = lumi
-        self.cat_axis = cat_axis
         self.output_dir = output_dir
+        self.set_color_map()
 
-    def get_feature_hists(self, feature: str) -> dict:
-        """
-        get nominal and variations histograms
+        # get histogram config
+        config_builder = ProcessorConfigBuilder(processor=processor, year=year)
+        processor_config = config_builder.build_processor_config()
+        self.histogram_config = processor_config.histogram_config
 
+    def set_color_map(self):
+        # set color map
         # https://cms-analysis.docs.cern.ch/guidelines/plotting/colors/
-        colors = [
-            "#3f90da",
-            "#ffa90e",
-            "#bd1f01",
-            "#94a4a2",
-            "#832db6",
-            "#a96b59",
-            "#e76300",
-            "#b9ac70",
-            "#717581",
-            "#92dadd",
-        ]
-        """
-        color_map = {
+        self.color_map = {
             "DY+Jets": "#3f90da",
             "tt": "#94a4a2",
             "Single Top": "#bd1f01",
             "Diboson": "#ffa90e",
         }
-        feature_hists = {
-            "mc": {
-                "nominal": {"histograms": [], "labels": [], "colors": []},
-                "variations": {},
-            },
-        }
-        for process, histogram_dicts in self.processed_histograms.items():
-            if histogram_dicts is None:
-                continue
-            if feature in histogram_dicts:
-                histogram = histogram_dicts[feature]
-            else:
-                for key in histogram_dicts:
-                    if feature in histogram_dicts[key].axes.name:
-                        if self.cat_axis:
-                            histogram = histogram_dicts[key].project(
-                                feature, "variation", self.cat_axis[0]
-                            )
-                        else:
-                            histogram = histogram_dicts[key].project(
-                                feature, "variation"
-                            )
-                        break
-            if self.cat_axis:
-                if process != "Data":
-                    for variation in histogram.axes["variation"]:
-                        if variation == "nominal":
-                            # add nominal histograms, their labels and colors
-                            feature_hists["mc"]["nominal"]["histograms"].append(
-                                histogram[
-                                    {
-                                        "variation": "nominal",
-                                        self.cat_axis[0]: self.cat_axis[1],
-                                    }
-                                ]
-                            )
-                            feature_hists["mc"]["nominal"]["labels"].append(process)
-                            feature_hists["mc"]["nominal"]["colors"].append(
-                                color_map[process]
-                            )
-                        else:
-                            variation_hist = histogram[
-                                {
-                                    "variation": variation,
-                                    self.cat_axis[0]: self.cat_axis[1],
-                                }
-                            ]
-                            if variation in feature_hists["mc"]["variations"]:
-                                feature_hists["mc"]["variations"][variation].append(
-                                    variation_hist
-                                )
-                            else:
-                                feature_hists["mc"]["variations"][variation] = [
-                                    variation_hist
-                                ]
-                else:
-                    feature_hists["data"] = histogram[
-                        {"variation": "nominal", self.cat_axis[0]: self.cat_axis[1]}
-                    ]
-            else:
-                if process != "Data":
-                    for variation in histogram.axes["variation"]:
-                        if variation == "nominal":
-                            # add nominal histograms, their labels and colors
-                            feature_hists["mc"]["nominal"]["histograms"].append(
-                                histogram[{"variation": "nominal"}]
-                            )
-                            feature_hists["mc"]["nominal"]["labels"].append(process)
-                            feature_hists["mc"]["nominal"]["colors"].append(
-                                color_map[process]
-                            )
-                        else:
-                            variation_hist = histogram[{"variation": variation}]
-                            if variation in feature_hists["mc"]["variations"]:
-                                feature_hists["mc"]["variations"][variation].append(
-                                    variation_hist
-                                )
-                            else:
-                                feature_hists["mc"]["variations"][variation] = [
-                                    variation_hist
-                                ]
-                else:
-                    feature_hists["data"] = histogram[{"variation": "nominal"}]
 
-        # accumulate variations histograms
-        for variation, hist_list in feature_hists["mc"]["variations"].items():
-            feature_hists["mc"]["variations"][variation] = accumulate(hist_list)
-        return feature_hists
+    def get_variable_label(self, variable):
+        if variable in self.histogram_config.axes:
+            variable_label = self.histogram_config.axes[variable]["label"]
+        else:
+            for key in self.histogram_config.axes:
+                if variable in self.histogram_config[key]:
+                    variable_label = self.histogram_config[key][variable]["label"]
+                    break
+        return variable_label
 
-    def plot_feature_hist(
+    def get_axis_type(self, variable):
+        if variable in self.histogram_config.axes:
+            axis_type = self.histogram_config.axes[variable]["type"]
+        else:
+            for key in self.histogram_config.axes:
+                if variable in self.histogram_config[key]:
+                    axis_type = self.histogram_config[key][variable]["type"]
+                    break
+        return axis_type
+
+    def get_histogram(
         self,
-        feature: str,
-        feature_label: str,
+        process,
+        variable,
+        variation,
+        category,
+        histogram_dict,
+    ):
+        """returns histogram by processes/variable/category"""
+
+        # get histogram from histogram dictionary
+        if variable in histogram_dict:
+            histogram = histogram_dict[variable]
+        else:
+            for key in histogram_dict:
+                if variable in histogram_dict[key].axes.name:
+                    histogram = histogram_dict[key]
+                    break
+        # get variable histogram for nominal variation and category
+        histogram = histogram[{"variation": variation, "category": category}].project(
+            variable
+        )
+        # check if axis is variable type
+        if self.get_axis_type(variable) == "Variable":
+            histogram = divide_by_binwidth(histogram)
+        return histogram
+
+    def get_variations_keys(self):
+        variations = {}
+        for process, histogram_dict in self.processed_histograms.items():
+            for feature in histogram_dict:
+                helper_histogram = histogram_dict[feature]
+                variations = [
+                    var
+                    for var in helper_histogram.axes["variation"]
+                    if var != "nominal"
+                ]
+                break
+            break
+        variations = list(
+            set([var.replace("Up", "").replace("Down", "") for var in variations])
+        )
+        return variations
+
+    def get_variations(
+        self,
+        process,
+        variable,
+        category,
+        variation,
+        histogram_dict,
+    ):
+        """returns variation histogram by processes/variable/category"""
+        # get histogram from histogram dictionary
+        if variable in histogram_dict:
+            histogram = histogram_dict[variable]
+        else:
+            for key in histogram_dict:
+                if variable in histogram_dict[key].axes.name:
+                    histogram = histogram_dict[key]
+                    break
+
+        # get variable histogram for nominal variation and category
+        histogram_up = histogram[
+            {"variation": f"{variation}Up", "category": category}
+        ].project(variable)
+        histogram_down = histogram[
+            {"variation": f"{variation}Down", "category": category}
+        ].project(variable)
+
+        # check if axis is variable type
+        if self.get_axis_type(variable) == "Variable":
+            histogram_up = divide_by_binwidth(histogram_up)
+            histogram_down = divide_by_binwidth(histogram_down)
+        return histogram_up, histogram_down
+
+    def get_histogram_config(self, variable, category):
+        histogram_info = {"nominal": {}, "variations": {}}
+        for process, histogram_dict in self.processed_histograms.items():
+            if process == "Data":
+                histogram_info["data"] = self.get_histogram(
+                    process=process,
+                    variable=variable,
+                    category=category,
+                    variation="nominal",
+                    histogram_dict=histogram_dict,
+                )
+            else:
+                # save nominal histogram
+                histogram = self.get_histogram(
+                    process=process,
+                    variable=variable,
+                    category=category,
+                    variation="nominal",
+                    histogram_dict=histogram_dict,
+                )
+                histogram_info["nominal"][process] = histogram
+
+                # save variations histograms
+                for variation in self.get_variations_keys():
+                    up, down = self.get_variations(
+                        process=process,
+                        variable=variable,
+                        category=category,
+                        variation=variation,
+                        histogram_dict=histogram_dict,
+                    )
+                    if f"{variation}Up" in histogram_info["variations"]:
+                        histogram_info["variations"][f"{variation}Up"] += up
+                        histogram_info["variations"][f"{variation}Down"] += up
+                    else:
+                        histogram_info["variations"][f"{variation}Up"] = up
+                        histogram_info["variations"][f"{variation}Down"] = down
+        return histogram_info
+
+    def get_colors_and_labels(self, histogram_info):
+        colors, labels = [], []
+        for process in histogram_info["nominal"]:
+            labels.append(process)
+            colors.append(self.color_map[process])
+        return labels, colors
+
+    def plot_uncert_band(self, histogram_info, ax):
+        # get up and down stat uncertainty per bin
+        nom_stat_down, nom_stat_up = poisson_interval(
+            values=self.nominal_values, variances=self.nominal_variances
+        )
+        # initialize up and down errors per bin
+        bin_error_up = np.abs(nom_stat_up - self.nominal_values) ** 2
+        bin_error_down = np.abs(nom_stat_down - self.nominal_values) ** 2
+        # add variation errors to bin errors
+        variations_mc_hists = histogram_info["variations"]
+        for variation, variation_hist in variations_mc_hists.items():
+            variation_values = variation_hist.values()
+            if "Up" in variation:
+                # add up variation
+                max_values = np.max(
+                    np.stack([self.nominal_values, variation_values]), axis=0
+                )
+                up_variation_values = np.abs(max_values - self.nominal_values)
+                bin_error_up += up_variation_values**2
+            else:
+                # add down variation
+                min_values = np.min(
+                    np.stack([self.nominal_values, variation_values]), axis=0
+                )
+                down_variation_values = np.abs(min_values - self.nominal_values)
+                bin_error_down += down_variation_values**2
+        self.band_up = self.nominal_values + np.sqrt(bin_error_up)
+        self.band_down = self.nominal_values - np.sqrt(bin_error_down)
+        # plot stat + syst uncertainty band
+        ax.bar(
+            x=self.centers,
+            height=self.band_up - self.band_down,
+            width=self.widths,
+            bottom=self.band_down,
+            color="lightgray",
+            alpha=0.6,
+            label="Stat + Syst unc.",
+            hatch="/" * 3,
+            edgecolor="black",
+            linewidth=0,
+        )
+
+    def plot_ratio(self, rax):
+        # compute Data/MC ratio
+        ratio = self.data_values / self.nominal_values
+        # plot ratio x error bar
+        xerr = self.edges[1:] - self.edges[:-1]
+        rax.errorbar(
+            x=self.centers,
+            y=ratio,
+            xerr=xerr / 2,
+            fmt=f"ko",
+            markersize=6,
+        )
+        # plot ratio y error bar
+        try:
+            ratio_error_down, ratio_error_up = ratio_uncertainty(
+                num=self.data_values,
+                denom=self.nominal_values,
+                uncertainty_type="poisson-ratio",
+            )
+            rax.vlines(
+                self.centers,
+                ratio + ratio_error_up,
+                ratio - ratio_error_down,
+                color="k",
+            )
+        except ValueError:
+            logging.info("(no poisson-ratio error)")
+
+        # plot ratio uncertaity band
+        ratio_up = np.concatenate([[0], self.band_up / self.nominal_values])
+        ratio_down = np.concatenate([[0], self.band_down / self.nominal_values])
+        ratio_uncertainty_band = rax.fill_between(
+            self.edges,
+            ratio_up,
+            ratio_down,
+            step="pre",
+            color="lightgray",
+            hatch="////",
+            alpha=0.6,
+            edgecolor="k",
+            linewidth=0,
+        )
+        # plot horizontal reference lines
+        xmin, xmax = rax.get_xlim()
+        rax.hlines(1, xmin, xmax, color="k", linestyle=":")
+
+    def plot_histograms(
+        self,
+        variable: str,
+        category: str,
         yratio_limits: str = None,
         log_scale: bool = False,
         savefig: bool = True,
     ):
         setup_logger(self.output_dir)
-        # compute nominal (MC and Data) and variation (MC) histograms
-        feature_hists = self.get_feature_hists(feature)
-        # MC nominal
-        nominal_mc_hists = feature_hists["mc"]["nominal"]["histograms"]
-        mc_histogram = accumulate(nominal_mc_hists)
-        mc_histogram_values = mc_histogram.values()
-        mc_histogram_variances = mc_histogram.variances()
-        mc_histogram_edges = mc_histogram.axes.edges[0]
-        mc_histogram_centers = mc_histogram.axes.centers[0]
-        mc_histogram_widths = mc_histogram.axes.widths[0]
-        # MC variations
-        variations_mc_hists = feature_hists["mc"]["variations"]
-        # Data
-        data_histogram = feature_hists["data"]
-        data_histogram_values = data_histogram.values()
 
+        histogram_info = self.get_histogram_config(variable, category)
+        # get nominal MC histograms
+        nominal_mc_hists = list(histogram_info["nominal"].values())
+        mc_histogram = accumulate(nominal_mc_hists)
+        self.nominal_values = mc_histogram.values()
+        self.nominal_variances = mc_histogram.variances()
+        self.edges = mc_histogram.axes.edges[0]
+        self.centers = mc_histogram.axes.centers[0]
+        self.widths = mc_histogram.axes.widths[0]
+        labels, colors = self.get_colors_and_labels(histogram_info)
+        # get variation histograms
+        variation_histograms = histogram_info["variations"]
+        # get Data histogram
+        data_histogram = histogram_info["data"]
+        self.data_values = data_histogram.values()
         # plot stacked MC and Data histograms
         fig, (ax, rax) = plt.subplots(
             nrows=2,
@@ -220,169 +352,61 @@ class Plotter:
             sharex=True,
         )
         hep.histplot(
-            data_histogram, label="Data", flow="none", ax=ax, **data_hist_kwargs
-        )
-        hep.histplot(
             nominal_mc_hists,
-            label=feature_hists["mc"]["nominal"]["labels"],
-            color=feature_hists["mc"]["nominal"]["colors"],
+            label=labels,
+            color=colors,
             flow="none",
             ax=ax,
             **mc_hist_kwargs,
         )
-
-        # get up and down stat uncertainty per bin
-        nom_stat_down, nom_stat_up = poisson_interval(
-            values=mc_histogram_values, variances=mc_histogram_variances
+        hep.histplot(
+            data_histogram, label="Data", flow="none", ax=ax, **data_hist_kwargs
         )
-        # initialize up and down errors per bin
-        bin_error_up = np.abs(nom_stat_up - mc_histogram_values) ** 2
-        bin_error_down = np.abs(nom_stat_down - mc_histogram_values) ** 2
-        # add variation errors to bin errors
-        for variation, variation_hist in variations_mc_hists.items():
-            variation_values = variation_hist.values()
-            if "Up" in variation:
-                # add up variation
-                max_values = np.max(
-                    np.stack([mc_histogram_values, variation_values]), axis=0
-                )
-                up_variation_values = np.abs(max_values - mc_histogram_values)
-                bin_error_up += up_variation_values**2
-            else:
-                # add down variation
-                min_values = np.min(
-                    np.stack([mc_histogram_values, variation_values]), axis=0
-                )
-                down_variation_values = np.abs(min_values - mc_histogram_values)
-                bin_error_down += down_variation_values**2
-        band_up = mc_histogram_values + np.sqrt(bin_error_up)
-        band_down = mc_histogram_values - np.sqrt(bin_error_down)
-
-        # plot stat + syst uncertainty band
-        ax.bar(
-            x=mc_histogram_centers,
-            height=band_up - band_down,
-            width=mc_histogram_widths,
-            bottom=band_down,
-            color="lightgray",
-            alpha=0.6,
-            label="Stat + Syst unc.",
-            hatch="/" * 3,
-            edgecolor="black",
-            linewidth=0,
-        )
-
-        # compute Data/MC ratio
-        ratio = data_histogram_values / mc_histogram_values
-        # plot ratio x error bar
-        xerr = mc_histogram_edges[1:] - mc_histogram_edges[:-1]
-        rax.errorbar(
-            x=mc_histogram_centers,
-            y=ratio,
-            xerr=xerr / 2,
-            fmt=f"ko",
-            markersize=6,
-        )
-        # plot ratio y error bar
-        try:
-            ratio_error_down, ratio_error_up = ratio_uncertainty(
-                num=data_histogram_values,
-                denom=mc_histogram_values,
-                uncertainty_type="poisson-ratio",
-            )
-            rax.vlines(
-                mc_histogram_centers,
-                ratio + ratio_error_down,
-                ratio - ratio_error_down,
-                color="k",
-            )
-        except ValueError:
-            logging.info(f"(no poisson-ratio error for {feature})")
-
-        # plot ratio uncertaity band
-        ratio_up = np.concatenate([[0], band_up / mc_histogram_values])
-        ratio_down = np.concatenate([[0], band_down / mc_histogram_values])
-        ratio_uncertainty_band = rax.fill_between(
-            mc_histogram_edges,
-            ratio_up,
-            ratio_down,
-            step="pre",
-            color="lightgray",
-            hatch="////",
-            alpha=0.6,
-            edgecolor="k",
-            linewidth=0,
-        )
-
-        # plot horizontal reference lines
-        xmin, xmax = rax.get_xlim()
-        rax.hlines(1, xmin, xmax, color="k", linestyle=":")
-        """
-        ymajorticks = rax.get_yticks()
-        ymajorticks_mp = (ymajorticks[1:] + ymajorticks[:-1]) / 2
-        yticks = np.concatenate([ymajorticks, ymajorticks_mp])
-        for ytick in yticks:
-            rax.hlines(ytick, xmin, xmax, color="k", linestyle=":", alpha=0.3)
-        """
+        # plot uncertainty band
+        self.plot_uncert_band(histogram_info, ax)
+        # plot ratio
+        self.plot_ratio(rax)
         # set limits
-        hist_edges = np.array(
-            [[i, j] for i, j in zip(mc_histogram_edges[:-1], mc_histogram_edges[1:])]
-        )
-        xlimits = np.min(hist_edges[mc_histogram_values > 0]), np.max(
-            hist_edges[mc_histogram_values > 0]
+        hist_edges = np.array([[i, j] for i, j in zip(self.edges[:-1], self.edges[1:])])
+        xlimits = np.min(hist_edges[self.nominal_values > 0]), np.max(
+            hist_edges[self.nominal_values > 0]
         )
         ax.set_xlim(xlimits)
         rax.set_xlim(xlimits)
-        if yratio_limits is None:
-            try:
-                up_limit = np.nanmax(ratio_error_up)
-                down_limit = np.nanmin(ratio_error_down)
-                scale = 1.1
-                yup = scale * up_limit
-                ydown = down_limit - scale * (1 - down_limit)
-
-                up_distance = up_limit - 1
-                down_distance = down_limit - 1
-                if abs(up_distance) > 2 * abs(down_distance):
-                    ydown = 1 - up_distance
-                if yup < 0:
-                    yup = 1 + scale * max(down_distance, up_distance)
-                up_distance = abs(1 - yup)
-                down_distance = abs(1 - ydown)
-                max_distance = max(down_distance, up_distance)
-                yratio_limits = 1 - max_distance, 1 + max_distance
-            except:
-                yratio_limits = (0, 2)
         rax.set_ylim(yratio_limits)
-
         # set legend layout
-        if ("eta" in feature) or ("phi" in feature):
+        if ("eta" in variable) or ("phi" in variable):
             ax.legend(loc="lower left", frameon=True)
         else:
-            ax.legend()
-
+            ax.legend(frameon=True)
         # set axes labels
-        ax.set(xlabel=None, ylabel="Events")
+        ylabel = "Events"
+        if self.get_axis_type(variable) == "Variable":
+            ylabel += " / bin width"
+        ax.set(xlabel=None, ylabel=ylabel)
         formatter = ticker.ScalarFormatter()
         formatter.set_scientific(False)
         ax.yaxis.set_major_formatter(formatter)
-        rax.set(xlabel=feature_label, ylabel="Data / Pred", facecolor="white")
-
+        rax.set(
+            xlabel=self.get_variable_label(variable),
+            ylabel="Data / Pred",
+            facecolor="white",
+        )
         # set log scale
         if log_scale:
             ax.set_yscale("log")
-
         # add CMS info
         hep.cms.lumitext(
             f"{self.lumi * 1e-3:.1f} fb$^{{-1}}$ ({self.year}, 13.6 TeV)",
             ax=ax,
         )
         hep.cms.text("Preliminary", ax=ax)
-
         # save histograms
         if savefig:
-            fname = f"{self.output_dir}/{self.processor}_{feature}"
-            if self.cat_axis:
-                fname += f"_{self.cat_axis[0]}_{self.cat_axis[1]}"
-            fig.savefig(f"{fname}_{self.year}.png")
+            output_path = Path(f"{self.output_dir}/{category}")
+            if not output_path.exists():
+                output_path.mkdir(parents=True, exist_ok=True)
+            fig.savefig(
+                f"{str(output_path)}/{self.processor}_{variable}_{category}_{self.year}.png"
+            )
         plt.close()
