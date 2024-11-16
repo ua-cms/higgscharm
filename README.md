@@ -16,15 +16,14 @@ The processors are defined in [`analysis/processors/<processor>.py`](https://git
 
 Jobs are submitted at T2B via the [submit_condor.py](https://github.com/deoache/higgscharm/blob/T2B/submit_condor.py) script:
 ```
-usage: submit_condor.py [-h] [--processor PROCESSOR] [--dataset DATASET] [--year YEAR] [--stepsize STEPSIZE]
+usage: submit_condor.py [-h] [--processor PROCESSOR] [--dataset DATASET] [--year YEAR]
 
-options:
+optional arguments:
   -h, --help            show this help message and exit
   --processor PROCESSOR
                         processor to be used {ztomumu, ztoee} (default ztomumu)
   --dataset DATASET     dataset name
   --year YEAR           dataset year {2022preEE, 2022postEE} (default 2022postEE)
-  --stepsize STEPSIZE   stepsize param for coffea.dataset_tools.preprocess function
 ```
 Example:
 ```bash
@@ -68,12 +67,26 @@ In some cases, root files corresponding to a dataset are stored in multiple fold
 
 ### Postprocessing
 
-Once you have run the corresponding datasets for a processor, you can get the results by typing:
+Once you have run the corresponding datasets for a processor, you can get the results using the `run_postprocess.py` script:
+```
+usage: run_postprocess.py [-h] [--processor PROCESSOR] [--year YEAR] [--log_scale] [--yratio_limits YRATIO_LIMITS YRATIO_LIMITS] [--output_dir OUTPUT_DIR]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --processor PROCESSOR
+                        processor to be used {ztomumu, ztoee}
+  --year YEAR           year of the data {2022preEE, 2022postEE}
+  --log_scale           Enable log scale for y-axis
+  --yratio_limits YRATIO_LIMITS YRATIO_LIMITS
+                        Set y-axis ratio limits as a tuple (e.g., --yratio_limits 0 2)
+  --output_dir OUTPUT_DIR
+                        Path to the outputs directory (optional)
+```
+Example:
 ```bash
 singularity shell -B /cvmfs -B /pnfs -B /user /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:0.7.22-py3.9-g7f049
 ``` 
-
 ```bash
-python3 run_postprocess.py --processor <processor> --year <year>
+python3 run_postprocess.py --processor ztomumu --year 2022preEE
 ``` 
-You can also add the `--log_scale` flag to change the y-axis to log scale. Results will be saved to the same directory as the output files
+Results will be saved to the same directory as the output files.
