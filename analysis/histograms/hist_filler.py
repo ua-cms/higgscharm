@@ -21,25 +21,36 @@ def get_flow_array(histogram, feature, feature_map):
     )
 
 
+def get_variable_array(histogram, histogram_config, feature, feature_map, flow):
+    if histogram_config.axes[feature]["type"] == "IntCategory":
+        variable_array = normalize(feature_map[feature])
+        # convert to integer array
+        variable_array = ak.to_numpy(variable_array).astype(int)
+    elif flow:
+        # add underflow/overflow to first/last bin
+        variable_array = get_flow_array(
+            histogram=histogram,
+            feature=feature,
+            feature_map=feature_map,
+        )
+    else:
+        variable_array = normalize(feature_map[feature])
+
+    return variable_array
+
+
 def fill_histogram(
     histograms, histogram_config, feature_map, category, weights, variation, flow=True
 ):
     if histogram_config.layout == "individual":
         for feature in histograms:
-            if flow:
-                feature_array = get_flow_array(
-                    histogram=histograms[feature],
-                    feature=feature,
-                    feature_map=feature_map,
-                )
-            else:
-                feature_array = normalize(feature_map[feature])
-            # check if axis type is IntCategory
-            if histogram_config.axes[feature]["type"] == "IntCategory":
-                # convert to integer array
-                feature_array = ak.to_numpy(feature_array).astype(int)
+            #
+            variable_array = get_variable_array(
+                histograms[feature], histogram_config, feature, feature_map, flow
+            )
+            #
             fill_args = {
-                feature: feature_array,
+                feature: variable_array,
                 "variation": variation,
                 "category": category,
                 "weight": (
@@ -53,18 +64,9 @@ def fill_histogram(
         for key, features in histogram_config.layout.items():
             fill_args = {}
             for feature in features:
-                if flow:
-                    fill_args[feature] = get_flow_array(
-                        histogram=histograms[key],
-                        feature=feature,
-                        feature_map=feature_map,
-                    )
-                else:
-                    fill_args[feature] = normalize(feature_map[feature])
-            # check if axis type is IntCategory
-            if histogram_config.axes[feature]["type"] == "IntCategory":
-                # convert to integer array
-                feature_array = ak.to_numpy(feature_array).astype(int)
+                fill_args[feature] = get_variable_array(
+                    histograms[key], histogram_config, feature, feature_map, flow
+                )
             fill_args.update(
                 {
                     "variation": variation,
