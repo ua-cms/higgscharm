@@ -39,61 +39,33 @@ def get_variable_array(histogram, histogram_config, feature, feature_map, flow):
     return variable_array
 
 
-def get_features_array(histograms: dict, layout: str | dict):
-    if isinstance(layout, str):
-        filler_args = {}
-        for feature in histograms:
-            filler_args[feature] = get_variable_array(
-                histograms[feature], histogram_config, feature, feature_map, flow
-            )
-    elif isinstance(layout, dict):
-        for key, features in layout.items():
-            filler_args = {}
-            for feature in features:
-                filler_args[feature] = get_variable_array(
-                    histograms[key], histogram_config, feature, feature_map, flow
-                )
-
-
-def get_filler_args(variation, category, variable_array, weights):
-    return {
-        "variation": variation,
-        "category": category,
-        "weight": (
-            ak.flatten(ak.ones_like(variable_array) * weights)
-            if feature_map[feature].ndim == 2
-            else weights
-        ),
-    }
-
-
 def fill_histogram(
-    filler_args, hist_to_fill, variation, category, feature_map, weights
-):
-    filler_args = get_filler_args(variation, category, feature_map[feature], weights)
-
-    hist_to_fill.fill(**filler_args)
-
-
-def fill_histograms(
     histograms, histogram_config, feature_map, category, weights, variation, flow=True
 ):
     if histogram_config.layout == "individual":
         for feature in histograms:
-            filler_args = get_filler_args(variation, category, variable_array, weights)
-            filler_args[feature] = get_variable_array(
+            variable_array = get_variable_array(
                 histograms[feature], histogram_config, feature, feature_map, flow
             )
-            histograms[feature].fill(**filler_args)
+            fill_args = {
+                feature: variable_array,
+                "variation": variation,
+                "category": category,
+                "weight": (
+                    ak.flatten(ak.ones_like(feature_map[feature]) * weights)
+                    if feature_map[feature].ndim == 2
+                    else weights
+                ),
+            }
+            histograms[feature].fill(**fill_args)
     else:
         for key, features in histogram_config.layout.items():
-            filler_args = {}
-            filler_args = get_filler_args(variation, category, variable_array, weights)
+            fill_args = {}
             for feature in features:
-                filler_args[feature] = get_variable_array(
+                fill_args[feature] = get_variable_array(
                     histograms[key], histogram_config, feature, feature_map, flow
                 )
-            filler_args.update(
+            fill_args.update(
                 {
                     "variation": variation,
                     "category": category,
@@ -104,4 +76,4 @@ def fill_histograms(
                     ),
                 }
             )
-            histograms[key].fill(**filler_args)
+            histograms[key].fill(**fill_args)
