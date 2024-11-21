@@ -234,29 +234,40 @@ class Plotter:
         nom_stat_down, nom_stat_up = poisson_interval(
             values=self.nominal_values, variances=self.nominal_variances
         )
-        # initialize up and down errors per bin
-        bin_error_up = np.abs(nom_stat_up - self.nominal_values) ** 2
-        bin_error_down = np.abs(nom_stat_down - self.nominal_values) ** 2
-        # add variation errors to bin errors
-        variations_mc_hists = histogram_info["variations"]
-        for variation, variation_hist in variations_mc_hists.items():
-            variation_values = variation_hist.values()
-            if "Up" in variation:
-                # add up variation
-                max_values = np.max(
-                    np.stack([self.nominal_values, variation_values]), axis=0
-                )
-                up_variation_values = np.abs(max_values - self.nominal_values)
-                bin_error_up += up_variation_values**2
-            else:
-                # add down variation
-                min_values = np.min(
-                    np.stack([self.nominal_values, variation_values]), axis=0
-                )
-                down_variation_values = np.abs(min_values - self.nominal_values)
-                bin_error_down += down_variation_values**2
-        self.band_up = self.nominal_values + np.sqrt(bin_error_up)
-        self.band_down = self.nominal_values - np.sqrt(bin_error_down)
+        # initialize up/down errors with statisticall error
+        mcstat_err2_up = np.abs(nom_stat_up - self.nominal_values) ** 2
+        mcstat_err2_down = np.abs(nom_stat_down - self.nominal_values) ** 2
+        err2_up = mcstat_err2_up
+        err2_down = mcstat_err2_down
+
+        for variation in self.get_variations_keys():
+            # Up/down variations for a single MC sample
+            var_up = histogram_info["variations"][f"{variation}Up"].values()
+            var_down = histogram_info["variations"][f"{variation}Down"].values()
+            # Compute the uncertainties corresponding to the up/down variations
+            err_up = var_up - self.nominal_values
+            err_down = var_down - self.nominal_values
+            # Compute the flags to check which of the two variations (up and down) are pushing the nominal value up and down
+            up_is_up = err_up > 0
+            down_is_down = err_down < 0
+            # Compute the flag to check if the uncertainty is one-sided, i.e. when both variations are up or down
+            is_onesided = up_is_up ^ down_is_down
+            # Sum in quadrature of the systematic uncertainties taking into account if the uncertainty is one- or double-sided
+            err2_up_twosided = np.where(up_is_up, err_up**2, err_down**2)
+            err2_down_twosided = np.where(up_is_up, err_down**2, err_up**2)
+            err2_max = np.maximum(err2_up_twosided, err2_down_twosided)
+            err2_up_onesided = np.where(is_onesided & up_is_up, err2_max, 0)
+            err2_down_onesided = np.where(is_onesided & down_is_down, err2_max, 0)
+            err2_up_combined = np.where(is_onesided, err2_up_onesided, err2_up_twosided)
+            err2_down_combined = np.where(
+                is_onesided, err2_down_onesided, err2_down_twosided
+            )
+            # Sum in quadrature of the systematic uncertainty corresponding to a MC sample
+            err2_up += err2_up_combined
+            err2_down += err2_down_combined
+
+        self.band_up = self.nominal_values + np.sqrt(err2_up)
+        self.band_down = self.nominal_values - np.sqrt(err2_down)
         # plot stat + syst uncertainty band
         ax.bar(
             x=self.centers,

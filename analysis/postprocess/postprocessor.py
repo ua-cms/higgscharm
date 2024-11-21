@@ -291,11 +291,17 @@ class Postprocessor:
                 .values()
             )
             # get variations values by process
+            variations_keys = []
             for variation in self.histograms[process][helper_histo_key].axes[
                 "variation"
             ]:
                 if variation == "nominal":
                     continue
+                # get variation key
+                variation_key = variation.replace("Up", "").replace("Down", "")
+                if variation_key not in variations_keys:
+                    variations_keys.append(variation_key)
+                # get variation hist
                 variation_hist = self.histograms[process][helper_histo_key][
                     {"variation": variation, "category": category}
                 ].project(helper_axis)
@@ -317,23 +323,36 @@ class Postprocessor:
         for process in syst_variations:
             bin_error_up[process] = 0
             bin_error_down[process] = 0
-            for variation in syst_variations[process]:
-                syst_values = syst_variations[process][variation].values()
-                # add up variation
-                max_syst_values = np.max(
-                    np.stack([nominal[process], syst_values]), axis=0
+            for variation in variations_keys:
+                # Up/down variations for a single MC sample
+                var_up = syst_variations[process][f"{variation}Up"].values()
+                var_down = syst_variations[process][f"{variation}Down"].values()
+                # Compute the uncertainties corresponding to the up/down variations
+                err_up = var_up - nominal[process]
+                err_down = var_down - nominal[process]
+                # Compute the flags to check which of the two variations (up and down) are pushing the nominal value up and down
+                up_is_up = err_up > 0
+                down_is_down = err_down < 0
+                # Compute the flag to check if the uncertainty is one-sided, i.e. when both variations are up or down
+                is_onesided = up_is_up ^ down_is_down
+                # Sum in quadrature of the systematic uncertainties taking into account if the uncertainty is one- or double-sided
+                err2_up_twosided = np.where(up_is_up, err_up**2, err_down**2)
+                err2_down_twosided = np.where(up_is_up, err_down**2, err_up**2)
+                err2_max = np.maximum(err2_up_twosided, err2_down_twosided)
+                err2_up_onesided = np.where(is_onesided & up_is_up, err2_max, 0)
+                err2_down_onesided = np.where(is_onesided & down_is_down, err2_max, 0)
+                err2_up_combined = np.where(
+                    is_onesided, err2_up_onesided, err2_up_twosided
                 )
-                max_syst_values = np.abs(max_syst_values - nominal[process])
-                bin_error_up[process] += max_syst_values**2
-                # add down variation
-                min_syst_values = np.min(
-                    np.stack([nominal[process], syst_values]), axis=0
+                err2_down_combined = np.where(
+                    is_onesided, err2_down_onesided, err2_down_twosided
                 )
-                min_syst_values = np.abs(min_syst_values - nominal[process])
-                bin_error_down[process] += min_syst_values**2
+                # Sum in quadrature of the systematic uncertainty corresponding to a MC sample
+                err2_up = err2_up_combined
+                err2_down = err2_down_combined
 
-            band_up[process] = np.sum(np.sqrt(np.sqrt(bin_error_up[process]) ** 2))
-            band_down[process] = np.sum(np.sqrt(np.sqrt(bin_error_down[process]) ** 2))
+            band_up[process] = np.sum(np.sqrt(err2_up))
+            band_down[process] = np.sum(np.sqrt(err2_down))
 
         # add sys uncertainties to results table
         results_df.loc["Total Background", "syst unc up"] = 0
