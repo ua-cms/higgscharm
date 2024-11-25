@@ -169,10 +169,10 @@ class ZToEEProcessor(processor.ProcessorABC):
             # Histogram filling
             # --------------------------------------------------------------
             if nevents_after > 0:
-                # get analysis features
-                feature_map = {}
-                for feature, axis_info in self.histogram_config.axes.items():
-                    feature_map[feature] = eval(axis_info["expression"])[category_mask]
+                # get analysis variables
+                variables_map = {}
+                for variable, axis in self.histogram_config.axes.items():
+                    variables_map[variable] = eval(axis.expression)[category_mask]
                 # fill histograms
                 if is_mc:
                     # get event weight systematic variations for MC samples
@@ -187,7 +187,7 @@ class ZToEEProcessor(processor.ProcessorABC):
                         fill_histogram(
                             histograms=histograms,
                             histogram_config=self.histogram_config,
-                            feature_map=feature_map,
+                            variables_map=variables_map,
                             weights=region_weight,
                             variation=variation,
                             category=category,
@@ -198,7 +198,7 @@ class ZToEEProcessor(processor.ProcessorABC):
                     fill_histogram(
                         histograms=histograms,
                         histogram_config=self.histogram_config,
-                        feature_map=feature_map,
+                        variables_map=variables_map,
                         weights=region_weight,
                         variation="nominal",
                         category=category,
