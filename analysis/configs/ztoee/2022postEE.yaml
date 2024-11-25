@@ -6,7 +6,7 @@ object_selection:
   muons:
     field: events.Muon
     cuts:
-      pt: events.Muon.pt > 24
+      pt: events.Muon.pt > 27
       abseta: np.abs(events.Muon.eta) < 2.4
       dxy: events.Muon.dxy < 0.5
       dz: events.Muon.dz < 1
@@ -154,34 +154,6 @@ histogram_config:
       stop: 3.14159
       label: $\phi(j)$
       expression: objects['jets'].phi
-    leading_jet_cvsl:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Leading Jet CvsL
-      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
-    leading_jet_cvsb:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Leading Jet CvsB
-      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
-    subleading_jet_cvsl:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Subleading Jet CvsL
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
-    subleading_jet_cvsb:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Subleading Jet CvsB
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
     jet_dr:
       type: Regular
       bins: 50
@@ -195,7 +167,7 @@ histogram_config:
       start: 0
       stop: 5
       label: $|\Delta \eta(j_1, j_2)|$
-      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta - ak.pad_none(objects['jets'], target=2)[:, 1].eta)
+      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta -ak.pad_none(objects['jets'], target=2)[:, 1].eta)
     jet_multiplicity:
       type: IntCategory
       categories:
@@ -217,4 +189,84 @@ histogram_config:
         - 15
       label: $N(j)$
       expression: ak.num(objects['jets'])
-  layout: individual
+    leadingjet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
+    leadingjet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
+    leadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
+    subleadingjet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
+    subleadingjet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
+    subleadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
+  layout: 
+    dielectron_mass: 
+      - dielectron_mass
+    dielectron_pt: 
+      - dielectron_pt
+    dielectron_dr: 
+      - dielectron_dr
+    dielectron_deta: 
+      - dielectron_deta
+    leading_electron_pt: 
+      - leading_electron_pt
+    leading_electron_eta: 
+      - leading_electron_eta
+    subleading_electron_pt: 
+      - subleading_electron_pt
+    subleading_electron_eta: 
+      - subleading_electron_eta
+    electron_pt: 
+      - electron_pt
+    electron_eta: 
+      - electron_eta
+    electron_phi: 
+      - electron_phi
+    jet_pt: 
+      - jet_pt
+    jet_eta: 
+      - jet_eta
+    jet_phi: 
+      - jet_phi
+    leading_jet:
+      - leadingjet_flavour
+      - leadingjet_cvsb
+      - leadingjet_cvsl
+    subleading_jet:
+      - subleadingjet_flavour
+      - subleadingjet_cvsb
+      - subleadingjet_cvsl

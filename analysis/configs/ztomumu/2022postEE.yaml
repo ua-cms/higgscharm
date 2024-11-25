@@ -152,34 +152,6 @@ histogram_config:
       stop: 3.14159
       label: $\phi(j)$
       expression: objects['jets'].phi
-    leading_jet_cvsl:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Leading Jet CvsL
-      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
-    leading_jet_cvsb:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Leading Jet CvsB
-      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
-    subleading_jet_cvsl:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Subleading Jet CvsL
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
-    subleading_jet_cvsb:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Subleading Jet CvsB
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
     jet_dr:
       type: Regular
       bins: 50
@@ -215,4 +187,84 @@ histogram_config:
         - 15
       label: $N(j)$
       expression: ak.num(objects['jets'])
-  layout: individual
+    leadingjet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
+    leadingjet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
+    leadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
+    subleadingjet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
+    subleadingjet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
+    subleadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
+  layout: 
+    dimuon_mass: 
+      - dimuon_mass
+    dimuon_pt: 
+      - dimuon_pt
+    dimuon_dr: 
+      - dimuon_dr
+    dimuon_deta: 
+      - dimuon_deta
+    leading_muon_pt: 
+      - leading_muon_pt
+    leading_muon_eta: 
+      - leading_muon_eta
+    subleading_muon_pt: 
+      - subleading_muon_pt
+    subleading_muon_eta: 
+      - subleading_muon_eta
+    muon_pt: 
+      - muon_pt
+    muon_eta: 
+      - muon_eta
+    muon_phi: 
+      - muon_phi
+    jet_pt: 
+      - jet_pt
+    jet_eta: 
+      - jet_eta
+    jet_phi: 
+      - jet_phi
+    leading_jet:
+      - leadingjet_flavour
+      - leadingjet_cvsb
+      - leadingjet_cvsl
+    subleading_jet:
+      - subleadingjet_flavour
+      - subleadingjet_cvsb
+      - subleadingjet_cvsl
