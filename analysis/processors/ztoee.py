@@ -44,7 +44,8 @@ class ZToEEProcessor(processor.ProcessorABC):
 
         # check if dataset is MC or Data
         is_mc = hasattr(events, "genWeight")
-
+        if not is_mc:
+            events["Jet", "hadronFlavour"] = ak.zeros_like(events.Jet.pt)
         # initialize output dictionary
         output = {}
 
@@ -170,8 +171,6 @@ class ZToEEProcessor(processor.ProcessorABC):
             # --------------------------------------------------------------
             if nevents_after > 0:
                 # get analysis variables
-                if not is_mc:
-                    events["Jet", "hadronFlavour"] = ak.zeros_like(events.Jet.pt)
                 variables_map = {}
                 for variable, axis in self.histogram_config.axes.items():
                     variables_map[variable] = eval(axis.expression)[category_mask]
