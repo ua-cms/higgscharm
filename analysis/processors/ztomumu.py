@@ -159,7 +159,7 @@ class ZToMuMuProcessor(processor.ProcessorABC):
                 # get analysis variables
                 variables_map = {}
                 for variable, axis in self.histogram_config.axes.items():
-                    variables_map[variable] = eval(axis,expression)[category_mask]
+                    variables_map[variable] = eval(axis.expression)[category_mask]
                 # fill histograms
                 if is_mc:
                     # get event weight systematic variations for MC samples
