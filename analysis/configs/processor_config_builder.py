@@ -1,6 +1,6 @@
 import yaml
 import importlib.resources
-from analysis.configs.histogram_config import HistogramConfig
+from analysis.histograms import HistogramConfig
 from analysis.configs.processor_config import ProcessorConfig
 
 
