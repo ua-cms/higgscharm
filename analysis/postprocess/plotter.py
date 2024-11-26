@@ -1,58 +1,19 @@
+import yaml
 import logging
 import numpy as np
 import mplhep as hep
 import matplotlib.pyplot as plt
 from pathlib import Path
 from matplotlib import ticker
+from hist.intervals import poisson_interval
 from coffea.processor import accumulate
+from analysis.histograms import VariableAxis
 from analysis.configs import ProcessorConfigBuilder
 from analysis.postprocess.utils import setup_logger, divide_by_binwidth
-from hist.intervals import poisson_interval, ratio_uncertainty
 
 
 np.seterr(invalid="ignore")
 np.seterr(divide="ignore")
-
-
-hep.style.use(hep.style.CMS)
-plt.rcParams.update(
-    {
-        "font.size": 20,
-        "axes.titlesize": 30,
-        "axes.labelsize": 20,
-        "xtick.labelsize": 15,
-        "ytick.labelsize": 15,
-        "lines.markersize": 30,
-        "legend.fontsize": 15,
-        "xtick.minor.width": 1,
-        "xtick.minor.size": 4,
-        "xtick.major.width": 1,
-        "xtick.major.size": 6,
-        "ytick.minor.width": 1,
-        "ytick.minor.size": 4,
-        "ytick.major.width": 1,
-        "ytick.major.size": 6,
-    }
-)
-mc_hist_kwargs = {
-    "histtype": "fill",
-    "stack": True,
-    "sort": "yield",
-    "linewidth": 0.7,
-    "edgecolor": "k",
-}
-data_hist_kwargs = {
-    "histtype": "errorbar",
-    "color": "k",
-    "linestyle": "none",
-    "marker": ".",
-    "markersize": 13,
-    "elinewidth": 1,
-    "yerr": True,
-    "xerr": True,
-    "linestyle": "none",
-    "marker": ".",
-}
 
 
 class Plotter:
@@ -70,42 +31,21 @@ class Plotter:
         self.year = year
         self.lumi = lumi
         self.output_dir = output_dir
-        self.set_color_map()
 
         # get histogram config
         config_builder = ProcessorConfigBuilder(processor=processor, year=year)
         processor_config = config_builder.build_processor_config()
         self.histogram_config = processor_config.histogram_config
 
-    def set_color_map(self):
-        # set color map
-        # https://cms-analysis.docs.cern.ch/guidelines/plotting/colors/
+        # load style config and set color map
+        with open(f"{Path.cwd()}/analysis/postprocess/style.yaml", "r") as f:
+            self.style = yaml.safe_load(f)
         self.color_map = {
             "DY+Jets": "#3f90da",
             "tt": "#94a4a2",
             "Single Top": "#bd1f01",
             "Diboson": "#ffa90e",
         }
-
-    def get_variable_label(self, variable):
-        if variable in self.histogram_config.axes:
-            variable_label = self.histogram_config.axes[variable]["label"]
-        else:
-            for key in self.histogram_config.axes:
-                if variable in self.histogram_config[key]:
-                    variable_label = self.histogram_config[key][variable]["label"]
-                    break
-        return variable_label
-
-    def get_axis_type(self, variable):
-        if variable in self.histogram_config.axes:
-            axis_type = self.histogram_config.axes[variable]["type"]
-        else:
-            for key in self.histogram_config.axes:
-                if variable in self.histogram_config[key]:
-                    axis_type = self.histogram_config[key][variable]["type"]
-                    break
-        return axis_type
 
     def get_histogram(
         self,
@@ -116,7 +56,6 @@ class Plotter:
         histogram_dict,
     ):
         """returns histogram by processes/variable/category"""
-
         # get histogram from histogram dictionary
         if variable in histogram_dict:
             histogram = histogram_dict[variable]
@@ -125,12 +64,13 @@ class Plotter:
                 if variable in histogram_dict[key].axes.name:
                     histogram = histogram_dict[key]
                     break
+
         # get variable histogram for nominal variation and category
         histogram = histogram[{"variation": variation, "category": category}].project(
             variable
         )
         # check if axis is variable type
-        if self.get_axis_type(variable) == "Variable":
+        if isinstance(self.histogram_config.axes[variable], VariableAxis):
             histogram = divide_by_binwidth(histogram)
         return histogram
 
@@ -178,7 +118,7 @@ class Plotter:
         ].project(variable)
 
         # check if axis is variable type
-        if self.get_axis_type(variable) == "Variable":
+        if isinstance(self.histogram_config.axes[variable], VariableAxis):
             histogram_up = divide_by_binwidth(histogram_up)
             histogram_down = divide_by_binwidth(histogram_down)
         return histogram_up, histogram_down
@@ -204,7 +144,6 @@ class Plotter:
                     histogram_dict=histogram_dict,
                 )
                 histogram_info["nominal"][process] = histogram
-
                 # save variations histograms
                 for variation in self.get_variations_keys():
                     up, down = self.get_variations(
@@ -230,29 +169,24 @@ class Plotter:
         return labels, colors
 
     def plot_uncert_band(self, histogram_info, ax):
-        # get up and down stat uncertainty per bin
-        nom_stat_down, nom_stat_up = poisson_interval(
-            values=self.nominal_values, variances=self.nominal_variances
-        )
         # initialize up/down errors with statisticall error
-        mcstat_err2_up = np.abs(nom_stat_up - self.nominal_values) ** 2
-        mcstat_err2_down = np.abs(nom_stat_down - self.nominal_values) ** 2
-        err2_up = mcstat_err2_up
-        err2_down = mcstat_err2_down
+        mcstat_err2 = self.nominal_variances
+        err2_up = mcstat_err2
+        err2_down = mcstat_err2
 
         for variation in self.get_variations_keys():
             # Up/down variations for a single MC sample
             var_up = histogram_info["variations"][f"{variation}Up"].values()
             var_down = histogram_info["variations"][f"{variation}Down"].values()
-            # Compute the uncertainties corresponding to the up/down variations
+            # compute the uncertainties corresponding to the up/down variations
             err_up = var_up - self.nominal_values
             err_down = var_down - self.nominal_values
-            # Compute the flags to check which of the two variations (up and down) are pushing the nominal value up and down
+            # compute the flags to check which of the two variations (up and down) are pushing the nominal value up and down
             up_is_up = err_up > 0
             down_is_down = err_down < 0
-            # Compute the flag to check if the uncertainty is one-sided, i.e. when both variations are up or down
+            # compute the flag to check if the uncertainty is one-sided, i.e. when both variations are up or down
             is_onesided = up_is_up ^ down_is_down
-            # Sum in quadrature of the systematic uncertainties taking into account if the uncertainty is one- or double-sided
+            # sum in quadrature of the systematic uncertainties taking into account if the uncertainty is one- or double-sided
             err2_up_twosided = np.where(up_is_up, err_up**2, err_down**2)
             err2_down_twosided = np.where(up_is_up, err_down**2, err_up**2)
             err2_max = np.maximum(err2_up_twosided, err2_down_twosided)
@@ -262,7 +196,7 @@ class Plotter:
             err2_down_combined = np.where(
                 is_onesided, err2_down_onesided, err2_down_twosided
             )
-            # Sum in quadrature of the systematic uncertainty corresponding to a MC sample
+            # sum in quadrature of the systematic uncertainty corresponding to a MC sample
             err2_up += err2_up_combined
             err2_down += err2_down_combined
 
@@ -274,57 +208,40 @@ class Plotter:
             height=self.band_up - self.band_down,
             width=self.widths,
             bottom=self.band_down,
-            color="lightgray",
-            alpha=0.6,
-            label="Stat + Syst unc.",
-            hatch="/" * 3,
-            edgecolor="black",
-            linewidth=0,
+            **self.style["uncert_band_kwargs"],
         )
 
     def plot_ratio(self, rax):
         # compute Data/MC ratio
-        ratio = self.data_values / self.nominal_values
-        # plot ratio x error bar
+        num = self.data_values
+        den = self.nominal_values
+        ratio = num / den
+        # only the uncertainty of num (DATA) propagated
+        num_variances = self.data_variances
+        ratio_variance = num_variances * np.power(den, -2)
+        ratio_uncert = np.abs(poisson_interval(ratio, ratio_variance) - ratio)
+        # plot ratio and x-y errors
         xerr = self.edges[1:] - self.edges[:-1]
         rax.errorbar(
-            x=self.centers,
-            y=ratio,
+            self.centers,
+            ratio,
             xerr=xerr / 2,
-            fmt=f"ko",
-            markersize=6,
+            yerr=ratio_uncert,
+            **self.style["ratio_error_kwargs"],
         )
-        # plot ratio y error bar
-        try:
-            ratio_error_down, ratio_error_up = ratio_uncertainty(
-                num=self.data_values,
-                denom=self.nominal_values,
-                uncertainty_type="poisson-ratio",
-            )
-            rax.vlines(
-                self.centers,
-                ratio + ratio_error_up,
-                ratio - ratio_error_down,
-                color="k",
-            )
-        except ValueError:
-            logging.info("(no poisson-ratio error)")
-
-        # plot ratio uncertaity band
-        ratio_up = np.concatenate([[0], self.band_up / self.nominal_values])
-        ratio_down = np.concatenate([[0], self.band_down / self.nominal_values])
+        # plot ratio uncertainty band
+        ratio_up = np.concatenate([[0], self.band_up / den])
+        ratio_down = np.concatenate([[0], self.band_down / den])
+        ratio_up[np.isnan(ratio_up)] = 1.0
+        ratio_down[np.isnan(ratio_down)] = 1.0
         ratio_uncertainty_band = rax.fill_between(
             self.edges,
             ratio_up,
             ratio_down,
             step="pre",
-            color="lightgray",
-            hatch="////",
-            alpha=0.6,
-            edgecolor="k",
-            linewidth=0,
+            **self.style["uncert_band_kwargs"],
         )
-        # plot horizontal reference lines
+        # plot horizontal reference line at 1
         xmin, xmax = rax.get_xlim()
         rax.hlines(1, xmin, xmax, color="k", linestyle=":")
 
@@ -337,9 +254,11 @@ class Plotter:
         savefig: bool = True,
     ):
         setup_logger(self.output_dir)
-
-        histogram_info = self.get_histogram_config(variable, category)
+        # set plot params
+        hep.style.use(hep.style.CMS)
+        plt.rcParams.update(self.style["rcParams"])
         # get nominal MC histograms
+        histogram_info = self.get_histogram_config(variable, category)
         nominal_mc_hists = list(histogram_info["nominal"].values())
         mc_histogram = accumulate(nominal_mc_hists)
         self.nominal_values = mc_histogram.values()
@@ -353,6 +272,7 @@ class Plotter:
         # get Data histogram
         data_histogram = histogram_info["data"]
         self.data_values = data_histogram.values()
+        self.data_variances = data_histogram.variances()
         # plot stacked MC and Data histograms
         fig, (ax, rax) = plt.subplots(
             nrows=2,
@@ -368,20 +288,23 @@ class Plotter:
             color=colors,
             flow="none",
             ax=ax,
-            **mc_hist_kwargs,
+            **self.style["mc_hist_kwargs"],
         )
         hep.histplot(
-            data_histogram, label="Data", flow="none", ax=ax, **data_hist_kwargs
+            data_histogram,
+            label="Data",
+            flow="none",
+            ax=ax,
+            **self.style["data_hist_kwargs"],
         )
         # plot uncertainty band
         self.plot_uncert_band(histogram_info, ax)
         # plot ratio
         self.plot_ratio(rax)
-        # set limits
+        # set x-y limits
         hist_edges = np.array([[i, j] for i, j in zip(self.edges[:-1], self.edges[1:])])
-        xlimits = np.min(hist_edges[self.nominal_values > 0]), np.max(
-            hist_edges[self.nominal_values > 0]
-        )
+        values_mask = self.nominal_values > 0
+        xlimits = np.min(hist_edges[values_mask]), np.max(hist_edges[values_mask])
         ax.set_xlim(xlimits)
         rax.set_xlim(xlimits)
         rax.set_ylim(yratio_limits)
@@ -392,14 +315,14 @@ class Plotter:
             ax.legend(frameon=True)
         # set axes labels
         ylabel = "Events"
-        if self.get_axis_type(variable) == "Variable":
+        if isinstance(self.histogram_config.axes[variable], VariableAxis):
             ylabel += " / bin width"
         ax.set(xlabel=None, ylabel=ylabel)
         formatter = ticker.ScalarFormatter()
         formatter.set_scientific(False)
         ax.yaxis.set_major_formatter(formatter)
         rax.set(
-            xlabel=self.get_variable_label(variable),
+            xlabel=self.histogram_config.axes[variable].label,
             ylabel="Data / Pred",
             facecolor="white",
         )
