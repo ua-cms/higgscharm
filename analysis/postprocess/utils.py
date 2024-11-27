@@ -36,7 +36,7 @@ def divide_by_binwidth(histogram):
 
 def clear_output_directory(output_dir):
     """Delete all result files in the output directory."""
-    extensions = ["*.csv", "*.txt", "*.png", "*.pdf", "*.yaml"]
+    extensions = ["*.txt"]
     for ext in extensions:
         files = glob.glob(os.path.join(output_dir, ext))
         for file in files:

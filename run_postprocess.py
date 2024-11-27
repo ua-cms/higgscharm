@@ -17,6 +17,8 @@ def main(args):
             processor=args.processor,
             year=args.year,
         )
+    # delete previous logs
+    clear_output_directory(args.output_dir)
     # set up logger
     setup_logger(args.output_dir)
     # load processor config
