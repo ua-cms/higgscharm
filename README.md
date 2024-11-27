@@ -42,13 +42,9 @@ optional arguments:
   --submit              Enable Condor job submission. If not provided, it just condor files 
   --nfiles NFILES       number of root files to include in each dataset partition (default 20)
 ```
-Example:
-```
-python3 submit_condor.py --processor ztomumu --dataset MuonC --year 2022preEE --submit
-``` 
 The [runner.py](https://github.com/deoache/higgscharm/blob/lxplus/runner.py) script is built on top of `submit_condor.py` and can be used to submit all jobs (background + data) of a control region for certain year: 
 ```
-python3 runner.py --processor ztomumu --year 2022preEE
+python3 runner.py --processor <processor> --year <year>
 ``` 
 After submitting the jobs you can watch their status typing:
 ```
@@ -58,7 +54,7 @@ Some jobs might crash due to T2B being down or for whatever reason. You can use 
 ```
 python3 resubmitter.py --processor <processor> --year <year>
 ```
-You can add the `--resubmit` flag to resubmit these missing jobs
+Adding the `--resubmit` flag will resubmit these missing jobs.
 
 Outputs will be stored at `/eos/user/<user_name>[0]/<user_name>/higgscharm/outputs/<processor>/<year>`. 
 
