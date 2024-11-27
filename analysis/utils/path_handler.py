@@ -7,7 +7,7 @@ class Paths:
     def __init__(self) -> None:
         # finds the root path as the directory one level upwards of where this file is located
         user = os.environ["USER"]
-        self.root_path = pathlib.Path(f"/pnfs/iihe/cms/store/user/{user}")
+        self.root_path = pathlib.Path(f"/eos/user/{user[0]}/{user}/higgscharm")
 
     def processor_path(
         self,
@@ -36,7 +36,7 @@ class Paths:
             ]
         )
         # make output directory
-        output_path = self.root_path / "higgscharm_outputs" / processor_path
+        output_path = self.root_path / "outputs" / processor_path
         if not output_path.exists():
             output_path.mkdir(parents=True)
         return output_path
