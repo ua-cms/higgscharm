@@ -31,7 +31,7 @@ def submit_condor(args: dict) -> None:
     condor_dir = Path(f"{main_dir}/condor")
 
     # set jobname and jobpath
-    jobpath = f'{args["processor"]}/{args["dataset_key"]}'
+    jobpath = f'{args["processor"]}/{args["year"]}/{args["dataset_key"]}'
     jobname = f'{args["processor"]}_{args["dataset_key"]}'
     print(f"creating condor files {jobname}")
 
