@@ -137,6 +137,7 @@ class HistogramConfig:
                     self.variables.append(variable)
 
         # replace axes dictionary with instantiated axis objects
+        self.dict_axes = self.axes.copy()
         axis_type_map = {
             "Variable": VariableAxis,
             "Regular": RegularAxis,
@@ -154,6 +155,6 @@ class HistogramConfig:
         return {
             "add_syst_axis": self.add_syst_axis,
             "add_weight": self.add_weight,
-            "axes": self.axes,
+            "axes": self.dict_axes,
             "layout": self.layout,
         }
