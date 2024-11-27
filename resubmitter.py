@@ -3,9 +3,15 @@ import yaml
 import argparse
 import subprocess
 from pathlib import Path
+from analysis.utils import paths
 
 
 def main(args):
+    if not args.output_path:
+        args.output_path = paths.processor_path(
+            processor=args.processor,
+            year=args.year,
+        )
     """Helper function to resubmit condor jobs"""
     main_dir = Path.cwd()
     outputs_path = f"{args.output_path}/{args.processor}/{args.year}"
@@ -13,7 +19,7 @@ def main(args):
 
     # get jobs to be run
     condor_path = f"{main_dir}/condor/{args.processor}/{args.year}"
-    condor_files = glob.glob(f"{condor_path}/*.sub", recursive=True)
+    condor_files = glob.glob(f"{condor_path}/*/*.sub", recursive=True)
     total_files = len(condor_files)
 
     # get jobs already run
@@ -61,7 +67,7 @@ if __name__ == "__main__":
         "--output_path",
         dest="output_path",
         type=str,
-        # default="/pnfs/iihe/cms/store/user/<your_username>/higgscharm_outputs",
+        default="",
         help="path to the outputs folder",
     )
     parser.add_argument(
