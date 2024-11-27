@@ -14,8 +14,7 @@ def main(args):
         )
     """Helper function to resubmit condor jobs"""
     main_dir = Path.cwd()
-    outputs_path = f"{args.output_path}/{args.processor}/{args.year}"
-    print(f"Reading outputs from: {outputs_path}")
+    print(f"Reading outputs from: {args.output_path}")
 
     # get jobs to be run
     condor_path = f"{main_dir}/condor/{args.processor}/{args.year}"
@@ -30,7 +29,7 @@ def main(args):
 
     run_done = []
     for sample in datasets:
-        output_list = glob.glob(f"{outputs_path}/*{sample}*.pkl")
+        output_list = glob.glob(f"{args.output_path}/*{sample}*.pkl")
         for f in output_list:
             run_done.append(
                 f.split("/")[-1].replace(".pkl", "").replace(f"{args.year}_", "")
@@ -53,14 +52,11 @@ def main(args):
     print(f"Missing jobs {total_files - total_run}:")
 
 
-    
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--resubmit",
-        dest="resubmit",
-        type=str,
-        default="False",
+        action="store_true",
         help="if True resubmit the jobs. if False only print the missing jobs",
     )
     parser.add_argument(
