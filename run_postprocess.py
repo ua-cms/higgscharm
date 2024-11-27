@@ -8,7 +8,6 @@ from analysis.postprocess.postprocessor import Postprocessor
 from analysis.postprocess.utils import (
     print_header,
     setup_logger,
-    clear_output_directory,
 )
 
 
@@ -18,8 +17,6 @@ def main(args):
             processor=args.processor,
             year=args.year,
         )
-    # delete previous results
-    clear_output_directory(args.output_dir)
     # set up logger
     setup_logger(args.output_dir)
     # load processor config
@@ -27,8 +24,6 @@ def main(args):
     processor_config = config_builder.build_processor_config()
     # get categories
     categories = processor_config.event_selection["categories"]
-    for category in categories:
-        clear_output_directory(f"{args.output_dir}/{category}")
     # save processor config
     logging.info(processor_config.to_yaml())
     # process (group and accumulate) outputs
@@ -106,7 +101,7 @@ if __name__ == "__main__":
         "--output_dir",
         dest="output_dir",
         type=str,
-        default=None,
+        default="",
         help="Path to the outputs directory (optional)",
     )
     args = parser.parse_args()
