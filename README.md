@@ -46,13 +46,19 @@ Example:
 ```
 python3 submit_condor.py --processor ztomumu --dataset MuonC --year 2022preEE --submit
 ``` 
+Check available datasets at `analysis/filesets/<year>_fileset.yaml`.
+
 After submitting the jobs you can watch their status typing:
-```bash
+```
 watch condor_q
 ```
-Outputs will be stored at `/eos/user/<user_name>[0]/<user_name>/higgscharm/outputs/<processor>/<year>`. 
+Some jobs might crash due to T2B being down or for whatever reason. You can use the `resubmitter.py` script to see which jobs are still to be executed
+```
+python3 resubmitter.py --processor <processor> --year <year>
+```
+You can add the `--resubmit` flag to resubmit these missing jobs
 
-Check available datasets at `analysis/filesets/<year>_fileset.yaml`
+Outputs will be stored at `/eos/user/<user_name>[0]/<user_name>/higgscharm/outputs/<processor>/<year>`. 
 
 ### Postprocessing
 
