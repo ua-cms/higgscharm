@@ -29,7 +29,7 @@ You need to have a valid grid proxy in the CMS VO. (see [here](https://twiki.cer
 ```
 voms-proxy-init --voms cms
 ```
-Jobs are submitted at LXPLUS via the [submit_condor.py](https://github.com/deoache/higgscharm/blob/T2B/submit_condor.py) script:
+Jobs are submitted at LXPLUS via the [submit_condor.py](https://github.com/deoache/higgscharm/blob/lxplus/submit_condor.py) script:
 ```
 usage: submit_condor.py [-h] [--processor PROCESSOR] [--dataset DATASET] [--year YEAR] [--submit] [--nfiles NFILES]
 
@@ -46,8 +46,10 @@ Example:
 ```
 python3 submit_condor.py --processor ztomumu --dataset MuonC --year 2022preEE --submit
 ``` 
-Check available datasets at `analysis/filesets/<year>_fileset.yaml`.
-
+The [runner.py](https://github.com/deoache/higgscharm/blob/lxplus/runner.py) script is built on top of `submit_condor.py` and can be used to submit all jobs (background + data) of a control region for certain year: 
+```
+python3 runner.py --processor ztomumu --year 2022preEE
+``` 
 After submitting the jobs you can watch their status typing:
 ```
 watch condor_q
