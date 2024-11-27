@@ -8,6 +8,7 @@ from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.configs import ProcessorConfigBuilder
 from analysis.corrections.muon import MuonWeights
+from analysis.corrections.electron import ElectronSS
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.histograms import HistBuilder, fill_histogram
@@ -72,6 +73,18 @@ class ZToMuMuProcessor(processor.ProcessorABC):
             apply_jer=apply_jer,
             apply_junc=apply_junc,
         )
+        # electron scale and smearing corrections
+        electron_ss = ElectronSS(
+            events=events,
+            year=year,
+            variation="nominal",
+        )
+        if is_mc:
+            # energies in MC are smeared
+            electron_ss.apply_smearing()
+        else:
+            # energies in data are scaled
+            electron_ss.apply_scale()
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
