@@ -42,22 +42,11 @@ def main(args):
         lumi=lumi,
         output_dir=args.output_dir,
     )
-    # get histogram config
-    histogram_config = processor_config.histogram_config
-    # get variables to plot
-    variables = []
-    if histogram_config.layout == "individual":
-        variables = list(histogram_config.axes.keys())
-    else:
-        variables = []
-        for key, values in histogram_config.layout.items():
-            for v in values:
-                variables.append(v)
     # plot histograms
     print_header("Plots")
     for category in categories:
         logging.info(f"plotting histograms for category: {category}")
-        for variable in variables:
+        for variable in processor_config.histogram_config.variables:
             logging.info(variable)
             plotter.plot_histograms(
                 variable=variable,
