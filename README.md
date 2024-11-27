@@ -81,6 +81,6 @@ In SWAN, type:
 cd higgscharm
 
 # run postprocess script
-python3 run_postprocess.py --processor ztomumu --year 2022preEE --log_scale
+python3 run_postprocess.py --processor <processor> --year <year> --log_scale
 ``` 
 Results will be saved to the same directory as the output files
