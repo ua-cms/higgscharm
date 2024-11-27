@@ -262,6 +262,12 @@ histogram_config:
       - jet_eta
     jet_phi: 
       - jet_phi
+    jet_dr: 
+      - jet_dr
+    jet_deta: 
+      - jet_deta
+    jet_multiplicity: 
+      - jet_multiplicity
     leading_jet:
       - leadingjet_flavour
       - leadingjet_cvsb
