@@ -1,6 +1,9 @@
-executable            = EXECUTABLEPATH/JOBNAME.sh
+executable            = DIRECTORY/JOBPATH/JOBNAME.sh
 arguments             = $(ClusterId)$(ProcId)
-output                = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).out
-error                 = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).err
-log                   = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).log
+output                = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).out
+error                 = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).err
+log                   = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).log
+
++JobFlavour           = "longlunch"
++SingularityImage     = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.9"
 queue 1
