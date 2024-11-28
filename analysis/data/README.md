@@ -4,7 +4,7 @@ JEC and JER tarballs were obtained from [here](https://github.com/cms-jet/JECDat
 
 **Note:** Filenames were changed: 
 * We added the extensions `jec`, `jr`,`jersf`, and `junc` to the JEC, JER, JER Scale Factors, and JERC uncerntainties files, respectively. These extensions need to be added in order to use the [Coffea jetmet tools](https://coffeateam.github.io/coffea/modules/coffea.jetmet_tools.html).     
-* We also substract the first underscore in the filenames to match the name criteria of the jetmet tools: filenames must contain 5 words (excluding underscores) 
+* We also substracted the first underscore in the filenames to match the name criteria of the jetmet tools: filenames must contain 5 words (excluding underscores) 
 
 ### Lumi file
 
@@ -14,7 +14,7 @@ To generate the `lumi2022.csv` file we used [brilcalc](https://twiki.cern.ch/twi
 # connect to lxplus
 ssh <your_username>@lxplus.cern.ch
 
-# Load the environment
+# load the environment
 source /cvmfs/cms-bril.cern.ch/cms-lumi-pog/brilws-docker/brilws-env
 
 # Run brilcalc
