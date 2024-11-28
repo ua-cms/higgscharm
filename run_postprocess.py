@@ -8,12 +8,12 @@ from analysis.postprocess.postprocessor import Postprocessor
 from analysis.postprocess.utils import (
     print_header,
     setup_logger,
+    clear_output_directory
 )
 
 
 def main(args):
-    if not args.output_dir:
-        args.output_dir = make_output_directory(vars(args))
+    args.output_dir = make_output_directory(vars(args))
     # delete previous logs
     clear_output_directory(args.output_dir)
     # set up logger
