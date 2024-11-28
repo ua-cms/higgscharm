@@ -45,7 +45,7 @@ optional arguments:
 ```
 Example:
 ```
-submit_condor.py --processor ztomumu --dataset MuonE --year 2022postEE --submit
+python3 submit_condor.py --processor ztomumu --dataset MuonE --year 2022postEE --submit
 ```
 **Note**: If you add the `--eos` flag, outputs will be save to your `/eos` area. **In this case, you will need to clone the repo also in [SWAN](https://swan-k8s.cern.ch/hub/spawn) (select the 105a release) in order to be able to run the postprocess step afterwards**.
 
