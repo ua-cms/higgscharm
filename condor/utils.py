@@ -28,8 +28,8 @@ def move_X509() -> str:
 def submit_condor(args: dict) -> None:
     """build condor and executable files. Submit condor job"""
     main_dir = Path.cwd()
-    condor_dir = Path(f"{main_dir}/condor")
-
+    condor_dir = main_dir / "condor"
+    
     # set jobname and jobpath
     jobpath = f'{args["processor"]}/{args["year"]}/{args["dataset_key"]}'
     jobname = f'{args["processor"]}_{args["dataset_key"]}'
