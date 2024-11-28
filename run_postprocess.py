@@ -1,7 +1,7 @@
 import yaml
 import logging
 import argparse
-from analysis.utils import paths
+from analysis.utils import make_output_directory
 from analysis.postprocess.plotter import Plotter
 from analysis.configs import ProcessorConfigBuilder
 from analysis.postprocess.postprocessor import Postprocessor
@@ -13,10 +13,7 @@ from analysis.postprocess.utils import (
 
 def main(args):
     if not args.output_dir:
-        args.output_dir = paths.processor_path(
-            processor=args.processor,
-            year=args.year,
-        )
+        args.output_dir = make_output_directory(vars(args))
     # delete previous logs
     clear_output_directory(args.output_dir)
     # set up logger
@@ -89,11 +86,9 @@ if __name__ == "__main__":
         help="Set y-axis ratio limits as a tuple (e.g., --yratio_limits 0 2)",
     )
     parser.add_argument(
-        "--output_dir",
-        dest="output_dir",
-        type=str,
-        default="",
-        help="Path to the outputs directory (optional)",
+        "--eos",
+        action="store_true",
+        help="Enable reading outputs from /eos",
     )
     args = parser.parse_args()
     main(args)

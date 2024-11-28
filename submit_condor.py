@@ -4,25 +4,21 @@ import argparse
 from copy import deepcopy
 from pathlib import Path
 from checker import run_checker
-from analysis.utils import paths
 from condor.utils import submit_condor
-from analysis.filesets.utils import get_rootfiles, divide_list
+from analysis.filesets.utils import divide_list
+from analysis.utils import make_output_directory
 
 
 def main(args):
     run_checker(args)
     args = vars(args)
 
-    # set output path
-    processor_output_path = paths.processor_path(
-        processor=args["processor"],
-        year=args["year"],
-    )
-    args["output_path"] = str(processor_output_path)
+    # add output path to args
+    args["output_path"] = make_output_directory(args)
 
     # split dataset into batches
-    fileset_path = Path(f"{Path.cwd()}/analysis/filesets")
-    with open(f"analysis/filesets/{args['year']}_lxplus.yaml", "r") as f:
+    fileset_path = Path.cwd() / "analysis" / "filesets"
+    with open(f"{fileset_path}/{args['year']}_lxplus.yaml", "r") as f:
         root_files = yaml.safe_load(f)[args["dataset"]]
     root_files_list = divide_list(root_files, args["nfiles"])
     
@@ -74,16 +70,21 @@ if __name__ == "__main__":
         help="dataset year {2022preEE, 2022postEE} (default 2022postEE)",
     )
     parser.add_argument(
-        "--submit",
-        action="store_true",
-        help="Enable Condor job submission. If not provided, it just builds datasets and condor files",
-    )
-    parser.add_argument(
         "--nfiles",
         dest="nfiles",
         type=int,
         default=20,
         help="number of root files to include in each dataset partition (default 20)",
+    )
+    parser.add_argument(
+        "--eos",
+        action="store_true",
+        help="Enable saving outputs to /eos",
+    )
+    parser.add_argument(
+        "--submit",
+        action="store_true",
+        help="Enable Condor job submission. If not provided, it just builds condor files",
     )
     args = parser.parse_args()
     main(args)

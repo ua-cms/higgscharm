@@ -1,2 +1,1 @@
-from analysis.utils.path_handler import Paths
-paths = Paths()
+from analysis.utils.output_dir_maker import make_output_directory

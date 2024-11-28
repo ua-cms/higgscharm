@@ -3,15 +3,12 @@ import yaml
 import argparse
 import subprocess
 from pathlib import Path
-from analysis.utils import paths
+from analysis.utils import make_output_directory
 
 
 def main(args):
-    if not args.output_path:
-        args.output_path = paths.processor_path(
-            processor=args.processor,
-            year=args.year,
-        )
+    args.output_path = make_output_directory(vars(args))
+
     """Helper function to resubmit condor jobs"""
     main_dir = Path.cwd()
     print(f"Reading outputs from: {args.output_path}")
@@ -60,13 +57,6 @@ if __name__ == "__main__":
         help="if True resubmit the jobs. if False only print the missing jobs",
     )
     parser.add_argument(
-        "--output_path",
-        dest="output_path",
-        type=str,
-        default="",
-        help="path to the outputs folder",
-    )
-    parser.add_argument(
         "--processor",
         dest="processor",
         type=str,
@@ -79,6 +69,11 @@ if __name__ == "__main__":
         type=str,
         default="2022postEE",
         help="year of the data {2022preEE, 2022postEE}",
+    )
+    parser.add_argument(
+        "--eos",
+        action="store_true",
+        help="Enable reading outputs from /eos",
     )
     args = parser.parse_args()
     main(args)

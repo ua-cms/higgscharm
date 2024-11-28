@@ -58,10 +58,23 @@ if __name__ == "__main__":
         default=20,
         help="number of root files to include in each dataset partition (default 20)",
     )
+    parser.add_argument(
+        "--submit",
+        action="store_true",
+        help="Enable Condor job submission. If not provided, it just builds condor files",
+    )
+    parser.add_argument(
+        "--eos",
+        action="store_true",
+        help="Enable saving outputs to /eos",
+    )
     args = parser.parse_args()
 
     datasets = background_samples + data_samples[args.processor][args.year]
     for dataset in datasets:
-        os.system(
-            f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles} --submit"
-        )
+        cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles}"
+        if args.submit:
+            cmd += " --submit"
+        if args.eos:
+            cmd += " --eos"
+        os.system(cmd)
