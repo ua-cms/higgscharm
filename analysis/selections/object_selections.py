@@ -4,7 +4,7 @@ import awkward as ak
 
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.working_points import working_points
-from analysis.selections import delta_r_mask, select_dileptons
+from analysis.selections import delta_r_mask, select_dileptons, select_4leptons
 
 
 class ObjectSelector:
@@ -59,18 +59,41 @@ class ObjectSelector:
             selection_mask = np.logical_and(selection_mask, mask)
         return selection_mask
 
-    
     def select_dimuons(self):
         if "muons" not in self.objects:
-            raise ValueError(
-                f"'muons' object has not been defined!"
-            )
+            raise ValueError(f"'muons' object has not been defined!")
         self.objects["dimuons"] = select_dileptons(self.objects, "muons")
-        
-        
+
     def select_dielectrons(self):
         if "electrons" not in self.objects:
-            raise ValueError(
-                f"'electrons' object has not been defined!"
-            )
+            raise ValueError(f"'electrons' object has not been defined!")
         self.objects["dielectrons"] = select_dileptons(self.objects, "electrons")
+
+    def select_4muons(self):
+        if "muons" not in self.objects:
+            raise ValueError(f"'muons' object has not been defined!")
+        self.objects["fourmuons"] = select_4leptons(self.objects, "muons")
+
+    def select_higgs(self):
+        # Select Z candidate with minimal |m(μμ) - m(Z)|
+        zmass = 91.1876
+        z1_diff = np.abs(self.objects["fourmuons"].z1.p4.mass - zmass)
+        z2_diff = np.abs(self.objects["fourmuons"].z2.p4.mass - zmass)
+        z1_candidate = np.where(
+            z1_diff < z2_diff,
+            self.objects["fourmuons"].z1,
+            self.objects["fourmuons"].z2,
+        )
+        z2_candidate = np.where(
+            z1_diff < z2_diff,
+            self.objects["fourmuons"].z2,
+            self.objects["fourmuons"].z1,
+        )
+        self.objects["higgs"] = ak.zip(
+            {
+                "z1": z1_candidate,
+                "z2": z2_candidate,
+                "p4": z1_candidate.p4 + z2_candidate.p4,
+                "pt": (z1_candidate.p4 + z2_candidate.p4).pt,
+            }
+        )

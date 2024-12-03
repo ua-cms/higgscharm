@@ -74,8 +74,47 @@ def select_dileptons(objects, key):
     # make sure they are sorted by transverse momentum
     leptons = leptons[ak.argsort(leptons.pt, axis=1)]
     # create pair combinations with all muons
-    dileptons = ak.combinations(objects[key], 2, fields=["l1", "l2"])
+    dileptons = ak.combinations(leptons, 2, fields=["l1", "l2"])
     # add dimuon 4-momentum field
     dileptons["z"] = dileptons.l1 + dileptons.l2
     dileptons["pt"] = dileptons.z.pt
     return dileptons
+
+
+def select_4leptons(objects, key):
+    leptons = ak.zip(
+        {
+            "pt": objects[key].pt,
+            "eta": objects[key].eta,
+            "phi": objects[key].phi,
+            "mass": objects[key].mass,
+            "charge": objects[key].charge,
+        },
+        with_name="PtEtaPhiMCandidate",
+        behavior=candidate.behavior,
+    )
+    # make sure they are sorted by transverse momentum
+    leptons = leptons[ak.argsort(leptons.pt, axis=1)]
+    # create combinations with all muons
+    fourleptons = ak.combinations(leptons, 4, fields=["lep1", "lep2", "lep3", "lep4"])
+    # add dimuon 4-momentum field
+    fourleptons = ak.zip(
+        {
+            "z1": ak.zip(
+                {
+                    "lep1": fourleptons.lep1,
+                    "lep2": fourleptons.lep2,
+                    "p4": fourleptons.lep1 + fourleptons.lep2,
+                }
+            ),
+            "z2": ak.zip(
+                {
+                    "lep1": fourleptons.lep3,
+                    "lep2": fourleptons.lep4,
+                    "p4": fourleptons.lep3 + fourleptons.lep4,
+                }
+            ),
+            "pt": (fourleptons.lep1 + fourleptons.lep2).pt,
+        }
+    )
+    return fourleptons
