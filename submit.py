@@ -7,12 +7,14 @@ from humanfriendly import format_timespan
 from coffea.nanoevents import PFNanoAODSchema
 from analysis.processors.ztoee import ZToEEProcessor
 from analysis.processors.ztomumu import ZToMuMuProcessor
+from analysis.processors.zztomumu import ZZToMuMuProcessor
 
 
 def main(args):
     processors = {
         "ztomumu": ZToMuMuProcessor(year=args.year),
         "ztoee": ZToEEProcessor(year=args.year),
+        "zztomumu": ZZToMuMuProcessor(year=args.year)
     }
     t0 = time.monotonic()
     out = processor.run_uproot_job(
