@@ -2,7 +2,7 @@ import yaml
 
 def run_checker(args):
     # check processor
-    available_processors = ["ztomumu", "ztoee"]
+    available_processors = ["ztomumu", "ztoee", "zztomumu"]
     if args.processor not in available_processors:
         raise ValueError(
             f"Incorrect processor. Available processors are: {available_processors}"
@@ -21,18 +21,18 @@ def run_checker(args):
             f"Incorrect dataset. Available datasets are: {available_datasets}"
         )
     # check processor/year/dataset combinations
-    if args.processor == "ztomumu":
+    if args.processor in ["ztomumu", "zztomumu"]:
         if args.dataset.startswith("EGamma"):
-            raise ValueError("ztomumu processor should be run with 'MuonX'")
+            raise ValueError("processor should be run with 'Muon' dataset")
         if args.year == "2022postEE":
             if args.dataset in ["MuonC", "MuonD"]:
                 raise ValueError(
-                    "ztomumu processor for 2022postEE should be run with 'MuonE', 'MuonF' or 'MuonG'"
+                    "processor should be run with 'MuonE', 'MuonF' or 'MuonG'"
                 )
         if args.year == "2022preEE":
             if args.dataset in ["MuonE", "MuonF", "MuonG"]:
                 raise ValueError(
-                    "ztomumu processor for 2022preEE should be run with 'MuonC' or 'MuonD'"
+                    "processor should be run with 'MuonC' or 'MuonD'"
                 )
     if args.processor == "ztoee":
         if args.dataset.startswith("Muon"):
