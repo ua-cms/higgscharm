@@ -41,7 +41,7 @@ def main(args):
     for f, sub in zip(condor_files_keys, condor_files):
         if f not in run_done:
             print(f)
-            if args.resubmit == "True":
+            if args.resubmit:
                 subprocess.run(["condor_submit", sub])
 
     print(f"Jobs to be run: {total_files}")
