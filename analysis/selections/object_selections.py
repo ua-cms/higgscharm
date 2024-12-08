@@ -1,10 +1,14 @@
 import inspect
 import numpy as np
 import awkward as ak
-
+from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.working_points import working_points
-from analysis.selections import delta_r_mask, select_dileptons, select_4leptons
+from analysis.selections import (
+    delta_r_mask,
+    select_dileptons,
+    select_zzto4l_zz_candidates,
+)
 
 
 class ObjectSelector:
@@ -59,6 +63,9 @@ class ObjectSelector:
             selection_mask = np.logical_and(selection_mask, mask)
         return selection_mask
 
+    # --------------------------------------------------------------------------------
+    # ZToLL
+    # --------------------------------------------------------------------------------
     def select_dimuons(self):
         if "muons" not in self.objects:
             raise ValueError(f"'muons' object has not been defined!")
@@ -69,31 +76,54 @@ class ObjectSelector:
             raise ValueError(f"'electrons' object has not been defined!")
         self.objects["dielectrons"] = select_dileptons(self.objects, "electrons")
 
-    def select_4muons(self):
-        if "muons" not in self.objects:
-            raise ValueError(f"'muons' object has not been defined!")
-        self.objects["fourmuons"] = select_4leptons(self.objects, "muons")
-
-    def select_higgs(self):
-        # Select Z candidate with minimal |m(μμ) - m(Z)|
-        zmass = 91.1876
-        z1_diff = np.abs(self.objects["fourmuons"].z1.p4.mass - zmass)
-        z2_diff = np.abs(self.objects["fourmuons"].z2.p4.mass - zmass)
-        z1_candidate = np.where(
-            z1_diff < z2_diff,
-            self.objects["fourmuons"].z1,
-            self.objects["fourmuons"].z2,
+    # --------------------------------------------------------------------------------
+    # ZZTo4L
+    # --------------------------------------------------------------------------------
+    def select_zzto4l_leptons(self):
+        leptons = ak.concatenate(
+            [self.objects["muons"], self.objects["electrons"]], axis=1
         )
-        z2_candidate = np.where(
-            z1_diff < z2_diff,
-            self.objects["fourmuons"].z2,
-            self.objects["fourmuons"].z1,
-        )
-        self.objects["higgs"] = ak.zip(
+        leptons = leptons[ak.argsort(leptons.pt, axis=1)]
+        self.objects["leptons"] = ak.zip(
             {
-                "z1": z1_candidate,
-                "z2": z2_candidate,
-                "p4": z1_candidate.p4 + z2_candidate.p4,
-                "pt": (z1_candidate.p4 + z2_candidate.p4).pt,
-            }
+                "pt": leptons.pt,
+                "eta": leptons.eta,
+                "phi": leptons.phi,
+                "mass": leptons.mass,
+                "charge": leptons.charge,
+                "pdgId": leptons.pdgId,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
         )
+
+    def select_zzto4l_zzpairs(self):
+        # sort lepton pairs by proximity to Z mass
+        zmass = 91.1876
+        dist_from_z_all_pairs = np.abs(
+            (self.objects["ll_pairs"].l1 + self.objects["ll_pairs"].l2).mass - zmass
+        )
+        sorted_ll_pairs = self.objects["ll_pairs"][
+            ak.argsort(dist_from_z_all_pairs, axis=1)
+        ]
+        # ZZ candidates
+        zz_pairs = select_zzto4l_zz_candidates(sorted_ll_pairs)
+        # mass-sorted alternative pairing Z candidates
+        alt_sorted_ll_pairs = self.objects["ll_pairs"][
+            ak.argsort(
+                -(self.objects["ll_pairs"].l1 + self.objects["ll_pairs"].l2).mass,
+                axis=1,
+            )
+        ]
+        alt_zz_pairs = select_zzto4l_zz_candidates(alt_sorted_ll_pairs)
+        # 'smart cut': require NOT(|mZa - mZ| < |mZ1 − mZ| AND mZb < 12)
+        # This cut discards 4µ and 4e candidates where the alternative pairing looks like an on-shell Z + low-mass l+l−
+        smart_cut = ~(
+            (
+                np.abs(alt_zz_pairs.z1.p4.mass - zmass)
+                < np.abs(zz_pairs.z1.p4.mass - zmass)
+            )
+            & (alt_zz_pairs.z2.p4.mass < 12)
+        )
+
+        self.objects["zz_pairs"] = zz_pairs[smart_cut]
