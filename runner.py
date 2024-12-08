@@ -11,8 +11,8 @@ data_samples = {
         "2022postEE": ["MuonE", "MuonF", "MuonG"],
     },
     "zzto4l": {
-        "2022preEE": ["MuonC", "MuonD", "EGammaC", "EGammaD"],
-        "2022postEE": ["MuonE", "MuonF", "MuonG", "EGammaE", "EGammaF", "EGammaG"],
+        "2022preEE": ["MuonC", "MuonD", "MuonEGC", "MuonEGD", "EGammaC", "EGammaD"],
+        "2022postEE": ["MuonE", "MuonF", "MuonG", "MuonEGE", "MuonEGF", "MuonEGG", "EGammaE", "EGammaF", "EGammaG"],
     },
 }
 background_samples = {
