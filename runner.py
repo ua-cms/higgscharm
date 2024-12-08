@@ -10,33 +10,79 @@ data_samples = {
         "2022preEE": ["MuonC", "MuonD"],
         "2022postEE": ["MuonE", "MuonF", "MuonG"],
     },
-    "zztomumu": {
+    "zzto4l": {
         "2022preEE": ["MuonC", "MuonD"],
         "2022postEE": ["MuonE", "MuonF", "MuonG"],
     },
 }
-background_samples = [
-    # DY+jets
-    "DYto2L_2Jets_50",
-    "DYto2L_2Jets_10to50",
-    # Diboson
-    "WW",
-    "WZ",
-    "ZZ",
-    # Ttbar
-    "TTto4Q",
-    "TTto2L2Nu",
-    "TTtoLNu2Q",
-    # SingleTop
-    "TbarWplusto2L2Nu",
-    "TWminusto2L2Nu",
-    "TWminustoLNu2Q",
-    "TbarWplusto4Q",
-    "TbarWplustoLNu2Q",
-    "TWminusto4Q",
-    "TbarBQ",
-    "TBbarQ",
-]
+background_samples = {
+    "ztoee": [
+        # DY+jets
+        "DYto2L_2Jets_50",
+        "DYto2L_2Jets_10to50",
+        # Diboson
+        "WW",
+        "WZ",
+        "ZZ",
+        # Ttbar
+        "TTto4Q",
+        "TTto2L2Nu",
+        "TTtoLNu2Q",
+        # SingleTop
+        "TbarWplusto2L2Nu",
+        "TWminusto2L2Nu",
+        "TWminustoLNu2Q",
+        "TbarWplusto4Q",
+        "TbarWplustoLNu2Q",
+        "TWminusto4Q",
+        "TbarBQ",
+        "TBbarQ",
+    ],
+    "ztomumu": [
+        # DY+jets
+        "DYto2L_2Jets_50",
+        "DYto2L_2Jets_10to50",
+        # Diboson
+        "WW",
+        "WZ",
+        "ZZ",
+        # Ttbar
+        "TTto4Q",
+        "TTto2L2Nu",
+        "TTtoLNu2Q",
+        # SingleTop
+        "TbarWplusto2L2Nu",
+        "TWminusto2L2Nu",
+        "TWminustoLNu2Q",
+        "TbarWplusto4Q",
+        "TbarWplustoLNu2Q",
+        "TWminusto4Q",
+        "TbarBQ",
+        "TBbarQ",
+    ],
+    "zzto4l": [
+        # bbH
+        "bbH_Hto2Zto4L",
+        # ggH
+        "GluGluHtoZZto4L",
+        # ggToZZ
+        "GluGluToContinto2Zto2E2Mu",
+        "GluGluToContinto2Zto2E2Tau",
+        "GluGluToContinto2Zto2Mu2Tau",
+        "GluGlutoContinto2Zto4E",
+        "GluGlutoContinto2Zto4Mu",
+        "GluGlutoContinto2Zto4Tau",
+        # ttH
+        "TTH_Hto2Z",
+        # VBF
+        "VBFHto2Zto4L",
+        # WH
+        "WminusH_Hto2Zto4L",
+        "WplusH_Hto2Zto4L",
+        # ZH
+        "ZHto2Zto4L"
+    ]
+}
 
 
 if __name__ == "__main__":
@@ -46,7 +92,7 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="ztomumu",
-        help="processor to be used {ztomumu, ztoee, zztomumu} (default ztomumu)",
+        help="processor to be used {ztomumu, ztoee, zto4l} (default ztomumu)",
     )
     parser.add_argument(
         "--year",
