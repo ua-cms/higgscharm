@@ -1,7 +1,8 @@
 goldenjson: analysis/data/Cert_Collisions2022_355100_362760_Golden.txt
 lumidata: analysis/data/lumi2022.csv
 hlt_paths:
-  - Ele30_WPTight_Gsf
+  EGamma:
+    - SingleEle
 object_selection:
   muons:
     field: events.Muon
@@ -38,8 +39,7 @@ event_selection:
   selections:
     atleast_one_goodvertex: events.PV.npvsGood > 0
     lumimask: get_lumi_mask(events, goldenjson)
-    trigger: get_trigger_mask(events, hlt_paths)
-    trigger_matching: get_trigger_match_mask(events, events.Electron, hlt_paths)
+    trigger: get_trigger_mask(events, hlt_paths, dataset_key)
     first_electron_pt: ak.firsts(objects['electrons'].pt) > 35
     two_electrons: ak.num(objects['electrons']) == 2
     one_z: ak.num(objects['dielectrons'].z) == 1
@@ -48,7 +48,6 @@ event_selection:
       - atleast_one_goodvertex
       - lumimask
       - trigger
-      - trigger_matching
       - first_electron_pt
       - two_electrons
       - one_z
