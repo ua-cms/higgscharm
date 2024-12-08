@@ -93,6 +93,21 @@ MuonG:
   query: Muon/Run2022G-22Sep2023-v1/NANOAOD
   process: Data
   xsec: None
+MuonEGE:
+  era: E
+  query: MuonEG/Run2022E-22Sep2023-v1/NANOAOD
+  process: Data
+  xsec: None
+MuonEGF:
+  era: F
+  query: MuonEG/Run2022F-22Sep2023-v1/NANOAOD
+  process: Data
+  xsec: None
+MuonEGG:
+  era: G
+  query: MuonEG/Run2022G-22Sep2023-v1/NANOAOD
+  process: Data
+  xsec: None
 EGammaE:
   era: E
   query: EGamma/Run2022E-22Sep2023-v1/NANOAOD

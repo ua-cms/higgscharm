@@ -59,11 +59,11 @@ def unflat_sf(sf: ak.Array, in_limit_mask: ak.Array, n: ak.Array):
 
 def get_era(input_str):
     # Check if the input string starts with "Muon" or "EGamma"
-    if input_str.startswith("Muon") or input_str.startswith("EGamma"):
+    if input_str.startswith("Muon") or input_str.startswith("MuonEG") or input_str.startswith("EGamma"):
         # Use regex to find the letter following "Muon" or "EGamma"
-        match = re.search(r"Muon([A-Za-z])|EGamma([A-Za-z])", input_str)
+        match = re.search(r"MuonEG([A-Za-z])|Muon([A-Za-z])|EGamma([A-Za-z])", input_str)
         if match:
-            # Return the first matched group (the letter following "Muon" or "EGamma")
+            # Return the first matched group (the letter following "Muon", "MuonEG" or "EGamma")
             return match.group(1) or match.group(2)
     # If the input doesn't start with "Muon" or "EGamma", return "MC"
     return "MC"
