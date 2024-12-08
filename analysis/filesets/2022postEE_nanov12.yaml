@@ -161,6 +161,7 @@ VBFHto2Zto4L:
 WminusH_Hto2Zto4L:
   era: MC
   query: WminusH_Hto2Zto4L_M-125_TuneCP5_13p6TeV_powheg2-minlo-HWJ-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: WH
   xsec: 0.5803
 WplusH_Hto2Zto4L:
   era: MC
