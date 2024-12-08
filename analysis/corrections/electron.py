@@ -5,7 +5,7 @@ import correctionlib.schemav2 as cs
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.met import update_met
-from analysis.selections.utils import trigger_match
+from analysis.selections.trigger import trigger_match
 from analysis.corrections.utils import get_pog_json, unflat_sf
 from analysis.selections.event_selections import get_trigger_mask
 
@@ -104,15 +104,21 @@ class ElectronWeights:
                 weight=nominal_weights,
             )
 
-    def add_hlt_weights(self, hlt_paths):
+    def add_hlt_weights(self, hlt_paths, dataset_key):
         """
         add electron HLT weights to weights container
         """
-        nominal_weights = self.get_hlt_weights(variation="sf", hlt_paths=hlt_paths)
+        nominal_weights = self.get_hlt_weights(
+            variation="sf", hlt_paths=hlt_paths, dataset_key=dataset_key
+        )
         if self.variation == "nominal":
             # get 'up' and 'down' weights
-            up_weights = self.get_hlt_weights(variation="sfup", hlt_paths=hlt_paths)
-            down_weights = self.get_hlt_weights(variation="sfdown", hlt_paths=hlt_paths)
+            up_weights = self.get_hlt_weights(
+                variation="sfup", hlt_paths=hlt_paths, dataset_key=dataset_key
+            )
+            down_weights = self.get_hlt_weights(
+                variation="sfdown", hlt_paths=hlt_paths, dataset_key=dataset_key
+            )
             # add scale factors to weights container
             self.weights.add(
                 name="electron_hlt",
@@ -208,7 +214,7 @@ class ElectronWeights:
         )
         return weights
 
-    def get_hlt_weights(self, variation, hlt_paths):
+    def get_hlt_weights(self, variation, hlt_paths, dataset_key):
         """
         Compute electron HLT weights
 
@@ -222,8 +228,9 @@ class ElectronWeights:
             get_pog_json(json_name="electron_hlt", year=self.year)
         )
         # get trigger masks
-        trigger_mask = get_trigger_mask(self.events, hlt_paths)
+        trigger_mask = get_trigger_mask(self.events, hlt_paths, dataset_key)
         trigger_mask = ak.flatten(ak.ones_like(self.electrons.pt) * trigger_mask) > 0
+        """
         trigger_match_mask = np.zeros(len(self.events), dtype="bool")
         for hlt_path in hlt_paths:
             if hlt_path in self.events.HLT.fields:
@@ -234,9 +241,10 @@ class ElectronWeights:
                 )
                 trigger_match_mask = trigger_match_mask | trig_obj_mask
         trigger_match_mask = ak.flatten(trigger_match_mask)
+        """
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = self.flat_electrons.pt > 25.0
-        in_electrons_mask = electron_pt_mask & trigger_mask & trigger_match_mask
+        in_electrons_mask = electron_pt_mask & trigger_mask  # & trigger_match_mask
         in_electrons = self.flat_electrons.mask[in_electrons_mask]
 
         # get electrons pT and abseta (replace None values with some 'in-limit' value)

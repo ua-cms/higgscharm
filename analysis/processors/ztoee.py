@@ -15,7 +15,7 @@ from analysis.selections import (
     ObjectSelector,
     get_lumi_mask,
     get_trigger_mask,
-    get_trigger_match_mask,
+    # get_trigger_match_mask,
 )
 
 
@@ -33,7 +33,7 @@ class ZToEEProcessor(processor.ProcessorABC):
 
     def process(self, events):
         dataset = events.metadata["dataset"]
-
+        dataset_key = dataset.split("_")[0]
         # get golden json, triggers, selections and histograms
         year = self.year
         goldenjson = self.processor_config.goldenjson
@@ -107,7 +107,9 @@ class ZToEEProcessor(processor.ProcessorABC):
                 id_wp=object_selections["electrons"]["cuts"]["electron_id"],
             )
             electron_weights.add_id_weights()
-            electron_weights.add_hlt_weights(hlt_paths)
+            electron_weights.add_hlt_weights(
+                hlt_paths=hlt_paths, dataset_key=dataset_key
+            )
             electron_weights.add_reco_weights("RecoBelow20")
             electron_weights.add_reco_weights("Reco20to75")
             electron_weights.add_reco_weights("RecoAbove75")

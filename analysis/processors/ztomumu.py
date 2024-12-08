@@ -16,7 +16,7 @@ from analysis.selections import (
     ObjectSelector,
     get_lumi_mask,
     get_trigger_mask,
-    get_trigger_match_mask,
+    # get_trigger_match_mask,
 )
 
 
@@ -34,7 +34,7 @@ class ZToMuMuProcessor(processor.ProcessorABC):
 
     def process(self, events):
         dataset = events.metadata["dataset"]
-
+        dataset_key = dataset.split("_")[0]
         # get golden json, triggers, selections and histograms
         year = self.year
         goldenjson = self.processor_config.goldenjson
@@ -111,7 +111,9 @@ class ZToMuMuProcessor(processor.ProcessorABC):
             )
             muon_weights.add_id_weights()
             muon_weights.add_iso_weights()
-            muon_weights.add_trigger_weights(hlt_paths=hlt_paths)
+            muon_weights.add_trigger_weights(
+                hlt_paths=hlt_paths, dataset_key=dataset_key
+            )
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
 
