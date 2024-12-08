@@ -7,6 +7,7 @@ from coffea.lumi_tools import LumiData, LumiList
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.configs import ProcessorConfigBuilder
+from analysis.filesets.utils import get_dataset_name
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.electron import ElectronWeights, ElectronSS
@@ -15,7 +16,6 @@ from analysis.selections import (
     ObjectSelector,
     get_lumi_mask,
     get_trigger_mask,
-    # get_trigger_match_mask,
 )
 
 
@@ -33,7 +33,7 @@ class ZToEEProcessor(processor.ProcessorABC):
 
     def process(self, events):
         dataset = events.metadata["dataset"]
-        dataset_key = dataset.split("_")[0]
+        ddataset_key = get_dataset_name(dataset)
         # get golden json, triggers, selections and histograms
         year = self.year
         goldenjson = self.processor_config.goldenjson

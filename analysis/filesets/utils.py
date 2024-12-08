@@ -45,3 +45,10 @@ def divide_list(lst: list, nfiles: int = 20) -> list:
         result.append(lst[start:end])
         start = end
     return result
+
+def get_dataset_name(dataset_key):
+    dataset_names = ["MuonEG", "EGamma", "Muon"]
+    for name in dataset_names:
+        if dataset_key.startswith(name):
+            return name
+    return "MC"
