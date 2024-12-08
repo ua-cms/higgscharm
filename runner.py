@@ -120,7 +120,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    datasets = background_samples + data_samples[args.processor][args.year]
+    datasets = background_samples[args.processor] + data_samples[args.processor][args.year]
     for dataset in datasets:
         cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles}"
         if args.submit:
