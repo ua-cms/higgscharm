@@ -4,17 +4,17 @@ import pickle
 import argparse
 from coffea import processor
 from humanfriendly import format_timespan
-from coffea.nanoevents import PFNanoAODSchema
+from coffea.nanoevents import NanoAODSchema
 from analysis.processors.ztoee import ZToEEProcessor
 from analysis.processors.ztomumu import ZToMuMuProcessor
-from analysis.processors.zztomumu import ZZToMuMuProcessor
+from analysis.processors.zzto4l import ZZTo4LProcessor
 
 
 def main(args):
     processors = {
         "ztomumu": ZToMuMuProcessor(year=args.year),
         "ztoee": ZToEEProcessor(year=args.year),
-        "zztomumu": ZZToMuMuProcessor(year=args.year)
+        "zzto4l": ZZTo4LProcessor(year=args.year),
     }
     t0 = time.monotonic()
     out = processor.run_uproot_job(
@@ -22,7 +22,7 @@ def main(args):
         treename="Events",
         processor_instance=processors[args.processor],
         executor=processor.futures_executor,
-        executor_args={"schema": PFNanoAODSchema, "workers": 4},
+        executor_args={"schema": NanoAODSchema, "workers": 4},
     )
     exec_time = format_timespan(time.monotonic() - t0)
     print(f"Execution time: {exec_time}")
