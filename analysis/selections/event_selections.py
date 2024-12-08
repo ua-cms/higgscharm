@@ -1,7 +1,9 @@
+import yaml
 import numpy as np
 import awkward as ak
+import importlib.resources
 from coffea.lumi_tools import LumiMask
-from analysis.selections.utils import trigger_match
+from analysis.selections.trigger import trigger_mask, trigger_match
 
 
 def get_lumi_mask(events, goldenjson):
@@ -13,12 +15,8 @@ def get_lumi_mask(events, goldenjson):
     return lumi_mask == 1
 
 
-def get_trigger_mask(events, hlt_paths):
-    trig_mask = np.zeros(len(events), dtype="bool")
-    for hlt_path in hlt_paths:
-        if hlt_path in events.HLT.fields:
-            trig_mask = trig_mask | events.HLT[hlt_path]
-    return trig_mask
+def get_trigger_mask(events, hlt_paths, dataset_key):
+    return trigger_mask(events, hlt_paths, dataset_key)
 
 
 def get_trigger_match_mask(events, leptons, hlt_paths):
