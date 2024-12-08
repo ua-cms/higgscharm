@@ -7,34 +7,33 @@ from coffea.lumi_tools import LumiData, LumiList
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.configs import ProcessorConfigBuilder
+from analysis.histograms import HistBuilder, fill_histogram
 from analysis.corrections.muon import MuonWeights
-from analysis.corrections.electron import ElectronSS
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
-from analysis.histograms import HistBuilder, fill_histogram
+from analysis.corrections.electron import ElectronWeights, ElectronSS
 from analysis.selections import (
     ObjectSelector,
     get_lumi_mask,
     get_trigger_mask,
-    get_trigger_match_mask,
 )
 
 
 PFNanoAODSchema.warn_missing_crossrefs = False
 
 
-class ZZToMuMuProcessor(processor.ProcessorABC):
+class ZZTo4LProcessor(processor.ProcessorABC):
     def __init__(self, year: str):
         self.year = year
 
-        config_builder = ProcessorConfigBuilder(processor="zztomumu", year=year)
+        config_builder = ProcessorConfigBuilder(processor="zzto4l", year=year)
         self.processor_config = config_builder.build_processor_config()
         self.histogram_config = self.processor_config.histogram_config
         self.histograms = HistBuilder(self.processor_config).build_histogram()
 
     def process(self, events):
         dataset = events.metadata["dataset"]
-
+        dataset_key = dataset.split("_")[0]
         # get golden json, triggers, selections and histograms
         year = self.year
         goldenjson = self.processor_config.goldenjson
@@ -100,18 +99,18 @@ class ZZToMuMuProcessor(processor.ProcessorABC):
                 variation="nominal",
                 weights_container=weights_container,
             )
-            # add muon id, iso and trigger weights
-            muon_weights = MuonWeights(
+            # add electron id, reco and trigger weights
+            electron_weights = ElectronWeights(
                 events=events,
                 year=self.year,
-                variation="nominal",
                 weights=weights_container,
-                id_wp=object_selections["muons"]["cuts"]["muon_id"],
-                iso_wp=object_selections["muons"]["cuts"]["muon_iso"],
+                variation="nominal",
+                id_wp=object_selections["electrons"]["cuts"]["electron_id"],
             )
-            muon_weights.add_id_weights()
-            muon_weights.add_iso_weights()
-            muon_weights.add_trigger_weights(hlt_paths=hlt_paths)
+            electron_weights.add_id_weights()
+            electron_weights.add_reco_weights("RecoBelow20")
+            electron_weights.add_reco_weights("Reco20to75")
+            electron_weights.add_reco_weights("RecoAbove75")
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
 
@@ -134,8 +133,6 @@ class ZZToMuMuProcessor(processor.ProcessorABC):
         # --------------------------------------------------------------
         object_selector = ObjectSelector(object_selections, year)
         objects = object_selector.select_objects(events)
-        
-        print(f"{ak.sum(ak.num(objects['muons'])==4)}")
 
         # --------------------------------------------------------------
         # Event selection
