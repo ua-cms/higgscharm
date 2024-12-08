@@ -64,6 +64,6 @@ def get_era(input_str):
         match = re.search(r"MuonEG([A-Za-z])|Muon([A-Za-z])|EGamma([A-Za-z])", input_str)
         if match:
             # Return the first matched group (the letter following "Muon", "MuonEG" or "EGamma")
-            return match.group(1) or match.group(2)
+            return match.group(1) or match.group(2) or match.group(3)
     # If the input doesn't start with "Muon" or "EGamma", return "MC"
     return "MC"
