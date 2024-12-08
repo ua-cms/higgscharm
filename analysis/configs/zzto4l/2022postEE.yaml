@@ -179,7 +179,7 @@ histogram_config:
       bins: 100
       start: 12
       stop: 120
-      label: $m(Z_1)$ [GeV]
+      label: $m(Z_2)$ [GeV]
       expression: objects['zz_candidate'].z2.p4.mass
     zz_mass:
       type: Regular
