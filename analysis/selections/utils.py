@@ -51,7 +51,7 @@ def select_zzto4l_zz_candidates(ll_pairs):
         }
     )
     # ghost removal: ∆R(η, φ) > 0.02 between each of the four leptons
-    ghost_removal = (
+    ghost_removal_mask = (
         (zz_pairs.z1.l1.delta_r(zz_pairs.z1.l2) > 0.02)
         & (zz_pairs.z1.l1.delta_r(zz_pairs.z2.l1) > 0.02)
         & (zz_pairs.z1.l1.delta_r(zz_pairs.z2.l2) > 0.02)
@@ -59,10 +59,8 @@ def select_zzto4l_zz_candidates(ll_pairs):
         & (zz_pairs.z1.l2.delta_r(zz_pairs.z2.l2) > 0.02)
         & (zz_pairs.z2.l1.delta_r(zz_pairs.z2.l2) > 0.02)
     )
-    zz_pairs = zz_pairs[ghost_removal]
-    
     # Lepton pT: two of the four selected leptons should pass pT,i > 20 GeV and pT,j > 10
-    lepton_pt = (
+    lepton_pt_mask = (
         (
             ak.any(zz_pairs.z1.l1.pt > 20, axis=-1)
             & ak.any(zz_pairs.z1.l2.pt > 10, axis=-1)
@@ -112,10 +110,8 @@ def select_zzto4l_zz_candidates(ll_pairs):
             & ak.any(zz_pairs.z2.l1.pt > 10, axis=-1)
         )
     )
-    zz_pairs = zz_pairs[lepton_pt]
-    
     # QCD suppression: all four opposite-sign pairs that can be built with the four leptons (regardless of lepton flavor) must satisfy m > 4 GeV
-    qcd_condition = (
+    qcd_condition_mask = (
         (zz_pairs.z1.p4.mass > 4)
         & (zz_pairs.z2.p4.mass > 4)
         & (
@@ -147,9 +143,8 @@ def select_zzto4l_zz_candidates(ll_pairs):
             )
         )
     )
-    zz_pairs = zz_pairs[qcd_condition]
-    
     # Z1 mass > 40 GeV
-    zz_pairs = zz_pairs[zz_pairs.z1.p4.mass > 40]
+    mass_mask = zz_pairs.z1.p4.mass > 40
 
-    return zz_pairs
+    mask = ghost_removal_mask & lepton_pt_mask & qcd_condition_mask & mass_mask
+    return zz_pairs[ak.fill_none(mask, False)]

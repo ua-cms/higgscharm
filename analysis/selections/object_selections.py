@@ -97,6 +97,14 @@ class ObjectSelector:
             behavior=candidate.behavior,
         )
 
+    def select_zzto4l_ll_pairs(self):
+        self.objects["ll_pairs"] = ak.combinations(
+            self.objects["leptons"], 2, fields=["l1", "l2"]
+        )
+        self.objects["ll_pairs"].pt = (
+            self.objects["ll_pairs"].l1.pt + self.objects["ll_pairs"].l2.pt
+        )
+
     def select_zzto4l_zzpairs(self):
         # sort lepton pairs by proximity to Z mass
         zmass = 91.1876
@@ -125,5 +133,26 @@ class ObjectSelector:
             )
             & (alt_zz_pairs.z2.p4.mass < 12)
         )
-
         self.objects["zz_pairs"] = zz_pairs[smart_cut]
+        self.objects["zz_pairs"].pt = (
+            self.objects["zz_pairs"].z1.p4.pt + self.objects["zz_pairs"].z2.p4.pt
+        )
+
+    def select_zzto4l_zzcandidate(self):
+        """
+        selects best zz candidate as the one with Z1 closest in mass to nominal Z boson mass
+        and Z2 from the candidates whose lepton give higher pT sum
+        """
+        # get mask of Z1's closest to Z
+        zmass = 91.1876
+        z1_dist_to_z = np.abs(self.objects["zz_pairs"].z1.p4.mass - zmass)
+        min_z1_dist_to_z = ak.min(z1_dist_to_z, axis=1)
+        closest_z1_mask = z1_dist_to_z == min_z1_dist_to_z
+        # get mask of Z2's with higher pT sum
+        z2_pt_sum = (
+            self.objects["zz_pairs"].z2.l1.pt + self.objects["zz_pairs"].z2.l2.pt
+        )
+        max_z2_pt_sum = ak.max(z2_pt_sum[closest_z1_mask], axis=1)
+        best_candidate_mask = (z2_pt_sum == max_z2_pt_sum) & closest_z1_mask
+        # select best candidate from zz_pairs
+        self.objects["zz_candidate"] = self.objects["zz_pairs"][best_candidate_mask]
