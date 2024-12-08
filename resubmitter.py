@@ -19,7 +19,7 @@ def main(args):
     total_files = len(condor_files)
 
     # get jobs already run
-    dataset_path = f"{main_dir}/analysis/filesets/{args.year}_fileset.yaml"
+    dataset_path = f"{main_dir}/analysis/filesets/{args.year}_nanov12.yaml"
     with open(dataset_path, "r") as f:
         dataset_config = yaml.safe_load(f)
     datasets = dataset_config.keys()
