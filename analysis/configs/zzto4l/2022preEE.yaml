@@ -120,7 +120,7 @@ histogram_config:
       expression: objects['zz_candidate'].z1.p4.pt
     z1_mass:
       type: Regular
-      bins: 100
+      bins: 54
       start: 12
       stop: 120
       label: $m(Z_1)$ [GeV]
@@ -176,21 +176,21 @@ histogram_config:
       expression: objects['zz_candidate'].z2.p4.pt
     z2_mass:
       type: Regular
-      bins: 100
+      bins: 54
       start: 12
       stop: 120
-      label: $m(Z_1)$ [GeV]
+      label: $m(Z_2)$ [GeV]
       expression: objects['zz_candidate'].z2.p4.mass
     zz_mass:
       type: Regular
-      bins: 120
+      bins: 66
       start: 70
-      stop: 800
+      stop: 400
       label: $m_{4\ell}$ [GeV]
       expression: (objects['zz_candidate'].z1.p4 + objects['zz_candidate'].z2.p4).mass
     zz_pt:
       type: Regular
-      bins: 50
+      bins: 40
       start: 0
       stop: 400
       label: $pT_{4\ell}$ [GeV]
@@ -275,8 +275,30 @@ histogram_config:
         - 0
         - 4
         - 5
-      label: HadronFlavour
+      label: Leading Jet HadronFlavour
       expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
+    subleadingjet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
+    subleadingjet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
+    subleadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: Subleading Jet HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
   layout:
     z1_lepton1_pt:
       - z1_lepton1_pt
@@ -319,3 +341,7 @@ histogram_config:
       - leadingjet_flavour
       - leadingjet_cvsb
       - leadingjet_cvsl
+    subleading_jet:
+      - subleadingjet_flavour
+      - subleadingjet_cvsb
+      - subleadingjet_cvsl
