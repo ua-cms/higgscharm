@@ -5,7 +5,7 @@ import correctionlib.schemav2 as cs
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.met import update_met
-from analysis.selections.trigger import trigger_match
+from analysis.selections.trigger import trigger_match_mask
 from analysis.corrections.utils import get_pog_json, unflat_sf
 from analysis.selections.event_selections import get_trigger_mask
 
@@ -228,23 +228,17 @@ class ElectronWeights:
             get_pog_json(json_name="electron_hlt", year=self.year)
         )
         # get trigger masks
-        trigger_mask = get_trigger_mask(self.events, hlt_paths, dataset_key)
-        trigger_mask = ak.flatten(ak.ones_like(self.electrons.pt) * trigger_mask) > 0
-        """
-        trigger_match_mask = np.zeros(len(self.events), dtype="bool")
-        for hlt_path in hlt_paths:
-            if hlt_path in self.events.HLT.fields:
-                trig_obj_mask = trigger_match(
-                    leptons=self.electrons,
-                    trigobjs=self.events.TrigObj,
-                    hlt_path=hlt_path,
-                )
-                trigger_match_mask = trigger_match_mask | trig_obj_mask
-        trigger_match_mask = ak.flatten(trigger_match_mask)
-        """
+        trigger = get_trigger_mask(self.events, hlt_paths, dataset_key)
+        trigger_match = trigger_match_mask(
+            events=self.events, leptons=self.electrons, hlt_paths=hlt_paths
+        )
+        trigger_mask = (
+            ak.flatten(ak.ones_like(self.electrons.pt) * trigger) > 0
+        ) & ak.flatten(trigger_match)
+
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = self.flat_electrons.pt > 25.0
-        in_electrons_mask = electron_pt_mask & trigger_mask  # & trigger_match_mask
+        in_electrons_mask = electron_pt_mask & trigger_mask
         in_electrons = self.flat_electrons.mask[in_electrons_mask]
 
         # get electrons pT and abseta (replace None values with some 'in-limit' value)

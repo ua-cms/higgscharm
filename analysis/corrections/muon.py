@@ -5,7 +5,7 @@ import awkward as ak
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.working_points import working_points
-from analysis.selections.trigger import trigger_match
+from analysis.selections.trigger import trigger_match_mask
 from analysis.corrections.utils import get_pog_json, unflat_sf
 from analysis.selections.event_selections import get_trigger_mask
 
@@ -263,21 +263,14 @@ class MuonWeights:
         """
         muon_pt_mask = self.flat_muons.pt > 26.0
         muon_eta_mask = np.abs(self.flat_muons.eta) < 2.4
-        # get trigger and muons matched to trigger objects
-        trigger_mask = get_trigger_mask(self.events, hlt_paths, dataset_key)
-        trigger_mask = ak.flatten(ak.ones_like(self.muons.pt) * trigger_mask) > 0
-        """
-        trigger_match_mask = np.zeros(len(self.events), dtype="bool")
-        for hlt_path in hlt_paths:
-            if hlt_path in self.events.HLT.fields:
-                trig_obj_mask = trigger_match(
-                    leptons=self.muons,
-                    trigobjs=self.events.TrigObj,
-                    hlt_path=hlt_path,
-                )
-                trigger_match_mask = trigger_match_mask | trig_obj_mask
-        trigger_match_mask = ak.flatten(trigger_match_mask)
-        """
+        # get trigger masks
+        trigger = get_trigger_mask(self.events, hlt_paths, dataset_key)
+        trigger_match = trigger_match_mask(
+            events=self.events, leptons=self.muons, hlt_paths=hlt_paths
+        )
+        trigger_mask = (
+            ak.flatten(ak.ones_like(self.muons.pt) * trigger) > 0
+        ) & ak.flatten(trigger_match)
         # get muons passing ID and Iso wps, trigger, and within SF binning
         in_muons_mask = (
             muon_pt_mask
@@ -285,7 +278,6 @@ class MuonWeights:
             & self.muon_id_mask
             & self.muon_iso_mask
             & trigger_mask
-            # & trigger_match_mask
         )
         in_muons = self.flat_muons.mask[in_muons_mask]
         # get muons pT and abseta (replace None values with some 'in-limit' value)
