@@ -33,7 +33,7 @@ class ZToEEProcessor(processor.ProcessorABC):
 
     def process(self, events):
         dataset = events.metadata["dataset"]
-        ddataset_key = get_dataset_name(dataset)
+        dataset_key = get_dataset_name(dataset)
         # get golden json, triggers, selections and histograms
         year = self.year
         goldenjson = self.processor_config.goldenjson
