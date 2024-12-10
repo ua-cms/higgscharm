@@ -12,10 +12,20 @@ data_samples = {
     },
     "zzto4l": {
         "2022preEE": ["MuonC", "MuonD", "MuonEGC", "MuonEGD", "EGammaC", "EGammaD"],
-        "2022postEE": ["MuonE", "MuonF", "MuonG", "MuonEGE", "MuonEGF", "MuonEGG", "EGammaE", "EGammaF", "EGammaG"],
+        "2022postEE": [
+            "MuonE",
+            "MuonF",
+            "MuonG",
+            "MuonEGE",
+            "MuonEGF",
+            "MuonEGG",
+            "EGammaE",
+            "EGammaF",
+            "EGammaG",
+        ],
     },
 }
-background_samples = {
+mc_samples = {
     "ztoee": [
         # DY+jets
         "DYto2L_2Jets_50",
@@ -61,27 +71,23 @@ background_samples = {
         "TBbarQ",
     ],
     "zzto4l": [
-        # bbH
+        # SIGNAL
         "bbH_Hto2Zto4L",
-        # ggH
         "GluGluHtoZZto4L",
-        # ggToZZ
+        "TTH_Hto2Z",
+        "VBFHto2Zto4L",
+        "WminusH_Hto2Zto4L",
+        "WplusH_Hto2Zto4L",
+        "ZHto2Zto4L"
+        # BACKGROUND
         "GluGluToContinto2Zto2E2Mu",
         "GluGluToContinto2Zto2E2Tau",
         "GluGluToContinto2Zto2Mu2Tau",
         "GluGlutoContinto2Zto4E",
         "GluGlutoContinto2Zto4Mu",
         "GluGlutoContinto2Zto4Tau",
-        # ttH
-        "TTH_Hto2Z",
-        # VBF
-        "VBFHto2Zto4L",
-        # WH
-        "WminusH_Hto2Zto4L",
-        "WplusH_Hto2Zto4L",
-        # ZH
-        "ZHto2Zto4L"
-    ]
+        "ZZto4L",
+    ],
 }
 
 
@@ -120,7 +126,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    datasets = background_samples[args.processor] + data_samples[args.processor][args.year]
+    datasets = (
+        background_samples[args.processor] + data_samples[args.processor][args.year]
+    )
     for dataset in datasets:
         cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles}"
         if args.submit:
