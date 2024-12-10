@@ -78,7 +78,7 @@ mc_samples = {
         "VBFHto2Zto4L",
         "WminusH_Hto2Zto4L",
         "WplusH_Hto2Zto4L",
-        "ZHto2Zto4L"
+        "ZHto2Zto4L",
         # BACKGROUND
         "GluGluToContinto2Zto2E2Mu",
         "GluGluToContinto2Zto2E2Tau",
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     datasets = (
-        background_samples[args.processor] + data_samples[args.processor][args.year]
+        mc_samples[args.processor] + data_samples[args.processor][args.year]
     )
     for dataset in datasets:
         cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles}"
