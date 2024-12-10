@@ -1,11 +1,17 @@
 import yaml
 import numpy as np
+import awkward as ak
 import importlib.resources
 
 
-def trigger_from_flag(events, flag):
+def get_hltpaths_from_flag(flag):
     with importlib.resources.open_text(f"analysis.data", f"trigger_flags.yaml") as file:
         hlt_paths = yaml.safe_load(file)[flag]
+    return hlt_paths
+
+
+def trigger_from_flag(events, flag):
+    hlt_paths = get_hltpaths_from_flag(flag)
     trigger_mask = np.zeros(len(events), dtype="bool")
     for hlt_path in hlt_paths:
         trigger_mask = trigger_mask | events.HLT[hlt_path]
@@ -92,3 +98,17 @@ def trigger_match(leptons, trigobjs, hlt_path):
     n_of_trigger_matches = ak.sum(pass_delta_r, axis=2)
     trig_matched_locs = n_of_trigger_matches >= 1
     return trig_matched_locs
+
+
+def trigger_match_mask(events, leptons, hlt_paths):
+    trigger_match_mask = np.zeros(len(events), dtype="bool")
+    for dataset_flags in hlt_paths.values():
+        for flag in dataset_flags:
+            for hlt_path in get_hltpaths_from_flag(flag):
+                trig_obj_mask = trigger_match(
+                    leptons=leptons,
+                    trigobjs=events.TrigObj,
+                    hlt_path=hlt_path,
+                )
+                trigger_match_mask = trigger_match_mask | trig_obj_mask
+    return trigger_match_mask
