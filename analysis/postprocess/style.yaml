@@ -1,11 +1,11 @@
 rcParams:
   font.size: 20
   axes.titlesize: 30
-  axes.labelsize: 20
+  axes.labelsize: 25
   xtick.labelsize: 15
   ytick.labelsize: 15
   lines.markersize: 30
-  legend.fontsize: 12
+  legend.fontsize: 14
   xtick.minor.width: 1
   xtick.minor.size: 4
   xtick.major.width: 1
