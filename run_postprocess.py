@@ -32,13 +32,11 @@ def main(args):
         output_dir=args.output_dir,
     )
     processed_histograms = postprocessor.histograms
-    lumi = postprocessor.luminosities["Total"]
     # initialize plotter
     plotter = Plotter(
         processor=args.processor,
         processed_histograms=processed_histograms,
         year=args.year,
-        lumi=lumi,
         output_dir=args.output_dir,
     )
     # plot histograms

@@ -23,8 +23,12 @@ class Postprocessor:
         # get datasets configs
         main_dir = Path.cwd()
         fileset_path = Path(f"{main_dir}/analysis/filesets")
-        with open(f"{fileset_path}/{year}_fileset.yaml", "r") as f:
+        with open(f"{fileset_path}/{year}_nanov12.yaml", "r") as f:
             self.dataset_config = yaml.safe_load(f)
+            
+        # load luminosities
+        with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:
+            self.luminosities = yaml.safe_load(f)
 
         # get categories
         config_builder = ProcessorConfigBuilder(processor=processor, year=year)
@@ -148,14 +152,7 @@ class Postprocessor:
                 )
 
     def set_lumixsec_weights(self):
-        """compute luminosity and xsec-lumi weights"""
-        # get integrated luminosity (/pb)
-        self.luminosities = {}
-        for sample, metadata in self.metadata.items():
-            if "lumi" in metadata:
-                self.luminosities[sample] = float(metadata["lumi"])
-        self.luminosities["Total"] = np.sum(list(self.luminosities.values()))
-        logging.info(pd.DataFrame({"luminosity [/pb]": self.luminosities}))
+        logging.info(f"luminosity [/pb] {self.luminosities[self.year]}")
         # compute lumi-xsec weights
         self.weights = {}
         self.xsecs = {}
@@ -166,7 +163,7 @@ class Postprocessor:
             self.sumw[sample] = metadata["sumw"]
             if self.dataset_config[sample]["era"] == "MC":
                 self.weights[sample] = (
-                    self.luminosities["Total"] * self.xsecs[sample]
+                    self.luminosities[self.year] * self.xsecs[sample]
                 ) / self.sumw[sample]
 
     def scale_histograms(self):
@@ -232,7 +229,7 @@ class Postprocessor:
                 )
                 if self.dataset_config[sample]["era"] == "MC":
                     stat_error /= self.metadata[sample]["raw_initial_nevents"]
-                    stat_error *= self.luminosities["Total"] * self.xsecs[sample]
+                    stat_error *= self.luminosities[self.year] * self.xsecs[sample]
                 stat_errors[process] += stat_error**2
             stat_errors[process] = np.sqrt(stat_errors[process])
 

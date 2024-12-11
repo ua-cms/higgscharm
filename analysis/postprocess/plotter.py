@@ -23,28 +23,43 @@ class Plotter:
         processor: str,
         processed_histograms: dict,
         year: str,
-        lumi: int,
         output_dir: str = None,
     ):
         self.processor = processor
         self.processed_histograms = processed_histograms
         self.year = year
-        self.lumi = lumi
         self.output_dir = output_dir
 
         # get histogram config
         config_builder = ProcessorConfigBuilder(processor=processor, year=year)
         processor_config = config_builder.build_processor_config()
         self.histogram_config = processor_config.histogram_config
-
+        
+        # load luminosities
+        with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:
+            self.luminosities = yaml.safe_load(f)
+            
         # load style config and set color map
         with open(f"{Path.cwd()}/analysis/postprocess/style.yaml", "r") as f:
             self.style = yaml.safe_load(f)
         self.color_map = {
-            "DY+Jets": "#3f90da",
-            "tt": "#94a4a2",
-            "Single Top": "#bd1f01",
-            "Diboson": "#ffa90e",
+            "ztomumu": {
+                "DY+Jets": "#3f90da",
+                "tt": "#94a4a2",
+                "Single Top": "#bd1f01",
+                "Diboson": "#ffa90e",
+            },
+            "ztoee": {
+                "DY+Jets": "#3f90da",
+                "tt": "#94a4a2",
+                "Single Top": "#bd1f01",
+                "Diboson": "#ffa90e",
+            },
+            "zzto4l": {
+                "H(125)": "#bd1f01",
+                "ggToZZ": "#ffa90e",
+                "qqToZZ": "#3f90da",
+            }
         }
 
     def get_histogram(
@@ -331,7 +346,7 @@ class Plotter:
             ax.set_yscale("log")
         # add CMS info
         hep.cms.lumitext(
-            f"{self.lumi * 1e-3:.1f} fb$^{{-1}}$ ({self.year}, 13.6 TeV)",
+            f"{self.luminosities[self.year] * 1e-3:.1f} fb$^{{-1}}$ ({self.year}, 13.6 TeV)",
             ax=ax,
         )
         hep.cms.text("Preliminary", ax=ax)
