@@ -18,14 +18,14 @@ object_selection:
     field: events.Electron
     cuts:
       pt: events.Electron.pt > 10
-      abseta: np.abs(events.Electron.eta) < 2.4
+      abseta: np.abs(events.Electron.eta) < 2.5
       electron_id: wp80iso
       electron_muon_dr: delta_r_mask(events.Electron, objects['muons'], 0.4)
   jets:
     field: events.Jet
     cuts:
       min_pt: events.Jet.pt > 20
-      abseta: np.abs(events.Jet.eta) < 2.4
+      abseta: np.abs(events.Jet.eta) < 2.5
       jet_id: tightlepveto
       jet_muon_dr: delta_r_mask(events.Jet, objects['muons'], 0.4)
       jet_electron_dr: delta_r_mask(events.Jet, objects['electrons'], 0.4)
@@ -42,6 +42,7 @@ event_selection:
     lumimask: get_lumi_mask(events, goldenjson)
     first_muon_pt: ak.firsts(objects['muons'].pt) > 27
     second_muon_pt: ak.pad_none(objects['muons'], target=2)[:, 1].pt > 15
+    electron_veto: ak.num(objects['electrons']) == 0
     two_muons: ak.num(objects['muons']) == 2
     one_z: ak.num(objects['dimuons'].z) == 1
   categories:
@@ -51,6 +52,7 @@ event_selection:
       - trigger
       - first_muon_pt
       - second_muon_pt
+      - electron_veto
       - two_muons
       - one_z
 histogram_config:
