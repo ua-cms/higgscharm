@@ -7,7 +7,7 @@ object_selection:
   muons:
     field: events.Muon
     cuts:
-      pt: events.Muon.pt > 27
+      pt: events.Muon.pt > 10
       abseta: np.abs(events.Muon.eta) < 2.4
       dxy: events.Muon.dxy < 0.5
       dz: events.Muon.dz < 1
@@ -17,7 +17,7 @@ object_selection:
   electrons:
     field: events.Electron
     cuts:
-      pt: events.Electron.pt > 30
+      pt: events.Electron.pt > 10
       abseta: np.abs(events.Electron.eta) < 2.4
       electron_id: wp80iso
       electron_muon_dr: delta_r_mask(events.Electron, objects['muons'], 0.4)
@@ -37,9 +37,11 @@ object_selection:
       mass_window: (objects['dimuons'].z.mass > 60.0) & (objects['dimuons'].z.mass < 120.0)
 event_selection:
   selections:
+    trigger: get_trigger_mask(events, hlt_paths, dataset_key)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     lumimask: get_lumi_mask(events, goldenjson)
-    trigger: get_trigger_mask(events, hlt_paths, dataset_key)
+    first_muon_pt: ak.firsts(objects['muons'].pt) > 27
+    second_muon_pt: ak.pad_none(objects['muons'], target=2)[:, 1].pt > 15
     two_muons: ak.num(objects['muons']) == 2
     one_z: ak.num(objects['dimuons'].z) == 1
   categories:
@@ -47,6 +49,8 @@ event_selection:
       - atleast_one_goodvertex
       - lumimask
       - trigger
+      - first_muon_pt
+      - second_muon_pt
       - two_muons
       - one_z
 histogram_config:
