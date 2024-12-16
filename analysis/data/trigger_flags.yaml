@@ -17,3 +17,5 @@ MuEle:
 TriMu:
   - TripleMu_10_5_5_DZ
   - TripleMu_12_10_5
+TriEle:
+  - Ele16_Ele12_Ele8_CaloIdL_TrackIdL
