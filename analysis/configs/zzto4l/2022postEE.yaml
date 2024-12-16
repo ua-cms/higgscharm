@@ -10,6 +10,7 @@ hlt_paths:
   EGamma:
     - SingleEle
     - DiEle
+    - TriEle
 object_selection:
   muons:
     field: events.Muon
