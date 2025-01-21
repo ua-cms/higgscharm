@@ -5,7 +5,8 @@ from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.working_points import working_points
 from analysis.selections import (
-    delta_r_mask,
+    delta_r_higher,
+    delta_r_lower,
     select_dileptons,
     select_zzto4l_zz_candidates,
 )

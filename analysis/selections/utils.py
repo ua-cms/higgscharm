@@ -2,11 +2,15 @@ import awkward as ak
 from coffea.nanoevents.methods import candidate
 
 
-def delta_r_mask(first, second, threshold=0.4):
+def delta_r_higher(first, second, threshold=0.4):
     # select objects from 'first' which are at least 'threshold' away from all objects in 'second'.
     mval = first.metric_table(second)
     return ak.all(mval > threshold, axis=-1)
 
+def delta_r_lower(first, second, threshold=0.4):
+    # select objects from 'first' which are at least 'threshold' within from all objects in 'second'.
+    mval = first.metric_table(second)
+    return ak.all(mval <= threshold, axis=-1)
 
 def select_dileptons(objects, key):
     leptons = ak.zip(
