@@ -29,7 +29,21 @@ You need to have a valid grid proxy in the CMS VO. (see [here](https://twiki.cer
 ```
 voms-proxy-init --voms cms
 ```
-Jobs are submitted at LXPLUS via the [submit_condor.py](https://github.com/deoache/higgscharm/blob/lxplus/submit_condor.py) script:
+Use the [make_filesets.py](https://github.com/deoache/higgscharm/blob/lxplus/analysis/filesets/make_filesets.py) script to build the input filesets with xrootd endpoints:
+```
+# get the singularity shell 
+singularity shell -B /afs -B /eos -B /cvmfs /cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.10
+
+# move to the fileset directory
+cd analysis/filesets/
+
+# run the 'make_filesets' script
+python make_filesets.py --year <year>
+
+# exit the singularity
+exit
+```
+With the input filesets in place, jobs are submitted at LXPLUS via the [submit_condor.py](https://github.com/deoache/higgscharm/blob/lxplus/submit_condor.py) script:
 ```
 usage: submit_condor.py [-h] [--processor PROCESSOR] [--dataset DATASET] [--year YEAR] [--nfiles NFILES] [--eos] [--submit]
 
