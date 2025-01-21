@@ -1,7 +1,6 @@
 import correctionlib
 import numpy as np
 import awkward as ak
-import correctionlib.schemav2 as cs
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.corrections.met import update_met
