@@ -20,15 +20,15 @@ object_selection:
       pt: events.Electron.pt > 10
       abseta: np.abs(events.Electron.eta) < 2.5
       electron_id: wp80iso
-      electron_muon_dr: delta_r_mask(events.Electron, objects['muons'], 0.4)
+      electron_muon_dr: delta_r_higher(events.Electron, objects['muons'], 0.4)
   jets:
     field: events.Jet
     cuts:
       min_pt: events.Jet.pt > 20
       abseta: np.abs(events.Jet.eta) < 2.5
       jet_id: tightlepveto
-      jet_muon_dr: delta_r_mask(events.Jet, objects['muons'], 0.4)
-      jet_electron_dr: delta_r_mask(events.Jet, objects['electrons'], 0.4)
+      jet_muon_dr: delta_r_higher(events.Jet, objects['muons'], 0.4)
+      jet_electron_dr: delta_r_higher(events.Jet, objects['electrons'], 0.4)
   dielectrons:
     field: select_dielectrons
     cuts:
