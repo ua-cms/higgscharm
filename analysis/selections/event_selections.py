@@ -3,7 +3,7 @@ import numpy as np
 import awkward as ak
 import importlib.resources
 from coffea.lumi_tools import LumiMask
-from analysis.selections.trigger import trigger_mask, trigger_match, trigger_match_mask
+from analysis.selections.trigger import trigger_mask, trigger_match_mask
 
 
 def get_lumi_mask(events, goldenjson):
