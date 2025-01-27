@@ -180,7 +180,7 @@ class Plotter:
         colors, labels = [], []
         for process in histogram_info["nominal"]:
             labels.append(process)
-            colors.append(self.color_map[process])
+            colors.append(self.color_map[self.processor][process])
         return labels, colors
 
     def plot_uncert_band(self, histogram_info, ax):
