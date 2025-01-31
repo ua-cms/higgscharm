@@ -31,7 +31,7 @@ object_selection:
       dxy: events.Electron.dxy < 0.5
       sip3d: events.Electron.sip3d < 4
       electron_id: wp80iso
-      electron_muon_dr: delta_r_mask(events.Electron, objects['muons'], 0.05)
+      electron_muon_dr: delta_r_higher(events.Electron, objects['muons'], 0.05)
   leptons:
     field: select_zzto4l_leptons
     cuts: null
@@ -41,7 +41,7 @@ object_selection:
       min_pt: events.Jet.pt > 20
       abseta: np.abs(events.Jet.eta) < 2.5
       jet_id: tightlepveto
-      jet_lepton_dr: delta_r_mask(events.Jet, objects['leptons'], 0.4)
+      jet_lepton_dr: delta_r_higher(events.Jet, objects['leptons'], 0.4)
   ll_pairs:
     field: select_zzto4l_ll_pairs
     cuts:
