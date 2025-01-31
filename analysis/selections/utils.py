@@ -54,6 +54,25 @@ def select_zzto4l_zz_candidates(ll_pairs):
             ),
         }
     )
+    # get zz pairs with original lepton 4-vectors (needed for QCD )
+    zz_pairs_orig = ak.zip(
+        {
+            "z1": ak.zip(
+                {
+                    "l1": zz_pairs.z1.l1.orig,
+                    "l2": zz_pairs.z1.l2.orig,
+                    "p4": zz_pairs.z1.l1.orig + zz_pairs.z1.l2.orig,
+                }
+            ),
+            "z2": ak.zip(
+                {
+                    "l1": zz_pairs.z2.l1.orig,
+                    "l2": zz_pairs.z2.l2.orig,
+                    "p4": zz_pairs.z2.l1.orig + zz_pairs.z2.l2.orig,
+                }
+            ),
+        }
+    )
     # ghost removal: ∆R(η, φ) > 0.02 between each of the four leptons
     ghost_removal_mask = (
         (zz_pairs.z1.l1.delta_r(zz_pairs.z1.l2) > 0.02)
@@ -116,34 +135,34 @@ def select_zzto4l_zz_candidates(ll_pairs):
     )
     # QCD suppression: all four opposite-sign pairs that can be built with the four leptons (regardless of lepton flavor) must satisfy m > 4 GeV
     qcd_condition_mask = (
-        (zz_pairs.z1.p4.mass > 4)
-        & (zz_pairs.z2.p4.mass > 4)
+        (zz_pairs_orig.z1.p4.mass > 4)
+        & (zz_pairs_orig.z2.p4.mass > 4)
         & (
-            (zz_pairs.z1.l1.charge + zz_pairs.z2.l1.charge != 0)
+            (zz_pairs_orig.z1.l1.charge + zz_pairs_orig.z2.l1.charge != 0)
             | (
-                (zz_pairs.z1.l1.charge + zz_pairs.z2.l1.charge == 0)
-                & ((zz_pairs.z1.l1 + zz_pairs.z2.l1).mass > 4)
+                (zz_pairs_orig.z1.l1.charge + zz_pairs_orig.z2.l1.charge == 0)
+                & ((zz_pairs_orig.z1.l1 + zz_pairs_orig.z2.l1).mass > 4)
             )
         )
         & (
-            (zz_pairs.z1.l1.charge + zz_pairs.z2.l2.charge != 0)
+            (zz_pairs_orig.z1.l1.charge + zz_pairs_orig.z2.l2.charge != 0)
             | (
-                (zz_pairs.z1.l1.charge + zz_pairs.z2.l2.charge == 0)
-                & ((zz_pairs.z1.l1 + zz_pairs.z2.l2).mass > 4)
+                (zz_pairs_orig.z1.l1.charge + zz_pairs_orig.z2.l2.charge == 0)
+                & ((zz_pairs_orig.z1.l1 + zz_pairs_orig.z2.l2).mass > 4)
             )
         )
         & (
-            (zz_pairs.z1.l2.charge + zz_pairs.z2.l1.charge != 0)
+            (zz_pairs_orig.z1.l2.charge + zz_pairs_orig.z2.l1.charge != 0)
             | (
-                (zz_pairs.z1.l2.charge + zz_pairs.z2.l1.charge == 0)
-                & ((zz_pairs.z1.l2 + zz_pairs.z2.l1).mass > 4)
+                (zz_pairs_orig.z1.l2.charge + zz_pairs_orig.z2.l1.charge == 0)
+                & ((zz_pairs_orig.z1.l2 + zz_pairs_orig.z2.l1).mass > 4)
             )
         )
         & (
-            (zz_pairs.z1.l2.charge + zz_pairs.z2.l2.charge != 0)
+            (zz_pairs_orig.z1.l2.charge + zz_pairs_orig.z2.l2.charge != 0)
             | (
-                (zz_pairs.z1.l2.charge + zz_pairs.z2.l2.charge == 0)
-                & ((zz_pairs.z1.l2 + zz_pairs.z2.l2).mass > 4)
+                (zz_pairs_orig.z1.l2.charge + zz_pairs_orig.z2.l2.charge == 0)
+                & ((zz_pairs_orig.z1.l2 + zz_pairs_orig.z2.l2).mass > 4)
             )
         )
     )
