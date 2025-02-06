@@ -126,8 +126,63 @@ ZZ:
 WZto3LNu:
   era: MC
   query: WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
-  process: WZ
+  process: WZ+jets
   xsec: 4.924
+Zto2Q_200to400:
+  era: MC
+  query: Zto2Q-4Jets_HT-200to400_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: Z+jets
+  xsec: 1012.0
+Zto2Q_400to600:
+  era: MC
+  query: Zto2Q-4Jets_HT-400to600_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: Z+jets
+  xsec: 114.2
+Zto2Q_600to800:
+  era: MC
+  query: Zto2Q-4Jets_HT-600to800_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: Z+jets
+  xsec: 25.34
+Zto2Q_800:
+  era: MC
+  query: Zto2Q-4Jets_HT-800_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: Z+jets
+  xsec: 12.99
+Wto2Q_200to40:
+  era: MC
+  query: Wto2Q-3Jets_HT-200to400_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: W+jets
+  xsec: 2549.0
+Wto2Q_400to600:
+  era: MC
+  query: Wto2Q-3Jets_HT-400to600_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: W+jets
+  xsec: 276.5
+Wto2Q_600to800:
+  era: MC
+  query: Wto2Q-3Jets_HT-600to800_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: W+jets
+  xsec: 59.25
+Wto2Q_800:
+  era: MC
+  query: Wto2Q-3Jets_HT-800_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: W+jets
+  xsec: 28.75
+WtoLNu_0J:
+  era: MC
+  query: WtoLNu-2Jets_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v3/NANOAODSIM
+  process: W+jets
+  xsec: 48716.955
+WtoLNu_1J:
+  era: MC
+  query: WtoLNu-2Jets_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: W+jets
+  xsec: 8107.312
+WtoLNu_2J:
+  era: MC
+  query: WtoLNu-2Jets_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: W+jets
+  xsec: 3049.263
 ZZto4L:
   era: MC
   query: ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
@@ -137,64 +192,64 @@ GluGluToContinto2Zto2E2Mu:
   era: MC
   query: GluGluToContinto2Zto2E2Mu_TuneCP5_13p6TeV_mcfm701-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: ggToZZ
-  xsec: 6.115
+  xsec: 0.006 #6.115
 GluGluToContinto2Zto2E2Tau:
   era: MC
   query: GluGluToContinto2Zto2E2Tau_TuneCP5_13p6TeV_mcfm701-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v4/NANOAODSIM
   process: ggToZZ
-  xsec: 6.242
+  xsec: 0.006 #6.242
 GluGluToContinto2Zto2Mu2Tau:
   era: MC
   query: GluGluToContinto2Zto2Mu2Tau_TuneCP5_13p6TeV_mcfm701-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v4/NANOAODSIM
   process: ggToZZ
-  xsec: 6.242
+  xsec: 0.006 #6.242
 GluGlutoContinto2Zto4E:
   era: MC
   query: GluGlutoContinto2Zto4E_TuneCP5_13p6TeV_mcfm-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: ggToZZ
-  xsec: 3.06
+  xsec: 0.003 #3.042
 GluGlutoContinto2Zto4Mu:
   era: MC
   query: GluGlutoContinto2Zto4Mu_TuneCP5_13p6TeV_mcfm-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: ggToZZ
-  xsec: 3.042
+  xsec: 0.003 #3.042
 GluGlutoContinto2Zto4Tau:
   era: MC
   query: GluGlutoContinto2Zto4Tau_TuneCP5_13p6TeV_mcfm-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: ggToZZ
-  xsec: 3.042
+  xsec: 0.003 #3.042
 bbH_Hto2Zto4L:
   era: MC
   query: bbH_Hto2Zto4L_M-125_TuneCP5_13p6TeV_JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v1/NANOAODSIM
   process: H(125) #bbH
-  xsec: 4.88
+  xsec: 0.00014 #4.88
 GluGluHtoZZto4L:
   era: MC
   query: GluGluHtoZZto4L_M-125_TuneCP5_13p6TeV_powheg2-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: H(125) #ggH
-  xsec: 23.16
-ZHto2Zto4L:
-  era: MC
-  query: ZHto2Zto4L_M125_TuneCP5_13p6TeV_powheg2-minlo-HZJ-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
-  process: H(125) #ZH
-  xsec: 8.839
-TTH_Hto2Z:
-  era: MC
-  query: TTH_Hto2Z_M-125_4LFilter_TuneCP5_13p6TeV_powheg2-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
-  process: H(125) #ttH
-  xsec: 0.5806
+  xsec: 0.01434 #23.16
 VBFHto2Zto4L:
   era: MC
   query: VBFHto2Zto4L_M125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: H(125) #VBF
-  xsec: 4.224
+  xsec: 0.00112 #4.224
+ZHto2Zto4L:
+  era: MC
+  query: ZHto2Zto4L_M125_TuneCP5_13p6TeV_powheg2-minlo-HZJ-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: H(125) #ZH
+  xsec: 0.000775 #8.839
 WminusH_Hto2Zto4L:
   era: MC
   query: WminusH_Hto2Zto4L_M-125_TuneCP5_13p6TeV_powheg2-minlo-HWJ-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: H(125) #WH
-  xsec: 0.5803
+  xsec: 0.000156 #0.5803
 WplusH_Hto2Zto4L:
   era: MC
   query: WplusH_Hto2Zto4L_M-125_TuneCP5_13p6TeV_powheg2-minlo-HWJ-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: H(125) #WH
-  xsec: 0.9218
+  xsec: 0.000244 #0.9218
+TTH_Hto2Z:
+  era: MC
+  query: TTH_Hto2Z_M-125_4LFilter_TuneCP5_13p6TeV_powheg2-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  process: H(125) #ttH
+  xsec: 0.00012 #0.5806
