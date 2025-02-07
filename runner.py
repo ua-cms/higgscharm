@@ -24,6 +24,20 @@ data_samples = {
             "EGammaG",
         ],
     },
+    "hww": {
+        "2022preEE": ["MuonC", "MuonD", "MuonEGC", "MuonEGD", "EGammaC", "EGammaD"],
+        "2022postEE": [
+            "MuonE",
+            "MuonF",
+            "MuonG",
+            "MuonEGE",
+            "MuonEGF",
+            "MuonEGG",
+            "EGammaE",
+            "EGammaF",
+            "EGammaG",
+        ],
+    },
 }
 mc_samples = {
     "ztoee": [
@@ -88,6 +102,21 @@ mc_samples = {
         "GluGlutoContinto2Zto4Tau",
         "ZZto4L",
     ],
+    "hww": [
+        # Ttbar
+        "TTto2L2Nu",
+        "TTto4Q",
+        "TTtoLNu2Q",
+        # SingleTop
+        "TbarWplusto2L2Nu",
+        "TWminusto2L2Nu",
+        "TWminustoLNu2Q",
+        "TbarWplusto4Q",
+        "TbarWplustoLNu2Q",
+        "TWminusto4Q",
+        "TbarBQ",
+        "TBbarQ",
+    ]
 }
 
 
@@ -98,7 +127,7 @@ if __name__ == "__main__":
         dest="processor",
         type=str,
         default="ztomumu",
-        help="processor to be used {ztomumu, ztoee, zto4l} (default ztomumu)",
+        help="processor to be used {ztomumu, ztoee, zto4l, hww} (default ztomumu)",
     )
     parser.add_argument(
         "--year",
