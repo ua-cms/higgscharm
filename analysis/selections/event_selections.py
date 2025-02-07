@@ -1,4 +1,5 @@
 import yaml
+import json
 import numpy as np
 import awkward as ak
 import importlib.resources
@@ -22,3 +23,15 @@ def get_trigger_mask(events, hlt_paths, dataset_key):
 def get_trigger_match_mask(events, leptons, hlt_paths):
     mask = trigger_match_mask(events, leptons, hlt_paths)
     return ak.sum(mask, axis=-1) > 0
+
+
+def get_metfilters_mask(events, year):
+    with importlib.resources.path("analysis.data", "metfilters.json") as path:
+        with open(path, "r") as handle:
+            metfilters = json.load(handle)[year]
+    metfilters_mask = np.ones(len(events), dtype="bool")
+    metfilterkey = "mc" if hasattr(events, "genWeight") else "data"
+    for mf in metfilters[metfilterkey]:
+        if mf in events.Flag.fields:
+            metfilters_mask = metfilters_mask & events.Flag[mf]
+    return metfilters_mask
