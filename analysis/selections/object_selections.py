@@ -9,6 +9,7 @@ from analysis.selections import (
     delta_r_lower,
     select_dileptons,
     select_zzto4l_zz_candidates,
+    transverse_mass
 )
 
 
@@ -263,3 +264,39 @@ class ObjectSelector:
         best_candidate_mask = (z2_pt_sum == max_z2_pt_sum) & closest_z1_mask
         # select best candidate from zz_pairs
         self.objects["zz_candidate"] = self.objects["zz_pairs"][best_candidate_mask]
+        
+        
+    # --------------------------------------------------------------------------------
+    # HWW 
+    # --------------------------------------------------------------------------------
+    def select_hww_leptons(self):
+        # set 'leptons' by concatenating electrons and muons
+        leptons = ak.concatenate(
+            [self.objects["muons"], self.objects["electrons"]], axis=1
+        )
+        leptons = leptons[ak.argsort(leptons.pt, axis=1)]
+        self.objects["leptons"] = ak.zip(
+            {
+                "pt": leptons.pt,
+                "eta": leptons.eta,
+                "phi": leptons.phi,
+                "mass": leptons.mass,
+                "charge": leptons.charge,
+                "pdgId": leptons.pdgId,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+        self.objects["ll_pairs"] = ak.combinations(self.objects["leptons"], 2, fields=["l1", "l2"])
+        
+    def select_hww_mll(self):
+        self.objects["mll"] = transverse_mass(self.objects["ll_pairs"].l1+self.objects["ll_pairs"].l2, self.objects["met"])
+        
+    def select_hww_ml1(self):
+        self.objects["ml1"] = transverse_mass(self.objects["ll_pairs"].l1, self.objects["met"])
+        
+    def select_hww_ml2(self):
+        self.objects["ml2"] = transverse_mass(self.objects["ll_pairs"].l2, self.objects["met"])
+        
+    def select_candidate_cjet(self):
+        self.objects["candidate_cjet"] = self.objects["cjets"][ak.argmax(self.objects["cjets"].btagDeepFlavCvL, axis=1) == ak.local_index(self.objects["cjets"], axis=1)]
