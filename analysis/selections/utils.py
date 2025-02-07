@@ -1,3 +1,4 @@
+import numpy as np
 import awkward as ak
 from coffea.nanoevents.methods import candidate
 
@@ -171,3 +172,15 @@ def select_zzto4l_zz_candidates(ll_pairs):
 
     mask = ghost_removal_mask & lepton_pt_mask & qcd_condition_mask & mass_mask
     return zz_pairs[ak.fill_none(mask, False)]
+
+
+def transverse_mass(lepton, met):
+    return np.sqrt(
+        2.0
+        * lepton.pt
+        * met.pt
+        * (
+            ak.ones_like(met.pt)
+            - np.cos(lepton.delta_phi(met))
+        )
+    )
