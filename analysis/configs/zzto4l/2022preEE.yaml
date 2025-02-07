@@ -29,8 +29,9 @@ object_selection:
       pt: events.Electron.pt > 7
       abseta: np.abs(events.Electron.eta) < 2.5
       dxy: events.Electron.dxy < 0.5
+      dz: events.Electron.dz < 1
       sip3d: events.Electron.sip3d < 4
-      electron_id: wp80iso
+      electron_id: wp90iso
       electron_muon_dr: delta_r_higher(events.Electron, objects['muons'], 0.05)
   leptons:
     field: select_zzto4l_leptons
