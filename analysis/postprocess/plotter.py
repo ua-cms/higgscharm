@@ -42,25 +42,16 @@ class Plotter:
         # load style config and set color map
         with open(f"{Path.cwd()}/analysis/postprocess/style.yaml", "r") as f:
             self.style = yaml.safe_load(f)
-        self.color_map = {
-            "ztomumu": {
-                "DY+Jets": "#3f90da",
-                "tt": "#94a4a2",
-                "Single Top": "#bd1f01",
-                "Diboson": "#ffa90e",
-            },
-            "ztoee": {
-                "DY+Jets": "#3f90da",
-                "tt": "#94a4a2",
-                "Single Top": "#bd1f01",
-                "Diboson": "#ffa90e",
-            },
-            "zzto4l": {
-                "H(125)": "#bd1f01",
-                "ggToZZ": "#ffa90e",
-                "qqToZZ": "#3f90da",
-            }
-        }
+        with open(f"{Path.cwd()}/analysis/filesets/{self.year}_fileset.yaml", "r") as f:
+            dataset_configs = yaml.safe_load(f)
+        processes = sorted(
+            set(
+                dataset_configs[sample]["process"]
+                for sample in dataset_configs
+                if dataset_configs[sample]["process"] != "Data"
+            )
+        )
+        self.color_map = {process: color for process, color in zip(processes, colors)}
 
     def get_histogram(
         self,
