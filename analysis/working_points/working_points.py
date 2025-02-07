@@ -13,6 +13,11 @@ class WorkingPoints:
             "wp90iso": events.Electron.mvaIso_WP90,
             "wp80noiso": events.Electron.mvaNoIso_WP80,
             "wp90noiso": events.Electron.mvaNoIso_WP90,
+            "fail": events.Electron.cutBased == 0,
+            "veto": events.Electron.cutBased == 1,
+            "loose": events.Electron.cutBased == 2,
+            "medium": events.Electron.cutBased == 3,
+            "tight": events.Electron.cutBased == 4,
         }
         return wps[wp]
 
