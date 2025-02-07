@@ -1,5 +1,66 @@
+import correctionlib
 import numpy as np
 import awkward as ak
+
+
+def apply_met_phi_corrections(
+    events: ak.Array,
+    is_mc: bool,
+    year: str,
+):
+    """
+    Apply MET phi modulation corrections
+
+    Parameters:
+    -----------
+        events:
+            Events array
+        is_mc:
+            True if dataset is MC
+        year:
+            Year of the dataset  {'2022preEE', '2022postEE'}
+
+    Returns:
+    --------
+        corrected MET pt and phi
+    """
+    cset = correctionlib.CorrectionSet.from_file(
+        "analysis/data/met_xy_corrections.json"
+    )
+    events["PuppiMET", "pt_raw"] = ak.ones_like(events.PuppiMET.pt) * events.PuppiMET.pt
+    events["PuppiMET", "phi_raw"] = (
+        ak.ones_like(events.PuppiMET.phi) * events.PuppiMET.phi
+    )
+
+    # make sure to not cross the maximum allowed value for uncorrected met
+    met_pt = events.PuppiMET.pt_raw
+    met_pt = np.clip(met_pt, 0.0, 6499.0)
+    met_phi = events.PuppiMET.phi_raw
+    met_phi = np.clip(met_phi, -3.15, 3.15)
+
+    # use correct run ranges when working with data, otherwise use uniform run numbers in an arbitrary large window
+    run_ranges = {
+        "2022preEE": [355094, 359017],
+        "2022postEE": [359045, 362760],
+    }
+    data_kind = "mc" if is_mc else "data"
+    if data_kind == "mc":
+        run = np.random.randint(
+            run_ranges[year][0], run_ranges[year][1], size=len(met_pt)
+        )
+    else:
+        run = events.run
+    try:
+        events["PuppiMET", "pt"] = cset[f"pt_metphicorr_puppimet_{data_kind}"].evaluate(
+            met_pt.to_numpy(), met_phi.to_numpy(), events.PV.npvsGood.to_numpy(), run
+        )
+        events["PuppiMET", "phi"] = cset[
+            f"phi_metphicorr_puppimet_{data_kind}"
+        ].evaluate(
+            met_pt.to_numpy(), met_phi.to_numpy(), events.PV.npvsGood.to_numpy(), run
+        )
+    except:
+        pass
 
 
 def update_met(events: ak.Array, lepton: str = "Muon") -> None:
