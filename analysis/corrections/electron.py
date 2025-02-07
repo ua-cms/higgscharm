@@ -3,9 +3,10 @@ import numpy as np
 import awkward as ak
 from typing import Type
 from coffea.analysis_tools import Weights
+from analysis.working_points import working_points
 from analysis.corrections.met import update_met
-from analysis.selections.trigger import trigger_match_mask
 from analysis.corrections.utils import get_pog_json, unflat_sf
+from analysis.selections.trigger import trigger_match_mask
 from analysis.selections.event_selections import get_trigger_mask
 
 
@@ -47,10 +48,16 @@ class ElectronWeights:
         self.flat_electrons = ak.flatten(events.Electron)
         self.electrons_counts = ak.num(events.Electron)
 
-        # set id working points
-        self.id_wps = {
-            "wp80iso": self.flat_electrons.mvaIso_WP80,
-            "wp90iso": self.flat_electrons.mvaIso_WP90,
+        # set id working points map
+        self.id_map = {
+            "wp80iso": "wp80iso",
+            "wp90iso": "wp90iso",
+            "wp80noiso": "wp80noiso",
+            "wp90noiso": "wp90noiso",
+            "loose": "Loose",
+            "medium": "Medium",
+            "tight": "Tight",
+            "veto": "Veto"
         }
         self.year_map = {
             "2022postEE": "2022Re-recoE+PromptFG",
@@ -146,7 +153,7 @@ class ElectronWeights:
         )
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = self.flat_electrons.pt > 10.0
-        electron_id_mask = self.id_wps[self.id_wp]
+        electron_id_mask = ak.flatten(working_points.electron_id(self.events, self.id_wp))
         in_electron_mask = electron_pt_mask & electron_id_mask
         in_electrons = self.flat_electrons.mask[in_electron_mask]
 
@@ -158,7 +165,7 @@ class ElectronWeights:
             cset["Electron-ID-SF"].evaluate(
                 self.year_map[self.year],
                 variation,
-                self.id_wp,
+                self.id_map[self.id_wp],
                 electron_eta,
                 electron_pt,
             ),
@@ -283,9 +290,12 @@ class ElectronSS:
         self.flat_electrons = ak.flatten(events.Electron)
         self.electrons_counts = ak.num(events.Electron)
         # get correction set
-        self.cset = correctionlib.CorrectionSet.from_file(
-            get_pog_json(json_name="electron_scale", year=self.year)
-        )
+        try:
+            self.cset = correctionlib.CorrectionSet.from_file(
+                get_pog_json(json_name="electron_scale", year=self.year)
+            )
+        except:
+            self.cset = correctionlib.CorrectionSet.from_file(f"analysis/data/{year}_electronSS.json.gz")
 
     def apply_scale(self):
         """
