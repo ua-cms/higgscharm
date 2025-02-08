@@ -9,6 +9,7 @@ from analysis.corrections.utils import get_pog_json, unflat_sf
 from analysis.selections.trigger import trigger_match_mask
 from analysis.selections.event_selections import get_trigger_mask
 
+import importlib.resources
 
 class ElectronWeights:
     """
@@ -25,18 +26,17 @@ class ElectronWeights:
         variation:
             syst variation
         id_wp:
-            ID working point {'wpiso80', 'wpiso90'}
+            ID working point {wp80iso, wp90iso, wp80noiso, wp90noiso, loose, medium, tight, veto}
 
     more info: https://twiki.cern.ch/twiki/bin/view/CMS/EgammSFandSSRun3#Scale_factors_and_correction_AN1
     """
-
     def __init__(
         self,
         events: ak.Array,
         weights: Type[Weights],
-        year: str = "2022postEE",
-        variation: str = "nominal",
-        id_wp: str = "wp80iso",
+        year: str,
+        id_wp: str,
+        variation: str,
     ) -> None:
         self.events = events
         self.electrons = events.Electron
@@ -289,13 +289,9 @@ class ElectronSS:
         self.variation = variation
         self.flat_electrons = ak.flatten(events.Electron)
         self.electrons_counts = ak.num(events.Electron)
-        # get correction set
-        try:
-            self.cset = correctionlib.CorrectionSet.from_file(
-                get_pog_json(json_name="electron_scale", year=self.year)
-            )
-        except:
-            self.cset = correctionlib.CorrectionSet.from_file(f"analysis/data/{year}_electronSS.json.gz")
+        self.cset = correctionlib.CorrectionSet.from_file(
+            get_pog_json(json_name="electron_scale", year=self.year)
+        )
 
     def apply_scale(self):
         """
