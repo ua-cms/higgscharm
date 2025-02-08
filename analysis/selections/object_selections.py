@@ -9,7 +9,7 @@ from analysis.selections import (
     delta_r_lower,
     select_dileptons,
     select_zzto4l_zz_candidates,
-    transverse_mass
+    transverse_mass,
 )
 
 
@@ -110,7 +110,7 @@ class ObjectSelector:
         ]
         fsr_photons = fsr_photons[
             (fsr_photons.pt > 2)
-            & (np.abs(fsr_photons.eta) < 2.5)
+            & (np.abs(fsr_photons.eta) < (2.5 if leptons == "electrons" else 2.4))
             & (fsr_photons.relIso03 < 1.8)
             & (fsr_photons.dROverEt2 < 0.012)
             & (delta_r_lower(fsr_photons, leptons_with_matched_fsrphotons, 0.5))
@@ -139,7 +139,7 @@ class ObjectSelector:
         leptons_with_matched_fsrphotons = ak.pad_none(
             leptons_with_matched_fsrphotons, 1
         )
-        # add fsr photons and leptons 
+        # add fsr photons and leptons
         fsr_photons["mass"] = 0
         fsr_photons["charge"] = 0
         leptons_plus_fsrphotons = ak.zip(
@@ -156,7 +156,7 @@ class ObjectSelector:
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
-        # concatenate leptons with and without matched fsr photons 
+        # concatenate leptons with and without matched fsr photons
         self.objects[leptons] = ak.where(
             ak.any(has_matched_fsrphotons, axis=1)
             & ak.any(has_matched_leptons, axis=1),
@@ -264,10 +264,9 @@ class ObjectSelector:
         best_candidate_mask = (z2_pt_sum == max_z2_pt_sum) & closest_z1_mask
         # select best candidate from zz_pairs
         self.objects["zz_candidate"] = self.objects["zz_pairs"][best_candidate_mask]
-        
-        
+
     # --------------------------------------------------------------------------------
-    # HWW 
+    # HWW
     # --------------------------------------------------------------------------------
     def select_hww_leptons(self):
         # set 'leptons' by concatenating electrons and muons
@@ -287,16 +286,36 @@ class ObjectSelector:
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
-        self.objects["ll_pairs"] = ak.combinations(self.objects["leptons"], 2, fields=["l1", "l2"])
-        
+        self.objects["ll_pairs"] = ak.combinations(
+            self.objects["leptons"], 2, fields=["l1", "l2"]
+        )
+
+    def select_hww_ll_pairs(self):
+        self.objects["ll_pairs"] = ak.combinations(
+            self.objects["leptons"], 2, fields=["l1", "l2"]
+        )
+        self.objects["ll_pairs"].pt = (
+            self.objects["ll_pairs"].l1.pt + self.objects["ll_pairs"].l2.pt
+        )
+
     def select_hww_mll(self):
-        self.objects["mll"] = transverse_mass(self.objects["ll_pairs"].l1+self.objects["ll_pairs"].l2, self.objects["met"])
-        
+        self.objects["mll"] = transverse_mass(
+            self.objects["ll_pairs"].l1 + self.objects["ll_pairs"].l2,
+            self.objects["met"],
+        )
+
     def select_hww_ml1(self):
-        self.objects["ml1"] = transverse_mass(self.objects["ll_pairs"].l1, self.objects["met"])
-        
+        self.objects["ml1"] = transverse_mass(
+            self.objects["ll_pairs"].l1, self.objects["met"]
+        )
+
     def select_hww_ml2(self):
-        self.objects["ml2"] = transverse_mass(self.objects["ll_pairs"].l2, self.objects["met"])
-        
+        self.objects["ml2"] = transverse_mass(
+            self.objects["ll_pairs"].l2, self.objects["met"]
+        )
+
     def select_candidate_cjet(self):
-        self.objects["candidate_cjet"] = self.objects["cjets"][ak.argmax(self.objects["cjets"].btagDeepFlavCvL, axis=1) == ak.local_index(self.objects["cjets"], axis=1)]
+        self.objects["candidate_cjet"] = self.objects["cjets"][
+            ak.argmax(self.objects["cjets"].btagDeepFlavCvL, axis=1)
+            == ak.local_index(self.objects["cjets"], axis=1)
+        ]
