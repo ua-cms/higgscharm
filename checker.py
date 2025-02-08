@@ -2,7 +2,7 @@ import yaml
 
 def run_checker(args):
     # check processor
-    available_processors = ["ztomumu", "ztoee", "zzto4l"]
+    available_processors = ["ztomumu", "ztoee", "zzto4l", "hww"]
     if args.processor not in available_processors:
         raise ValueError(
             f"Incorrect processor. Available processors are: {available_processors}"
