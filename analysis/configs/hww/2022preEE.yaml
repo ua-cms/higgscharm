@@ -26,6 +26,12 @@ object_selection:
   leptons:
     field: select_hww_leptons
     cuts: null
+  ll_pairs:
+    field: select_hww_ll_pairs
+    cuts:
+      pt: (objects["ll_pairs"].l1 + objects["ll_pairs"].l2).pt > 30
+      charge: (objects["ll_pairs"].l1.charge + objects["ll_pairs"].l2.charge) == 0 
+      mass: (objects["ll_pairs"].l1 + objects["ll_pairs"].l2).mass > 12
   cjets:
     field: events.Jet
     cuts:
@@ -58,9 +64,14 @@ event_selection:
     met_45: objects['met'].pt > 45
     one_electron: ak.num(objects['electrons']) == 1
     one_muon: ak.num(objects['muons']) == 1
-    atleast_twojets: ak.num(objects['cjets']) > 1
+    atleast_one_cjet: ak.num(objects['cjets']) > 0
+    atleast_two_cjets: ak.num(objects['cjets']) > 1
+    transverse_mass_signal: ak.all((objects["ml2"] > 30) & (objects["mll"] > 60), axis=1)
+    transverse_mass_top: ak.all((objects["ml2"] > 30) & (objects["mll"] <= 60), axis=1)
+    dilepton_mass_signal: ak.all(objects["mll"] <= 72, axis=1)
+    dilepton_mass_top: ak.all(objects["mll"] > 72, axis=1)
   categories:
-    base:
+    top:
       - atleast_one_goodvertex
       - lumimask
       - met_filters
@@ -68,6 +79,30 @@ event_selection:
       - met_45
       - one_electron
       - one_muon
+      - atleast_two_cjets
+      - transverse_mass_top
+      - dilepton_mass_top
+    signal:
+      - atleast_one_goodvertex
+      - lumimask
+      - met_filters
+      - trigger
+      - met_45
+      - one_electron
+      - one_muon
+      - atleast_one_cjet
+      - transverse_mass_signal
+      - dilepton_mass_signal
+    dilepton_mass_top:
+      - atleast_one_goodvertex
+      - lumimask
+      - met_filters
+      - trigger
+      - met_45
+      - one_electron
+      - one_muon
+      - atleast_one_cjet
+      - transverse_mass_signal
 histogram_config:
   add_syst_axis: true
   add_weight: true
@@ -177,14 +212,6 @@ histogram_config:
         - 15
       label: c-jets multiplicity
       expression: ak.num(objects['cjets'])
-    jet_flavour:
-      type: IntCategory
-      categories:
-        - 0
-        - 4
-        - 5
-      label: c-jets HadronFlavour
-      expression: objects['cjets'].hadronFlavour
   layout:
     met:
       - met
@@ -204,5 +231,3 @@ histogram_config:
       - jet_phi
     jet_multiplicity:
       - jet_multiplicity
-    jet_flavour:
-      - jet_flavour
