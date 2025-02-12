@@ -117,7 +117,7 @@ histogram_config:
       stop: 3.14159
       label: $\phi(p_T^{miss})$ [GeV]
       expression: objects['met'].phi
-    met_raw:
+    met_pt_raw:
       type: Variable
       edges:
         - 45
