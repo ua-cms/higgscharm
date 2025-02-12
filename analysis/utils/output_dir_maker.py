@@ -6,5 +6,6 @@ def make_output_directory(args: dict) -> str:
     processor_output_path = paths.processor_path(
         processor=args["processor"],
         year=args["year"],
+        dataset=args["dataset"]
     )
     return str(processor_output_path)

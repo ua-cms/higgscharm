@@ -3,7 +3,7 @@ import pathlib
 
 
 class Paths:
-    
+
     def __init__(self, eos: bool) -> None:
         if eos:
             # finds the /eos user directory
@@ -12,11 +12,12 @@ class Paths:
         else:
             # finds the root path as the directory one level upwards of where this file is located
             self.root_path = pathlib.Path(__file__).resolve().parent.parent
-        
+
     def processor_path(
         self,
         processor: str,
         year: str,
+        dataset: str
     ) -> pathlib.Path:
         """
         Safely return a path by creating the parent directories to avoid errors when writing to the path.
@@ -35,6 +36,7 @@ class Paths:
                 for elem in [
                     processor,
                     year,
+                    dataset
                 ]
                 if elem is not None
             ]
