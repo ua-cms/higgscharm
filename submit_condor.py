@@ -52,29 +52,26 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        default="ztomumu",
-        help="processor to be used {ztomumu, ztoee, zto4l} (default ztomumu)",
+        help="processor to be used {ztomumu, ztoee, zto4l, hww}",
     )
     parser.add_argument(
         "--dataset",
         dest="dataset",
         type=str,
-        default="",
         help="dataset name",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
-        default="2022postEE",
-        help="dataset year {2022preEE, 2022postEE} (default 2022postEE)",
+        help="dataset year {2022preEE, 2022postEE}",
     )
     parser.add_argument(
         "--nfiles",
         dest="nfiles",
         type=int,
-        default=20,
-        help="number of root files to include in each dataset partition (default 20)",
+        default=10,
+        help="number of root files to include in each dataset partition (default 10)",
     )
     parser.add_argument(
         "--eos",
