@@ -71,7 +71,7 @@ event_selection:
     dilepton_mass_signal: ak.all(objects["mll"] <= 72, axis=1)
     dilepton_mass_top: ak.all(objects["mll"] > 72, axis=1)
   categories:
-    top:
+    base:
       - atleast_one_goodvertex
       - lumimask
       - met_filters
@@ -79,39 +79,35 @@ event_selection:
       - met_45
       - one_electron
       - one_muon
-      - atleast_two_cjets
-      - transverse_mass_top
-      - dilepton_mass_top
-    signal:
-      - atleast_one_goodvertex
-      - lumimask
-      - met_filters
-      - trigger
-      - met_45
-      - one_electron
-      - one_muon
-      - atleast_one_cjet
-      - transverse_mass_signal
-      - dilepton_mass_signal
-    dilepton_mass_top:
-      - atleast_one_goodvertex
-      - lumimask
-      - met_filters
-      - trigger
-      - met_45
-      - one_electron
-      - one_muon
-      - atleast_one_cjet
-      - transverse_mass_signal
 histogram_config:
   add_syst_axis: true
   add_weight: true
   axes:
-    met:
-      type: Regular
-      bins: 50
-      start: 45
-      stop: 500
+    met_pt:
+      type: Variable
+      edges:
+        - 45
+        - 55
+        - 65
+        - 75
+        - 85
+        - 95
+        - 105
+        - 115
+        - 125
+        - 135
+        - 145
+        - 155
+        - 170
+        - 185
+        - 200
+        - 220
+        - 250
+        - 300
+        - 350
+        - 400
+        - 500
+        - 600
       label: $p_T^{miss}$ [GeV]
       expression: objects['met'].pt
     met_phi:
@@ -122,10 +118,30 @@ histogram_config:
       label: $\phi(p_T^{miss})$ [GeV]
       expression: objects['met'].phi
     met_raw:
-      type: Regular
-      bins: 50
-      start: 45
-      stop: 500
+      type: Variable
+      edges:
+        - 45
+        - 55
+        - 65
+        - 75
+        - 85
+        - 95
+        - 105
+        - 115
+        - 125
+        - 135
+        - 145
+        - 155
+        - 170
+        - 185
+        - 200
+        - 220
+        - 250
+        - 300
+        - 350
+        - 400
+        - 500
+        - 600
       label: Raw $p_T^{miss}$ [GeV]
       expression: objects['met'].pt_raw
     met_phi_raw:
@@ -136,45 +152,137 @@ histogram_config:
       label: Raw $\phi(p_T^{miss})$ [GeV]
       expression: objects['met'].phi_raw
     lepton1_pt:
-      type: Regular
-      bins: 50
-      start: 15
-      stop: 300
+      type: Variable
+      edges:
+        - 15
+        - 25
+        - 35
+        - 45
+        - 55
+        - 65
+        - 75
+        - 85
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 350
+        - 400
+        - 500
       label: $p_T(\ell_1)$ [GeV]
       expression: objects["ll_pairs"].l1.pt
     lepton2_pt:
-      type: Regular
-      bins: 50
-      start: 5
-      stop: 300
-      label: $p_T(\ell_2^)$ [GeV]
+      type: Variable
+      edges:
+        - 15
+        - 25
+        - 35
+        - 45
+        - 55
+        - 65
+        - 75
+        - 85
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 350
+        - 400
+        - 500
+      label: $p_T(\ell_2)$ [GeV]
       expression: objects["ll_pairs"].l2.pt
     mtl1:
-      type: Regular
-      bins: 50
-      start: 15
-      stop: 300
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 230
+        - 260
+        - 300
+        - 350
+        - 400
+        - 500
       label: $m_T^{\ell_1}$ [GeV]
       expression: objects['ml1']
     mtl2:
-      type: Regular
-      bins: 50
-      start: 15
-      stop: 300
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 230
+        - 260
+        - 300
+        - 350
+        - 400
+        - 500
       label: $m_T^{\ell_2}$ [GeV]
       expression: objects['ml2']
     mtll:
-      type: Regular
-      bins: 50
-      start: 15
-      stop: 300
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 230
+        - 260
+        - 300
+        - 350
+        - 400
+        - 500
       label: $m_T^{\ell \ell}$ [GeV]
       expression: objects['mll']
     jet_pt:
-      type: Regular
-      bins: 50
-      start: 20
-      stop: 500
+      type: Variable
+      edges:
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 350
+        - 400
+        - 450
+        - 500
+        - 600
+        - 800
       label: Candidate c-jet $p_T$ [GeV]
       expression: objects['candidate_cjet'].pt
     jet_eta:
@@ -214,7 +322,7 @@ histogram_config:
       expression: ak.num(objects['cjets'])
   layout:
     met:
-      - met
+      - met_pt
       - met_phi
       - met_raw
       - met_phi_raw
