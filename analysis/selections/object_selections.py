@@ -286,9 +286,6 @@ class ObjectSelector:
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
-        self.objects["ll_pairs"] = ak.combinations(
-            self.objects["leptons"], 2, fields=["l1", "l2"]
-        )
 
     def select_hww_ll_pairs(self):
         self.objects["ll_pairs"] = ak.combinations(
