@@ -324,7 +324,7 @@ histogram_config:
     met:
       - met_pt
       - met_phi
-      - met_raw
+      - met_pt_raw
       - met_phi_raw
     lepton:
       - lepton1_pt
