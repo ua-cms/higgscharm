@@ -34,13 +34,11 @@ def divide_by_binwidth(histogram):
     return histogram / bin_width
 
 
-def clear_output_directory(output_dir):
-    """Delete all result files in the output directory."""
-    extensions = ["*.txt"]
-    for ext in extensions:
-        files = glob.glob(os.path.join(output_dir, ext))
-        for file in files:
-            os.remove(file)
+def clear_output_directory(output_dir, ext):
+    """Delete all result files in the output directory with extension 'ext'"""
+    files = glob.glob(os.path.join(output_dir, f"*.{ext}"))
+    for file in files:
+        os.remove(file)
 
 
 def df_to_latex(df):
