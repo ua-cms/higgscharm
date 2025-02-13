@@ -52,7 +52,7 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        help="processor to be used {ztomumu, ztoee, zto4l, hww}",
+        help="processor to be used {ztomumu, ztoee, zzto4l, hww}",
     )
     parser.add_argument(
         "--dataset",

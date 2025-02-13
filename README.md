@@ -50,10 +50,10 @@ usage: submit_condor.py [-h] [--processor PROCESSOR] [--dataset DATASET] [--year
 optional arguments:
   -h, --help            show this help message and exit
   --processor PROCESSOR
-                        processor to be used {ztomumu, ztoee} (default ztomumu)
+                        processor to be used {ztomumu, ztoee, zzto4l, hww}
   --dataset DATASET     dataset name
-  --year YEAR           dataset year {2022preEE, 2022postEE} (default 2022postEE)
-  --nfiles NFILES       number of root files to include in each dataset partition (default 20)
+  --year YEAR           dataset year {2022preEE, 2022postEE}
+  --nfiles NFILES       number of root files to include in each dataset partition (default 10)
   --eos                 Enable saving outputs to /eos
   --submit              Enable Condor job submission. If not provided, it just builds condor files
 ```
@@ -70,15 +70,15 @@ usage: runner.py [-h] [--processor PROCESSOR] [--year YEAR] [--nfiles NFILES] [-
 optional arguments:
   -h, --help            show this help message and exit
   --processor PROCESSOR
-                        processor to be used {ztomumu, ztoee} (default ztomumu)
-  --year YEAR           dataset year {2022preEE, 2022postEE} (default 2022postEE)
-  --nfiles NFILES       number of root files to include in each dataset partition (default 20)
+                        processor to be used {ztomumu, ztoee, zzto4l, hww}
+  --year YEAR           dataset year {2022preEE, 2022postEE}
+  --nfiles NFILES       number of root files to include in each dataset partition (default 10)
   --submit              Enable Condor job submission. If not provided, it just builds condor files
   --eos                 Enable saving outputs to /eos
 ```
 Example:
 ```
-python3 runner.py --processor ztomumu --year 2022postEE --submit
+python3 runner.py --processor ztomumu --year 2022postEE --submit --eos
 ``` 
 After submitting the jobs you can watch their status by typing:
 ```
