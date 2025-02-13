@@ -6,48 +6,27 @@ from pathlib import Path
 from coffea.dataset_tools.dataset_query import DataDiscoveryCLI
 
 
-SITES = {
-    "2022preEE": [
-        "T3_US_FNALLPC",
-        "T1_US_FNAL_Disk",
-        "T2_US_Vanderbilt",
-        "T2_US_Purdue",
-        "T2_US_Nebraska",
-        "T2_DE_DESY",
-        "T2_BE_IIHE",
-        "T2_CH_CERN",
-        "T1_DE_KIT_Disk",
-        "T2_DE_RWTH",
-        "T2_BE_UCL",
-        "T1_UK_RAL_Disk",
-        "T1_FR_CCIN2P3_Disk",
-        "T2_RU_JINR",
-        "T2_UK_London_IC",
-        "T1_FR_CCIN2P3_Disk",
-        "T3_CH_PSI",
-        "T2_ES_CIEMAT",
-    ],
-    "2022postEE": [
-        "T3_US_FNALLPC",
-        "T1_US_FNAL_Disk",
-        "T2_US_Vanderbilt",
-        "T2_US_Purdue",
-        "T2_US_Nebraska",
-        "T2_DE_DESY",
-        "T2_BE_IIHE",
-        "T2_CH_CERN",
-        "T1_DE_KIT_Disk",
-        "T2_DE_RWTH",
-        "T2_BE_UCL",
-        "T1_UK_RAL_Disk",
-        "T1_FR_CCIN2P3_Disk",
-        "T2_RU_JINR",
-        "T2_UK_London_IC",
-        "T1_FR_CCIN2P3_Disk",
-        "T3_CH_PSI",
-        "T2_ES_CIEMAT",
-    ],
-}
+SITES = [
+    "T1_US_FNAL_Disk",
+    "T1_DE_KIT_Disk",
+    "T1_UK_RAL_Disk",
+    "T1_FR_CCIN2P3_Disk",
+    "T1_FR_CCIN2P3_Disk",
+    "T2_US_Vanderbilt",
+    "T2_US_Purdue",
+    "T2_US_Nebraska",
+    "T2_DE_DESY",
+    "T2_BE_IIHE",
+    "T2_CH_CERN",
+    "T2_DE_RWTH",
+    "T2_BE_UCL",
+    "T2_HU_Budapest",
+    "T2_RU_JINR",
+    "T2_UK_London_IC",
+    "T2_ES_CIEMAT",
+    "T3_US_FNALLPC",
+    "T3_CH_PSI",
+]
 
 
 def main(args):
@@ -59,7 +38,7 @@ def main(args):
     for sample in dataset_configs:
         das_queries[sample] = dataset_configs[sample]["query"]
 
-    for year in SITES:
+    for year in ["2022preEE", "2022postEE"]:
         if args.year != "all":
             if year != args.year:
                 continue
@@ -77,7 +56,7 @@ def main(args):
         # the dataset definition is passed to a DataDiscoveryCLI
         ddc = DataDiscoveryCLI()
         # set the allow sites to look for replicas
-        ddc.do_allowlist_sites(SITES[year])
+        ddc.do_allowlist_sites(SITES)
         # query rucio and get replicas
         ddc.load_dataset_definition(
             dataset_definition,
@@ -109,7 +88,7 @@ if __name__ == "__main__":
         "--year",
         dest="year",
         type=str,
-        default="2022postEE",
+        default="all",
         help="year of the data {2022preEE, 2022postEE, all}",
     )
     args = parser.parse_args()
