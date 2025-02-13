@@ -1,123 +1,20 @@
 import os
 import argparse
+from analysis.configs import ProcessorConfigBuilder
 
-data_samples = {
-    "ztoee": {
-        "2022preEE": ["EGammaC", "EGammaD"],
-        "2022postEE": ["EGammaE", "EGammaF", "EGammaG"],
-    },
-    "ztomumu": {
-        "2022preEE": ["MuonC", "MuonD"],
-        "2022postEE": ["MuonE", "MuonF", "MuonG"],
-    },
-    "zzto4l": {
-        "2022preEE": ["MuonC", "MuonD", "MuonEGC", "MuonEGD", "EGammaC", "EGammaD"],
-        "2022postEE": [
-            "MuonE",
-            "MuonF",
-            "MuonG",
-            "MuonEGE",
-            "MuonEGF",
-            "MuonEGG",
-            "EGammaE",
-            "EGammaF",
-            "EGammaG",
-        ],
-    },
-    "hww": {
-        "2022preEE": ["MuonC", "MuonD", "MuonEGC", "MuonEGD", "EGammaC", "EGammaD"],
-        "2022postEE": [
-            "MuonE",
-            "MuonF",
-            "MuonG",
-            "MuonEGE",
-            "MuonEGF",
-            "MuonEGG",
-            "EGammaE",
-            "EGammaF",
-            "EGammaG",
-        ],
-    },
-}
-mc_samples = {
-    "ztoee": [
-        # DY+jets
-        "DYto2L_2Jets_50",
-        "DYto2L_2Jets_10to50",
-        # Diboson
-        "WW",
-        "WZ",
-        "ZZ",
-        # Ttbar
-        "TTto4Q",
-        "TTto2L2Nu",
-        "TTtoLNu2Q",
-        # SingleTop
-        "TbarWplusto2L2Nu",
-        "TWminusto2L2Nu",
-        "TWminustoLNu2Q",
-        "TbarWplusto4Q",
-        "TbarWplustoLNu2Q",
-        "TWminusto4Q",
-        "TbarBQ",
-        "TBbarQ",
-    ],
-    "ztomumu": [
-        # DY+jets
-        "DYto2L_2Jets_50",
-        "DYto2L_2Jets_10to50",
-        # Diboson
-        "WW",
-        "WZ",
-        "ZZ",
-        # Ttbar
-        "TTto4Q",
-        "TTto2L2Nu",
-        "TTtoLNu2Q",
-        # SingleTop
-        "TbarWplusto2L2Nu",
-        "TWminusto2L2Nu",
-        "TWminustoLNu2Q",
-        "TbarWplusto4Q",
-        "TbarWplustoLNu2Q",
-        "TWminusto4Q",
-        "TbarBQ",
-        "TBbarQ",
-    ],
-    "zzto4l": [
-        # SIGNAL
-        "bbH_Hto2Zto4L",
-        "GluGluHtoZZto4L",
-        "TTH_Hto2Z",
-        "VBFHto2Zto4L",
-        "WminusH_Hto2Zto4L",
-        "WplusH_Hto2Zto4L",
-        "ZHto2Zto4L",
-        # BACKGROUND
-        "GluGluToContinto2Zto2E2Mu",
-        "GluGluToContinto2Zto2E2Tau",
-        "GluGluToContinto2Zto2Mu2Tau",
-        "GluGlutoContinto2Zto4E",
-        "GluGlutoContinto2Zto4Mu",
-        "GluGlutoContinto2Zto4Tau",
-        "ZZto4L",
-    ],
-    "hww": [
-        # Ttbar
-        "TTto2L2Nu",
-        "TTto4Q",
-        "TTtoLNu2Q",
-        # SingleTop
-        "TbarWplusto2L2Nu",
-        "TWminusto2L2Nu",
-        "TWminustoLNu2Q",
-        "TbarWplusto4Q",
-        "TbarWplustoLNu2Q",
-        "TWminusto4Q",
-        "TbarBQ",
-        "TBbarQ",
-    ]
-}
+
+def get_datasets(processor: str, year: str):
+    eras = {"2022preEE": ["C", "D"], "2022postEE": ["E", "F", "G"]}
+    config_builder = ProcessorConfigBuilder(processor=processor, year=year)
+    processor_config = config_builder.build_processor_config()
+    mc_datasets = processor_config.mc_datasets
+    primary_datasets = list(processor_config.hlt_paths.keys())
+    data_datasets = []
+    for primary_dataset in primary_datasets:
+        for era in eras[year]:
+            data_datasets.append(f"{primary_dataset}{era}")
+
+    return data_datasets + mc_datasets
 
 
 if __name__ == "__main__":
@@ -126,22 +23,20 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        default="ztomumu",
-        help="processor to be used {ztomumu, ztoee, zto4l, hww} (default ztomumu)",
+        help="processor to be used {ztomumu, ztoee, zzto4l, hww}",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
-        default="2022postEE",
-        help="dataset year {2022preEE, 2022postEE} (default 2022postEE)",
+        help="dataset year {2022preEE, 2022postEE}",
     )
     parser.add_argument(
         "--nfiles",
         dest="nfiles",
         type=int,
-        default=20,
-        help="number of root files to include in each dataset partition (default 20)",
+        default=10,
+        help="number of root files to include in each dataset partition (default 10)",
     )
     parser.add_argument(
         "--submit",
@@ -155,10 +50,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    datasets = (
-        mc_samples[args.processor] + data_samples[args.processor][args.year]
-    )
-    for dataset in datasets:
+    for dataset in get_datasets(processor=args.processor, year=args.year):
         cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles}"
         if args.submit:
             cmd += " --submit"
