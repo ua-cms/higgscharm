@@ -1,8 +1,12 @@
+import os
+import sys
 import yaml
-import glob
+import uproot
 import logging
+import subprocess
 import numpy as np
 import pandas as pd
+from glob import glob
 from pathlib import Path
 from coffea.processor import accumulate
 from analysis.configs import ProcessorConfigBuilder
@@ -14,100 +18,108 @@ class Postprocessor:
         self,
         processor: str,
         year: str,
-        output_dir: str,
+        category: str,
+        output_dir: Path,
     ):
         self.processor = processor
         self.year = year
+        self.category = category
         self.output_dir = output_dir
+        self.indir = output_dir.parent
 
         # get datasets configs
         main_dir = Path.cwd()
         fileset_path = Path(f"{main_dir}/analysis/filesets")
         with open(f"{fileset_path}/{year}_nanov12.yaml", "r") as f:
             self.dataset_config = yaml.safe_load(f)
-            
+
         # load luminosities
         with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:
             self.luminosities = yaml.safe_load(f)
 
-        # get categories
         config_builder = ProcessorConfigBuilder(processor=processor, year=year)
         processor_config = config_builder.build_processor_config()
-        self.categories = processor_config.event_selection["categories"]
-
-        # run postprocessor
-        self.run_postprocess()
+        self.histogram_config = processor_config.histogram_config
 
     def run_postprocess(self):
-        print_header("grouping outputs by sample")
-        self.group_outputs()
-
-        print_header("scaling outputs by sample")
-        self.set_lumixsec_weights()
+        self.merge_metadata()
+        self.get_weight()
+        self.merge_histograms()
         self.scale_histograms()
-        self.scale_cutflow()
-
-        print_header("grouping outputs by process")
-        self.histograms = self.group_by_process(self.scaled_histograms)
-        logging.info(
-            yaml.dump(self.process_samples, sort_keys=False, default_flow_style=False)
-        )
+        self.group_histograms()
 
         print_header(f"Cutflow")
-        for category in self.categories:
-            output_path = Path(f"{self.output_dir}/{category}")
-            if not output_path.exists():
-                output_path.mkdir(parents=True, exist_ok=True)
-            logging.info(f"category: {category}")
-            processed_cutflow = self.group_by_process(self.scaled_cutflow[category])
-            self.cutflow_df = pd.DataFrame(processed_cutflow)
-            self.cutflow_df["Total Background"] = self.cutflow_df.drop(
-                columns="Data"
-            ).sum(axis=1)
-            self.cutflow_df = self.cutflow_df[
-                ["Data", "Total Background"]
-                + [
-                    process
-                    for process in self.cutflow_df.columns
-                    if process not in ["Data", "Total Background"]
-                ]
+        logging.info(f"category: {self.category}")
+        self.scale_cutflow()
+        self.group_cutflow()
+        self.sample_cutflow_df = pd.DataFrame(self.scaled_cutflow)
+        logging.info("\nCutflow by sample")
+        logging.info(
+            f'{self.sample_cutflow_df.applymap(lambda x: f"{x:.3f}" if pd.notnull(x) else "")}\n'
+        )
+        self.cutflow_df = pd.DataFrame(self.processed_cutflow)
+        self.cutflow_df["Total Background"] = self.cutflow_df.drop(columns="Data").sum(
+            axis=1
+        )
+        self.cutflow_df = self.cutflow_df[
+            ["Data", "Total Background"]
+            + [
+                process
+                for process in self.cutflow_df.columns
+                if process not in ["Data", "Total Background"]
             ]
-            logging.info(
-                f'{self.cutflow_df.applymap(lambda x: f"{x:.3f}" if pd.notnull(x) else "")}\n'
-            )
-            self.cutflow_df.to_csv(f"{output_path}/cutflow_{category}.csv")
+        ]
+        logging.info("\nCutflow by process")
+        logging.info(
+            f'{self.cutflow_df.applymap(lambda x: f"{x:.3f}" if pd.notnull(x) else "")}\n'
+        )
+        self.cutflow_df.to_csv(f"{self.output_dir}/cutflow_{self.category}.csv")
 
         print_header(f"Results")
-        for category in self.categories:
-            output_path = Path(f"{self.output_dir}/{category}")
-            logging.info(f"category: {category}")
-            results_df = self.get_results_report(category)
-            logging.info(
-                results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else "")
+        logging.info("\nEvents by sample:\n")
+        logging.info(
+            pd.DataFrame({"events": self.nevents}).applymap(
+                lambda x: f"{x}" if pd.notnull(x) else ""
             )
-            logging.info("\n")
-            results_df.to_csv(f"{output_path}/results_{category}.csv")
-            latex_table = df_to_latex(results_df)
-            with open(f"{output_path}/results_latex_{category}.txt", "w") as f:
-                f.write(latex_table)
+        )
+        results_df = self.get_results_report(self.category)
+        logging.info("\nEvents by process:\n")
+        logging.info(results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
+        logging.info("\n")
+        results_df.to_csv(f"{self.output_dir}/results.csv")
+        latex_table = df_to_latex(results_df)
+        with open(f"{self.output_dir}/results_latex.txt", "w") as f:
+            f.write(latex_table)
 
-    def group_outputs(self):
+    def merge_histograms(self):
+        samples = os.listdir(self.indir)
+        with open(f"{self.indir}/group_by_sample.sh", "w") as outfile:
+            outfile.write("#!/bin/bash\n")
+            for sample in samples:
+                roots = glob(f"{self.indir}/{sample}/{sample}_*.root")
+                if len(roots) == 0:
+                    continue
+                outfile.write(
+                    f"hadd -f0 -O {self.indir}/{sample}.root {self.indir}/{sample}/*.root\n"
+                )
+        print_header("Merging histograms by sample")
+        subprocess.run(["bash", f"{self.indir}/group_by_sample.sh"])
+
+    def merge_metadata(self):
         """
         group and accumulate output files by sample
         """
-        logging.info(f"reading outputs from {self.output_dir}")
-        extension = ".pkl"
-        output_files = glob.glob(f"{self.output_dir}/*{extension}", recursive=True)
+        print_header("Processing metadata")
+        metadata_dir = self.output_dir.parent
+        logging.info(f"Reading metadata from {metadata_dir}")
+        output_files = glob(f"{metadata_dir}/*/*.pkl", recursive=True)
         n_output_files = len(output_files)
         assert n_output_files != 0, "No output files found"
 
         # group output file paths by sample name
         grouped_outputs = {}
         for output_file in output_files:
-            sample_name = output_file.split("/")[-1].split(extension)[0]
-            if sample_name.rsplit("_")[-1].isdigit():
-                sample_name = "_".join(sample_name.rsplit("_")[:-1])
-            sample_name = sample_name.replace(f"{self.year}_", "")
+            sample_name = output_file.split("/")[-2]
             if sample_name in grouped_outputs:
                 grouped_outputs[sample_name].append(output_file)
             else:
@@ -116,42 +128,32 @@ class Postprocessor:
         logging.info(f"{n_output_files} output files were found:")
         n_grouped_outputs = {}
 
-        # open output dictionaries with layout:
-        #      {<sample>_<i-th>: {"histograms": {"pt": Hist(...), ...}, "metadata": {"sumw": x, ...}}})
-        # group and accumulate histograms and metadata by <sample>
         self.metadata = {}
-        self.histograms = {}
         grouped_metadata = {}
-        grouped_histograms = {}
-        print_header("Reading and accumulating outputs by sample")
+        logging.info("merging metadata by sample")
         for sample in grouped_outputs:
             logging.info(f"{sample}...")
-            grouped_histograms[sample] = []
             grouped_metadata[sample] = {}
             for fname in grouped_outputs[sample]:
                 output = open_output(fname)
-                if output:
-                    # group histograms by sample
-                    grouped_histograms[sample].append(output["histograms"])
-                    # group metadata by sample
-                    for meta_key in output["metadata"]:
-                        if meta_key in grouped_metadata[sample]:
-                            grouped_metadata[sample][meta_key].append(
-                                output["metadata"][meta_key]
-                            )
-                        else:
-                            grouped_metadata[sample][meta_key] = [
-                                output["metadata"][meta_key]
-                            ]
-            # accumulate histograms and metadata by sample
-            self.histograms[sample] = accumulate(grouped_histograms[sample])
+                for k, v in output["base"].items():
+                    output[k] = v
+                for meta_key in output:
+                    if meta_key in grouped_metadata[sample]:
+                        grouped_metadata[sample][meta_key].append(output[meta_key])
+                    else:
+                        grouped_metadata[sample][meta_key] = [output[meta_key]]
             self.metadata[sample] = {}
             for meta_key in grouped_metadata[sample]:
                 self.metadata[sample][meta_key] = accumulate(
                     grouped_metadata[sample][meta_key]
                 )
 
-    def set_lumixsec_weights(self):
+    def get_weight(self):
+        print_header("Computing lumi-xsec weights")
+        # load luminosities
+        with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:
+            self.luminosities = yaml.safe_load(f)
         logging.info(f"luminosity [/pb] {self.luminosities[self.year]}")
         # compute lumi-xsec weights
         self.weights = {}
@@ -165,50 +167,79 @@ class Postprocessor:
                 self.weights[sample] = (
                     self.luminosities[self.year] * self.xsecs[sample]
                 ) / self.sumw[sample]
+        scale_info = pd.DataFrame(
+            {
+                "xsec [pb]": self.xsecs,
+                "sumw": self.sumw,
+                "weight": self.weights,
+            }
+        )
+        logging.info(scale_info.applymap(lambda x: f"{x}" if pd.notnull(x) else ""))
 
     def scale_histograms(self):
         """scale histograms to lumi-xsec"""
+        print_header("Scaling histograms to lumi-xsec")
         self.scaled_histograms = {}
-        for sample, variables in self.histograms.items():
-            # scale histograms
+        self.processes = {}
+        root_files = glob(f"{self.indir}/*.root")
+        self.nevents = {}
+        for root_file in root_files:
+            sample = root_file.split("/")[-1].replace(".root", "")
+            logging.info(f"{sample}...")
+            self.nevents[sample] = (
+                self.weights[sample] * self.metadata[sample]["weighted_final_nevents"]
+            )
             self.scaled_histograms[sample] = {}
-            for variable in variables:
-                self.scaled_histograms[sample][variable] = (
-                    self.histograms[sample][variable] * self.weights[sample]
-                )
+            with uproot.open(root_file) as f:
+                for hist_key in f:
+                    if self.category not in hist_key:
+                        continue
+                    variable = hist_key.replace(";1", "").replace(
+                        f"{self.category}_", ""
+                    )
+                    try:
+                        self.scaled_histograms[sample][variable] = (
+                            f[hist_key].to_hist() * self.weights[sample]
+                        )
+                    except ValueError:
+                        logging.info(f"could not process {hist_key} histogram")
+
+    def group_histograms(self):
+        group = {}
+        self.process_samples = {}
+        for sample in self.scaled_histograms:
+            if not self.nevents[sample] > 0:
+                continue
+            process = self.dataset_config[sample]["process"]
+            if process not in group:
+                group[process] = [self.scaled_histograms[sample]]
+                self.process_samples[process] = [sample]
+            else:
+                group[process].append(self.scaled_histograms[sample])
+                self.process_samples[process].append(sample)
+        for process in group:
+            group[process] = accumulate(group[process])
+        self.proccesed_histograms = group
 
     def scale_cutflow(self):
         """scale cutflow to lumi-xsec"""
         self.scaled_cutflow = {}
-        for category in self.categories:
-            self.scaled_cutflow[category] = {}
-            for sample, variables in self.histograms.items():
-                self.scaled_cutflow[category][sample] = {}
-                if category in self.metadata[sample]:
-                    for cut, nevents in self.metadata[sample][category][
-                        "cutflow"
-                    ].items():
-                        self.scaled_cutflow[category][sample][cut] = (
-                            nevents * self.weights[sample]
-                        )
+        for sample in self.metadata:
+            self.scaled_cutflow[sample] = {}
+            for cut, nevents in self.metadata[sample]["cutflow"].items():
+                self.scaled_cutflow[sample][cut] = nevents * self.weights[sample]
 
-    def group_by_process(self, to_group):
-        """group and accumulate histograms by process"""
+    def group_cutflow(self):
         group = {}
-        self.process_samples = {}
-        for sample in to_group:
+        for sample in self.scaled_cutflow:
             process = self.dataset_config[sample]["process"]
             if process not in group:
-                group[process] = [to_group[sample]]
-                self.process_samples[process] = [sample]
+                group[process] = [self.scaled_cutflow[sample]]
             else:
-                group[process].append(to_group[sample])
-                self.process_samples[process].append(sample)
-
+                group[process].append(self.scaled_cutflow[sample])
         for process in group:
             group[process] = accumulate(group[process])
-
-        return group
+        self.processed_cutflow = group
 
     def get_results_report(self, category):
         nevents = {}
@@ -263,49 +294,50 @@ class Postprocessor:
         ]
         results_df = results_df.sort_values(by="percentage", ascending=False)
 
+        # get systematic variations keys
+        variations_keys = []
+        for variable in self.histogram_config.variables:
+            if "met" in variable:
+                continue
+            for process, histogram_dict in self.proccesed_histograms.items():
+                if process == "Data":
+                    continue
+                for hist_key in histogram_dict:
+                    if "nominal" in hist_key:
+                        continue
+                    if hist_key.startswith(variable):
+                        variations_keys.append(hist_key.replace(f"{variable}_", ""))
+                break
+            break
+        variations_keys = [
+            v.replace("Up", "").replace("Down", "") for v in variations_keys
+        ]
+        variations_keys = list(set(variations_keys))
         # compute systematic uncertainty
         nominal, syst = {}, {}
-        for process, hist_dict in self.histograms.items():
+        for process, hist_dict in self.proccesed_histograms.items():
             if process == "Data":
                 continue
             syst[process] = {}
-            # get some helper histogram to extract nominal and variations values
-            for histo_key, histo in hist_dict.items():
-                axis_names = [
-                    axis
-                    for axis in histo.axes.name
-                    if axis not in ["variation", "category"]
-                ]
-                helper_histo_key = histo_key
-                helper_axis = axis_names[0]
+            # get some helper variable to extract nominal and variations values
+            for variable in self.histogram_config.variables:
+                helper_var = variable
                 break
             # get nominal values by process
-            nominal[process] = (
-                self.histograms[process][helper_histo_key][
-                    {"variation": "nominal", "category": category}
-                ]
-                .project(helper_axis)
-                .values()
-            )
+            nominal[process] = self.proccesed_histograms[process][
+                f"{helper_var}_nominal"
+            ].values()
             # get variations values by process
-            variations_keys = []
-            for variation in self.histograms[process][helper_histo_key].axes[
-                "variation"
-            ]:
-                if variation == "nominal":
-                    continue
-                # get variation key
-                variation_key = variation.replace("Up", "").replace("Down", "")
-                if variation_key not in variations_keys:
-                    variations_keys.append(variation_key)
-                # get variation hist
-                variation_hist = self.histograms[process][helper_histo_key][
-                    {"variation": variation, "category": category}
-                ].project(helper_axis)
-                if variation in syst:
-                    syst[process][variation].append(variation_hist)
-                else:
-                    syst[process][variation] = [variation_hist]
+            for variation in variations_keys:
+                for shift in ["Up", "Down"]:
+                    variation_key = f"{variation}{shift}"
+                    variation_hist = self.proccesed_histograms[process][
+                        f"{helper_var}_{variation_key}"
+                    ]
+                    if variation_key in syst:
+                        syst[process][variation_key].append(variation_hist)
+                    else:
+                        syst[process][variation_key] = [variation_hist]
         # accumulate variations
         syst_variations = {}
         for process in syst:

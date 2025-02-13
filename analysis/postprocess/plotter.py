@@ -1,8 +1,10 @@
 import yaml
+import uproot
 import logging
 import numpy as np
 import mplhep as hep
 import matplotlib.pyplot as plt
+from glob import glob
 from pathlib import Path
 from matplotlib import ticker
 from hist.intervals import poisson_interval
@@ -21,28 +23,28 @@ class Plotter:
     def __init__(
         self,
         processor: str,
-        processed_histograms: dict,
         year: str,
-        output_dir: str = None,
+        processed_histograms: dict,
+        output_dir: str,
     ):
         self.processor = processor
-        self.processed_histograms = processed_histograms
         self.year = year
+        self.processed_histograms = processed_histograms
         self.output_dir = output_dir
 
         # get histogram config
         config_builder = ProcessorConfigBuilder(processor=processor, year=year)
         processor_config = config_builder.build_processor_config()
         self.histogram_config = processor_config.histogram_config
-        
+
         # load luminosities
         with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:
             self.luminosities = yaml.safe_load(f)
-            
-        # load style config and set color map
+        # load style config 
         with open(f"{Path.cwd()}/analysis/postprocess/style.yaml", "r") as f:
             self.style = yaml.safe_load(f)
-        with open(f"{Path.cwd()}/analysis/filesets/{self.year}_fileset.yaml", "r") as f:
+        # set processes color map
+        with open(f"{Path.cwd()}/analysis/filesets/{self.year}_nanov12.yaml", "r") as f:
             dataset_configs = yaml.safe_load(f)
         processes = sorted(
             set(
@@ -51,111 +53,77 @@ class Plotter:
                 if dataset_configs[sample]["process"] != "Data"
             )
         )
-        self.color_map = {process: color for process, color in zip(processes, colors)}
+        self.color_map = {
+            process: color for process, color in zip(processes, self.style["colors"])
+        }
+
 
     def get_histogram(
         self,
-        process,
         variable,
         variation,
-        category,
         histogram_dict,
     ):
-        """returns histogram by processes/variable/category"""
-        # get histogram from histogram dictionary
-        if variable in histogram_dict:
-            histogram = histogram_dict[variable]
-        else:
-            for key in histogram_dict:
-                if variable in histogram_dict[key].axes.name:
-                    histogram = histogram_dict[key]
-                    break
-
-        # get variable histogram for nominal variation and category
-        histogram = histogram[{"variation": variation, "category": category}].project(
-            variable
-        )
-        # check if axis is variable type
+        """returns histogram by variable and variation"""
+        histogram = histogram_dict[f"{variable}_{variation}"]
+        # if histogram axis type is 'Variable' divide by bin width
         if isinstance(self.histogram_config.axes[variable], VariableAxis):
             histogram = divide_by_binwidth(histogram)
         return histogram
 
-    def get_variations_keys(self):
-        variations = {}
-        for process, histogram_dict in self.processed_histograms.items():
-            for feature in histogram_dict:
-                helper_histogram = histogram_dict[feature]
-                variations = [
-                    var
-                    for var in helper_histogram.axes["variation"]
-                    if var != "nominal"
-                ]
-                break
-            break
-        variations = list(
-            set([var.replace("Up", "").replace("Down", "") for var in variations])
-        )
-        return variations
-
-    def get_variations(
+    def get_variations_histograms(
         self,
-        process,
         variable,
-        category,
         variation,
         histogram_dict,
     ):
-        """returns variation histogram by processes/variable/category"""
-        # get histogram from histogram dictionary
-        if variable in histogram_dict:
-            histogram = histogram_dict[variable]
-        else:
-            for key in histogram_dict:
-                if variable in histogram_dict[key].axes.name:
-                    histogram = histogram_dict[key]
-                    break
-
-        # get variable histogram for nominal variation and category
-        histogram_up = histogram[
-            {"variation": f"{variation}Up", "category": category}
-        ].project(variable)
-        histogram_down = histogram[
-            {"variation": f"{variation}Down", "category": category}
-        ].project(variable)
-
-        # check if axis is variable type
-        if isinstance(self.histogram_config.axes[variable], VariableAxis):
-            histogram_up = divide_by_binwidth(histogram_up)
-            histogram_down = divide_by_binwidth(histogram_down)
+        """returns Up/Down histograms for some variation"""
+        histogram_up = self.get_histogram(variable, f"{variation}Up", histogram_dict)
+        histogram_down = self.get_histogram(
+            variable, f"{variation}Down", histogram_dict
+        )
         return histogram_up, histogram_down
 
-    def get_histogram_config(self, variable, category):
+    def get_variations_keys(self):
+        variations = []
+        for variable in self.histogram_config.variables:
+            if "met" in variable:
+                continue
+            for process, histogram_dict in self.processed_histograms.items():
+                if process == "Data":
+                    continue
+                for hist_key in histogram_dict:
+                    if "nominal" in hist_key:
+                        continue
+                    if hist_key.startswith(variable):
+                        variations.append(hist_key.replace(f"{variable}_", ""))
+                break
+            break
+        variations = [v.replace("Up", "").replace("Down", "") for v in variations]
+        return list(set(variations))
+
+    def get_histogram_config(self, variable):
         histogram_info = {"nominal": {}, "variations": {}}
         for process, histogram_dict in self.processed_histograms.items():
+            print(f"processing {process}!!!!!!!!")
             if process == "Data":
                 histogram_info["data"] = self.get_histogram(
-                    process=process,
                     variable=variable,
-                    category=category,
                     variation="nominal",
                     histogram_dict=histogram_dict,
                 )
             else:
                 # save nominal histogram
                 histogram = self.get_histogram(
-                    process=process,
                     variable=variable,
-                    category=category,
                     variation="nominal",
                     histogram_dict=histogram_dict,
                 )
                 histogram_info["nominal"][process] = histogram
                 # save variations histograms
                 for variation in self.get_variations_keys():
-                    up, down = self.get_variations(
-                        process=process,
+                    up, down = self.get_variations_histograms(
                         variable=variable,
-                        category=category,
                         variation=variation,
                         histogram_dict=histogram_dict,
                     )
@@ -171,7 +139,7 @@ class Plotter:
         colors, labels = [], []
         for process in histogram_info["nominal"]:
             labels.append(process)
-            colors.append(self.color_map[self.processor][process])
+            colors.append(self.color_map[process])
         return labels, colors
 
     def plot_uncert_band(self, histogram_info, ax):
@@ -258,13 +226,14 @@ class Plotter:
         yratio_limits: str = None,
         log_scale: bool = False,
         savefig: bool = True,
+        format: str = "pdf",
     ):
         setup_logger(self.output_dir)
         # set plot params
         hep.style.use(hep.style.CMS)
         plt.rcParams.update(self.style["rcParams"])
         # get nominal MC histograms
-        histogram_info = self.get_histogram_config(variable, category)
+        histogram_info = self.get_histogram_config(variable)
         nominal_mc_hists = list(histogram_info["nominal"].values())
         mc_histogram = accumulate(nominal_mc_hists)
         self.nominal_values = mc_histogram.values()
@@ -343,10 +312,7 @@ class Plotter:
         hep.cms.text("Preliminary", ax=ax)
         # save histograms
         if savefig:
-            output_path = Path(f"{self.output_dir}/{category}")
-            if not output_path.exists():
-                output_path.mkdir(parents=True, exist_ok=True)
             fig.savefig(
-                f"{str(output_path)}/{self.processor}_{variable}_{category}_{self.year}.png"
+                f"{self.output_dir}/{self.processor}_{category}_{variable}_{self.year}.{format}"
             )
         plt.close()
