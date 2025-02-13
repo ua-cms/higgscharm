@@ -105,7 +105,6 @@ class Plotter:
     def get_histogram_config(self, variable):
         histogram_info = {"nominal": {}, "variations": {}}
         for process, histogram_dict in self.processed_histograms.items():
-            print(f"processing {process}!!!!!!!!")
             if process == "Data":
                 histogram_info["data"] = self.get_histogram(
                     variable=variable,
