@@ -21,7 +21,6 @@ class ProcessorConfig:
         object_selection,
         event_selection,
         histogram_config,
-        mc_datasets
     ):
         self.goldenjson = goldenjson
         self.lumidata = lumidata
@@ -29,7 +28,6 @@ class ProcessorConfig:
         self.object_selection = object_selection
         self.event_selection = event_selection
         self.histogram_config = histogram_config
-        self.mc_datasets = mc_datasets
 
     def to_dict(self):
         """Convert ProcessorConfig to a dictionary."""

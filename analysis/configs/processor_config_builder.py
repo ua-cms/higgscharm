@@ -18,7 +18,6 @@ class ProcessorConfigBuilder:
             object_selection=self.parse_object_selection(),
             event_selection=self.parse_event_selection(),
             histogram_config=self.parse_histogram_config(),
-            mc_datasets=self.config["mc_datasets"],
         )
             
     def parse_object_selection(self):
