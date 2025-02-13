@@ -347,3 +347,21 @@ histogram_config:
       - subleadingjet_flavour
       - subleadingjet_cvsb
       - subleadingjet_cvsl
+mc_datasets:
+# signal
+- bbH_Hto2Zto4L
+- GluGluHtoZZto4L
+- TTH_Hto2Z
+- VBFHto2Zto4L
+- WminusH_Hto2Zto4L
+- WplusH_Hto2Zto4L
+- ZHto2Zto4L
+# ggToZZ
+- GluGluToContinto2Zto2E2Mu
+- GluGluToContinto2Zto2E2Tau
+- GluGluToContinto2Zto2Mu2Tau
+- GluGlutoContinto2Zto4E
+- GluGlutoContinto2Zto4Mu
+- GluGlutoContinto2Zto4Tau
+# qqToZZ
+- ZZto4L

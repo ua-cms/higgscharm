@@ -339,3 +339,21 @@ histogram_config:
       - jet_phi
     jet_multiplicity:
       - jet_multiplicity
+mc_datasets:
+  # Ttbar
+  - TTto4Q
+  - TTto2L2Nu
+  - TTtoLNu2Q
+  # SingleTop
+  - TbarWplusto2L2Nu
+  - TWminusto2L2Nu
+  - TWminustoLNu2Q
+  - TbarWplusto4Q
+  - TbarWplustoLNu2Q
+  - TWminusto4Q
+  - TbarBQ
+  - TBbarQ
+  # Diboson
+  - WW
+  - WZ
+  - ZZ
