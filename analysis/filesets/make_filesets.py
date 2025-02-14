@@ -25,7 +25,7 @@ SITES = [
     "T2_UK_London_IC",
     "T2_ES_CIEMAT",
     "T2_CH_CSCS",
-    "T2_IT_Rome"
+    "T2_IT_Rome",
     "T3_US_FNALLPC",
     "T3_CH_PSI",
 ]
