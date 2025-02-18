@@ -26,12 +26,11 @@ def main(args):
         executor_args={"schema": NanoAODSchema, "workers": 4},
     )
     savepath = f"{args.output_path}/{args.dataset}"
-    if args.coffea:
+    if args.output_format == "coffea":
         save(out, f"{asavepath}.coffea")
-    elif args.root:
+    elif args.output_format == "root":
         write_root(out, savepath, args)
         
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -66,14 +65,10 @@ if __name__ == "__main__":
         help="output path",
     )
     parser.add_argument(
-        "--root",
-        action="store_true",
-        help="Enable saving outputs in .root format",
-    )
-    parser.add_argument(
-        "--coffea",
-        action="store_true",
-        help="Enable saving outputs in .coffea format",
+        "--output_format",
+        type=str,
+        default="coffea",
+        help="format of output histograms {root, coffea}",
     )
     args = parser.parse_args()
     main(args)

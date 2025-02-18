@@ -42,11 +42,8 @@ def main(args):
             # with strings within the dictionary enclosed in double quotes.
             # we use json.dumps() to switch from single to double quotes within the dictionary
             f"--partition_fileset '{json.dumps(partition_fileset)}' "
+            f"--output_format {args['output_format']}"
         )
-        if args["coffea"]:
-            args["cmd"] += f"--coffea "
-        if args["root"]:
-            args["cmd"] += f"--root "
         submit_condor(args)
 
 
@@ -88,14 +85,10 @@ if __name__ == "__main__":
         help="Enable Condor job submission. If not provided, it just builds condor files",
     )
     parser.add_argument(
-        "--root",
-        action="store_true",
-        help="Enable saving outputs in .root format",
-    )
-    parser.add_argument(
-        "--coffea",
-        action="store_true",
-        help="Enable saving outputs in .coffea format",
+        "--output_format",
+        type=str,
+        default="coffea",
+        help="format of output histograms {root, coffea}",
     )
     args = parser.parse_args()
     main(args)

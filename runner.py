@@ -100,14 +100,10 @@ if __name__ == "__main__":
         help="Enable saving outputs to /eos",
     )
     parser.add_argument(
-        "--root",
-        action="store_true",
-        help="Enable saving outputs in .root format",
-    )
-    parser.add_argument(
-        "--coffea",
-        action="store_true",
-        help="Enable saving outputs in .coffea format",
+        "--output_format",
+        type=str,
+        default="coffea",
+        help="format of output histograms {root, coffea}",
     )
     args = parser.parse_args()
     # get datasets for processor and year
@@ -124,13 +120,9 @@ if __name__ == "__main__":
     datasets = mc + data
     # submit job for each dataset
     for dataset in datasets:
-        cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles}"
+        cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles} --output_format {args.output_format}"
         if args.submit:
             cmd += " --submit"
         if args.eos:
             cmd += " --eos"
-        if args.coffea:
-            cmd += " --coffea"
-        elif args.root:
-            cmd += " --root"
         os.system(cmd)
