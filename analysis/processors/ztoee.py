@@ -104,11 +104,14 @@ class ZToEEProcessor(processor.ProcessorABC):
                 year=self.year,
                 weights=weights_container,
                 variation="nominal",
-                id_wp=object_selections["electrons"]["cuts"]["electron_id"],
             )
-            electron_weights.add_id_weights()
+            electron_weights.add_id_weights(
+                id_wp=object_selections["electrons"]["cuts"]["electron_id"]
+            )
             electron_weights.add_hlt_weights(
-                hlt_paths=hlt_paths, dataset_key=dataset_key
+                hlt_paths=hlt_paths,
+                dataset_key=dataset_key,
+                id_wp=object_selections["electrons"]["cuts"]["electron_id"],
             )
             electron_weights.add_reco_weights("RecoBelow20")
             electron_weights.add_reco_weights("Reco20to75")

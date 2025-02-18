@@ -11,6 +11,7 @@ from analysis.selections.event_selections import get_trigger_mask
 
 import importlib.resources
 
+
 class ElectronWeights:
     """
     Electron ID, Reco and HLT weights class
@@ -30,12 +31,12 @@ class ElectronWeights:
 
     more info: https://twiki.cern.ch/twiki/bin/view/CMS/EgammSFandSSRun3#Scale_factors_and_correction_AN1
     """
+
     def __init__(
         self,
         events: ak.Array,
         weights: Type[Weights],
         year: str,
-        id_wp: str,
         variation: str,
     ) -> None:
         self.events = events
@@ -43,7 +44,6 @@ class ElectronWeights:
         self.weights = weights
         self.year = year
         self.variation = variation
-        self.id_wp = id_wp
 
         self.flat_electrons = ak.flatten(events.Electron)
         self.electrons_counts = ak.num(events.Electron)
@@ -57,22 +57,22 @@ class ElectronWeights:
             "loose": "Loose",
             "medium": "Medium",
             "tight": "Tight",
-            "veto": "Veto"
+            "veto": "Veto",
         }
         self.year_map = {
             "2022postEE": "2022Re-recoE+PromptFG",
             "2022preEE": "2022Re-recoBCD",
         }
 
-    def add_id_weights(self):
+    def add_id_weights(self, id_wp):
         """
         add electron ID weights to weights container
         """
-        nominal_weights = self.get_id_weights(variation="sf")
+        nominal_weights = self.get_id_weights(variation="sf", id_wp=id_wp)
         if self.variation == "nominal":
             # get 'up' and 'down' weights
-            up_weights = self.get_id_weights(variation="sfup")
-            down_weights = self.get_id_weights(variation="sfdown")
+            up_weights = self.get_id_weights(variation="sfup", id_wp=id_wp)
+            down_weights = self.get_id_weights(variation="sfdown", id_wp=id_wp)
             # add scale factors to weights container
             self.weights.add(
                 name=f"electron_id",
@@ -110,20 +110,26 @@ class ElectronWeights:
                 weight=nominal_weights,
             )
 
-    def add_hlt_weights(self, hlt_paths, dataset_key):
+    def add_hlt_weights(self, hlt_paths, dataset_key, id_wp):
         """
         add electron HLT weights to weights container
         """
         nominal_weights = self.get_hlt_weights(
-            variation="sf", hlt_paths=hlt_paths, dataset_key=dataset_key
+            variation="sf", hlt_paths=hlt_paths, dataset_key=dataset_key, id_wp=id_wp
         )
         if self.variation == "nominal":
             # get 'up' and 'down' weights
             up_weights = self.get_hlt_weights(
-                variation="sfup", hlt_paths=hlt_paths, dataset_key=dataset_key
+                variation="sfup",
+                hlt_paths=hlt_paths,
+                dataset_key=dataset_key,
+                id_wp=id_wp,
             )
             down_weights = self.get_hlt_weights(
-                variation="sfdown", hlt_paths=hlt_paths, dataset_key=dataset_key
+                variation="sfdown",
+                hlt_paths=hlt_paths,
+                dataset_key=dataset_key,
+                id_wp=id_wp,
             )
             # add scale factors to weights container
             self.weights.add(
@@ -138,7 +144,7 @@ class ElectronWeights:
                 weight=nominal_weights,
             )
 
-    def get_id_weights(self, variation):
+    def get_id_weights(self, variation, id_wp):
         """
         Compute electron ID weights
 
@@ -153,7 +159,7 @@ class ElectronWeights:
         )
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = self.flat_electrons.pt > 10.0
-        electron_id_mask = ak.flatten(working_points.electron_id(self.events, self.id_wp))
+        electron_id_mask = ak.flatten(working_points.electron_id(self.events, id_wp))
         in_electron_mask = electron_pt_mask & electron_id_mask
         in_electrons = self.flat_electrons.mask[in_electron_mask]
 
@@ -165,7 +171,7 @@ class ElectronWeights:
             cset["Electron-ID-SF"].evaluate(
                 self.year_map[self.year],
                 variation,
-                self.id_map[self.id_wp],
+                self.id_map[id_wp],
                 electron_eta,
                 electron_pt,
             ),
@@ -220,7 +226,7 @@ class ElectronWeights:
         )
         return weights
 
-    def get_hlt_weights(self, variation, hlt_paths, dataset_key):
+    def get_hlt_weights(self, variation, hlt_paths, id_wp, dataset_key):
         """
         Compute electron HLT weights
 
@@ -259,7 +265,7 @@ class ElectronWeights:
             cset["Electron-HLT-SF"].evaluate(
                 self.year_map[self.year],
                 variation,
-                hlt_path_id_map[self.id_wp],
+                hlt_path_id_map[id_wp],
                 electron_eta,
                 electron_pt,
             ),

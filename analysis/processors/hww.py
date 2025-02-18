@@ -18,9 +18,8 @@ from analysis.selections import (
     ObjectSelector,
     get_lumi_mask,
     get_trigger_mask,
-    get_metfilters_mask
+    get_metfilters_mask,
 )
-
 
 
 PFNanoAODSchema.warn_missing_crossrefs = False
@@ -87,10 +86,10 @@ class HWWProcessor(processor.ProcessorABC):
         else:
             # energies in data are scaled
             electron_ss.apply_scale()
-            
+
         # apply MET-phi modulation corrections
         apply_met_phi_corrections(events, is_mc, year)
-        
+
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
@@ -123,9 +122,10 @@ class HWWProcessor(processor.ProcessorABC):
                 year=self.year,
                 weights=weights_container,
                 variation="nominal",
-                id_wp=object_selections["electrons"]["cuts"]["electron_id"],
             )
-            electron_weights.add_id_weights()
+            electron_weights.add_id_weights(
+                id_wp=object_selections["electrons"]["cuts"]["electron_id"]
+            )
             electron_weights.add_reco_weights("RecoBelow20")
             electron_weights.add_reco_weights("Reco20to75")
             electron_weights.add_reco_weights("RecoAbove75")
