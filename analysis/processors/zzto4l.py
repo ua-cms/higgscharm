@@ -101,15 +101,13 @@ class ZZTo4LProcessor(processor.ProcessorABC):
                 variation="nominal",
                 weights_container=weights_container,
             )
-            # add electron id, reco and trigger weights
+            # add electron reco weights
             electron_weights = ElectronWeights(
                 events=events,
                 year=self.year,
                 weights=weights_container,
                 variation="nominal",
-                id_wp=object_selections["electrons"]["cuts"]["electron_id"],
             )
-            electron_weights.add_id_weights()
             electron_weights.add_reco_weights("RecoBelow20")
             electron_weights.add_reco_weights("Reco20to75")
             electron_weights.add_reco_weights("RecoAbove75")
