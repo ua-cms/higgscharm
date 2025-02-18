@@ -1,3 +1,6 @@
+import numpy as np
+
+
 class WorkingPoints:
 
     def jet_id(self, events, wp):
@@ -18,6 +21,46 @@ class WorkingPoints:
             "loose": events.Electron.cutBased == 2,
             "medium": events.Electron.cutBased == 3,
             "tight": events.Electron.cutBased == 4,
+        }
+        return wps[wp]
+
+    def electron_bdt_id(self, events, wp):
+        wps = {
+            "bdt": (
+                (np.abs(events.Electron) < 0.8)
+                & (events.Electron.pt > 5)
+                & (events.Electron.pt < 10)
+                & (events.Electron.mvaIso > 1.6369)
+            )
+            | (
+                (np.abs(events.Electron) < 0.8)
+                & (events.Electron.pt > 10)
+                & (events.Electron.mvaIso > 0.3685)
+            )
+            | (
+                (np.abs(events.Electron) > 0.8)
+                & (np.abs(events.Electron) < 1.479)
+                & (events.Electron.pt > 5)
+                & (events.Electron.pt < 10)
+                & (events.Electron.mvaIso > 1.5499)
+            )
+            | (
+                (np.abs(events.Electron) > 0.8)
+                & (np.abs(events.Electron) < 1.479)
+                & (events.Electron.pt > 10)
+                & (events.Electron.mvaIso > 0.2662)
+            )
+            | (
+                (np.abs(events.Electron) > 1.479)
+                & (events.Electron.pt > 5)
+                & (events.Electron.pt < 10)
+                & (events.Electron.mvaIso > 2.0629)
+            )
+            | (
+                (np.abs(events.Electron) > 1.479)
+                & (events.Electron.pt > 10)
+                & (events.Electron.mvaIso > -0.544)
+            )
         }
         return wps[wp]
 
