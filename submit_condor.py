@@ -83,5 +83,15 @@ if __name__ == "__main__":
         action="store_true",
         help="Enable Condor job submission. If not provided, it just builds condor files",
     )
+    parser.add_argument(
+        "--root",
+        action="store_true",
+        help="Enable saving outputs in .root format",
+    )
+    parser.add_argument(
+        "--coffea",
+        action="store_true",
+        help="Enable saving outputs in .coffea format",
+    )
     args = parser.parse_args()
     main(args)

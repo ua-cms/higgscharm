@@ -99,6 +99,16 @@ if __name__ == "__main__":
         action="store_true",
         help="Enable saving outputs to /eos",
     )
+    parser.add_argument(
+        "--root",
+        action="store_true",
+        help="Enable saving outputs in .root format",
+    )
+    parser.add_argument(
+        "--coffea",
+        action="store_true",
+        help="Enable saving outputs in .coffea format",
+    )
     args = parser.parse_args()
     # get datasets for processor and year
     mc = [
@@ -119,4 +129,8 @@ if __name__ == "__main__":
             cmd += " --submit"
         if args.eos:
             cmd += " --eos"
+        if args.coffea:
+            cmd += " --coffea"
+        elif args.root:
+            cmd += " --root"
         os.system(cmd)
