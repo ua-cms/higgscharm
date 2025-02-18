@@ -25,11 +25,10 @@ def main(args):
         executor=processor.futures_executor,
         executor_args={"schema": NanoAODSchema, "workers": 4},
     )
-    save_path = f"{args.output_path}/{args.dataset}"
     if args.coffea:
-        save(out, f"{save_path}.coffea")
+        save(out, f"{args.output_path}.coffea")
     elif args.root:
-        write_root(out, save_path, args)
+        write_root(out, args.output_path, args)
         
 
 
