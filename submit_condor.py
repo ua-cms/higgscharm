@@ -43,6 +43,10 @@ def main(args):
             # we use json.dumps() to switch from single to double quotes within the dictionary
             f"--partition_fileset '{json.dumps(partition_fileset)}' "
         )
+        if args["coffea"]:
+            args["cmd"] += f"--coffea "
+        if args["root"]:
+            args["cmd"] += f"--root "
         submit_condor(args)
 
 
