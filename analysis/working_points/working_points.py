@@ -21,11 +21,6 @@ class WorkingPoints:
             "loose": events.Electron.cutBased == 2,
             "medium": events.Electron.cutBased == 3,
             "tight": events.Electron.cutBased == 4,
-        }
-        return wps[wp]
-
-    def electron_bdt_id(self, events, wp):
-        wps = {
             "bdt": (
                 (np.abs(events.Electron) < 0.8)
                 & (events.Electron.pt > 5)
@@ -60,7 +55,7 @@ class WorkingPoints:
                 (np.abs(events.Electron) > 1.479)
                 & (events.Electron.pt > 10)
                 & (events.Electron.mvaIso > -0.544)
-            )
+            ),
         }
         return wps[wp]
 
