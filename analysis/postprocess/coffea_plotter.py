@@ -1,14 +1,12 @@
 import yaml
-import uproot
 import logging
 import numpy as np
 import mplhep as hep
 import matplotlib.pyplot as plt
-from glob import glob
 from pathlib import Path
 from matplotlib import ticker
-from hist.intervals import poisson_interval
 from coffea.processor import accumulate
+from hist.intervals import poisson_interval
 from analysis.histograms import VariableAxis
 from analysis.configs import ProcessorConfigBuilder
 from analysis.postprocess.utils import setup_logger, divide_by_binwidth
@@ -18,8 +16,7 @@ np.seterr(invalid="ignore")
 np.seterr(divide="ignore")
 
 
-class Plotter:
-
+class CoffeaPlotter:
     def __init__(
         self,
         processor: str,
@@ -40,7 +37,7 @@ class Plotter:
         # load luminosities
         with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:
             self.luminosities = yaml.safe_load(f)
-        # load style config 
+        # load style config
         with open(f"{Path.cwd()}/analysis/postprocess/style.yaml", "r") as f:
             self.style = yaml.safe_load(f)
         # set processes color map
@@ -57,72 +54,110 @@ class Plotter:
             process: color for process, color in zip(processes, self.style["colors"])
         }
 
-
     def get_histogram(
         self,
+        process,
         variable,
         variation,
+        category,
         histogram_dict,
     ):
-        """returns histogram by variable and variation"""
-        histogram = histogram_dict[f"{variable}_{variation}"]
-        # if histogram axis type is 'Variable' divide by bin width
+        """returns histogram by processes/variable/category"""
+        # get histogram from histogram dictionary
+        if variable in histogram_dict:
+            histogram = histogram_dict[variable]
+        else:
+            for key in histogram_dict:
+                if variable in histogram_dict[key].axes.name:
+                    histogram = histogram_dict[key]
+                    break
+        # get variable histogram for nominal variation and category
+        histogram = histogram[{"variation": variation, "category": category}].project(
+            variable
+        )
+        # if axis type is variable divide by bin width
         if isinstance(self.histogram_config.axes[variable], VariableAxis):
             histogram = divide_by_binwidth(histogram)
         return histogram
 
-    def get_variations_histograms(
+    def get_variations_keys(self):
+        variations = {}
+        for process, histogram_dict in self.processed_histograms.items():
+            for feature in histogram_dict:
+                helper_histogram = histogram_dict[feature]
+                variations = [
+                    var
+                    for var in helper_histogram.axes["variation"]
+                    if var != "nominal"
+                ]
+                break
+            break
+        variations = list(
+            set([var.replace("Up", "").replace("Down", "") for var in variations])
+        )
+        return variations
+
+    def get_variations(
         self,
+        process,
         variable,
+        category,
         variation,
         histogram_dict,
     ):
-        """returns Up/Down histograms for some variation"""
-        histogram_up = self.get_histogram(variable, f"{variation}Up", histogram_dict)
-        histogram_down = self.get_histogram(
-            variable, f"{variation}Down", histogram_dict
-        )
+        """returns variation histogram by processes/variable/category"""
+        # get histogram from histogram dictionary
+        if variable in histogram_dict:
+            histogram = histogram_dict[variable]
+        else:
+            for key in histogram_dict:
+                if variable in histogram_dict[key].axes.name:
+                    histogram = histogram_dict[key]
+                    break
+
+        # get variable histogram for nominal variation and category
+        histogram_up = histogram[
+            {"variation": f"{variation}Up", "category": category}
+        ].project(variable)
+        histogram_down = histogram[
+            {"variation": f"{variation}Down", "category": category}
+        ].project(variable)
+
+        # if axis type is variable divide by bin width
+        if isinstance(self.histogram_config.axes[variable], VariableAxis):
+            histogram_up = divide_by_binwidth(histogram_up)
+            histogram_down = divide_by_binwidth(histogram_down)
+
         return histogram_up, histogram_down
 
-    def get_variations_keys(self):
-        variations = []
-        for variable in self.histogram_config.variables:
-            if "met" in variable:
-                continue
-            for process, histogram_dict in self.processed_histograms.items():
-                if process == "Data":
-                    continue
-                for hist_key in histogram_dict:
-                    if "nominal" in hist_key:
-                        continue
-                    if hist_key.startswith(variable):
-                        variations.append(hist_key.replace(f"{variable}_", ""))
-                break
-            break
-        variations = [v.replace("Up", "").replace("Down", "") for v in variations]
-        return list(set(variations))
-
-    def get_histogram_config(self, variable):
+    def get_histogram_config(self, variable, category):
         histogram_info = {"nominal": {}, "variations": {}}
         for process, histogram_dict in self.processed_histograms.items():
             if process == "Data":
                 histogram_info["data"] = self.get_histogram(
+                    process=process,
                     variable=variable,
+                    category=category,
                     variation="nominal",
                     histogram_dict=histogram_dict,
                 )
             else:
                 # save nominal histogram
                 histogram = self.get_histogram(
+                    process=process,
                     variable=variable,
+                    category=category,
                     variation="nominal",
                     histogram_dict=histogram_dict,
                 )
                 histogram_info["nominal"][process] = histogram
+
                 # save variations histograms
                 for variation in self.get_variations_keys():
-                    up, down = self.get_variations_histograms(
+                    up, down = self.get_variations(
+                        process=process,
                         variable=variable,
+                        category=category,
                         variation=variation,
                         histogram_dict=histogram_dict,
                     )
@@ -132,6 +167,7 @@ class Plotter:
                     else:
                         histogram_info["variations"][f"{variation}Up"] = up
                         histogram_info["variations"][f"{variation}Down"] = down
+
         return histogram_info
 
     def get_colors_and_labels(self, histogram_info):
@@ -146,20 +182,19 @@ class Plotter:
         mcstat_err2 = self.nominal_variances
         err2_up = mcstat_err2
         err2_down = mcstat_err2
-
         for variation in self.get_variations_keys():
             # Up/down variations for a single MC sample
             var_up = histogram_info["variations"][f"{variation}Up"].values()
             var_down = histogram_info["variations"][f"{variation}Down"].values()
-            # compute the uncertainties corresponding to the up/down variations
+            # Compute the uncertainties corresponding to the up/down variations
             err_up = var_up - self.nominal_values
             err_down = var_down - self.nominal_values
-            # compute the flags to check which of the two variations (up and down) are pushing the nominal value up and down
+            # Compute the flags to check which of the two variations (up and down) are pushing the nominal value up and down
             up_is_up = err_up > 0
             down_is_down = err_down < 0
-            # compute the flag to check if the uncertainty is one-sided, i.e. when both variations are up or down
+            # Compute the flag to check if the uncertainty is one-sided, i.e. when both variations are up or down
             is_onesided = up_is_up ^ down_is_down
-            # sum in quadrature of the systematic uncertainties taking into account if the uncertainty is one- or double-sided
+            # Sum in quadrature of the systematic uncertainties taking into account if the uncertainty is one- or double-sided
             err2_up_twosided = np.where(up_is_up, err_up**2, err_down**2)
             err2_down_twosided = np.where(up_is_up, err_down**2, err_up**2)
             err2_max = np.maximum(err2_up_twosided, err2_down_twosided)
@@ -169,7 +204,7 @@ class Plotter:
             err2_down_combined = np.where(
                 is_onesided, err2_down_onesided, err2_down_twosided
             )
-            # sum in quadrature of the systematic uncertainty corresponding to a MC sample
+            # Sum in quadrature of the systematic uncertainty corresponding to a MC sample
             err2_up += err2_up_combined
             err2_down += err2_down_combined
 
@@ -224,15 +259,14 @@ class Plotter:
         category: str,
         yratio_limits: str = None,
         log_scale: bool = False,
-        savefig: bool = True,
-        format: str = "pdf",
+        extension: str = "png",
     ):
         setup_logger(self.output_dir)
         # set plot params
         hep.style.use(hep.style.CMS)
         plt.rcParams.update(self.style["rcParams"])
         # get nominal MC histograms
-        histogram_info = self.get_histogram_config(variable)
+        histogram_info = self.get_histogram_config(variable, category)
         nominal_mc_hists = list(histogram_info["nominal"].values())
         mc_histogram = accumulate(nominal_mc_hists)
         self.nominal_values = mc_histogram.values()
@@ -275,18 +309,21 @@ class Plotter:
         self.plot_uncert_band(histogram_info, ax)
         # plot ratio
         self.plot_ratio(rax)
-        # set x-y limits
+        # set limits
         hist_edges = np.array([[i, j] for i, j in zip(self.edges[:-1], self.edges[1:])])
-        values_mask = self.nominal_values > 0
-        xlimits = np.min(hist_edges[values_mask]), np.max(hist_edges[values_mask])
+        xlimits = np.min(hist_edges[self.nominal_values > 0]), np.max(
+            hist_edges[self.nominal_values > 0]
+        )
         ax.set_xlim(xlimits)
         rax.set_xlim(xlimits)
         rax.set_ylim(yratio_limits)
         # set legend layout
-        if ("eta" in variable) or ("phi" in variable):
+        if log_scale:
+            ax.legend(loc="lower left", frameon=True)
+        elif ("eta" in variable) or ("phi" in variable):
             ax.legend(loc="lower left", frameon=True)
         else:
-            ax.legend(frameon=True)
+            ax.legend()
         # set axes labels
         ylabel = "Events"
         if isinstance(self.histogram_config.axes[variable], VariableAxis):
@@ -310,8 +347,10 @@ class Plotter:
         )
         hep.cms.text("Preliminary", ax=ax)
         # save histograms
-        if savefig:
-            fig.savefig(
-                f"{self.output_dir}/{self.processor}_{category}_{variable}_{self.year}.{format}"
-            )
+        output_path = Path(f"{self.output_dir}/{category}")
+        if not output_path.exists():
+            output_path.mkdir(parents=True, exist_ok=True)
+        fig.savefig(
+            f"{str(output_path)}/{self.processor}_{category}_{variable}_{self.year}.{extension}"
+        )
         plt.close()

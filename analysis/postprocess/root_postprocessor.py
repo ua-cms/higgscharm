@@ -13,7 +13,7 @@ from analysis.configs import ProcessorConfigBuilder
 from analysis.postprocess.utils import open_output, print_header, df_to_latex
 
 
-class Postprocessor:
+class ROOTPostprocessor:
     def __init__(
         self,
         processor: str,
