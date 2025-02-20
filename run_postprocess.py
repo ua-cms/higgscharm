@@ -56,23 +56,16 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    postprocess_kwargs = {
+        "processor": args.processor,
+        "year": args.year,
+        "yratio_limits": args.yratio_limits,
+        "log_scale": args.log_scale,
+        "extension": args.extension,
+        "postprocess": args.postprocess,
+        "plot": args.plot
+    }
     if args.output_format == "coffea":
-        coffea_postprocess(
-            processor=args.processor,
-            year=args.year,
-            yratio_limits=args.yratio_limits,
-            log_scale=args.log_scale,
-            extension=args.extension,
-            postprocess=args.postprocess,
-            plot=args.plot,
-        )
+        coffea_postprocess(**postprocess_kwargs)
     elif args.output_format == "root":
-        root_postprocess(
-            processor=args.processor,
-            year=args.year,
-            yratio_limits=args.yratio_limits,
-            log_scale=args.log_scale,
-            extension=args.extension,
-            postprocess=args.postprocess,
-            plot=args.plot,
-        )
+        root_postprocess(**postprocess_kwargs)
