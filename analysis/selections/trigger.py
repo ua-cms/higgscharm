@@ -18,6 +18,69 @@ def trigger_from_flag(events, flag):
     return trigger_mask
 
 
+def zzto4l_trigger(events, hlt_paths, dataset_key):
+    # compute all trigger masks based on the flags in hlt_paths
+    trigger_flags = {}
+    for flag in hlt_paths:
+        trigger_flags[flag] = trigger_from_flag(events, flag)
+
+    if hasattr(events, "genWeight"):
+        # compute the combined OR of all flags (for MC datasets)
+        mc_trigger_mask = np.zeros(len(events), dtype="bool")
+        for flag in trigger_flags:
+            mc_trigger_mask = mc_trigger_mask | trigger_flags[flag]
+        return mc_trigger_mask
+
+    # ensure each event is taken only from a single PD
+    nevents = len(events)
+    pd_trigger_mask = (
+        (
+            ((dataset_key == "EGamma") * np.ones(nevents, dtype=bool))
+            & (trigger_flags["DiEle"] | trigger_flags["TriEle"])
+        )
+        | (
+            (
+                ((dataset_key == "Muon") or (dataset_key == "DoubleMuon"))
+                * np.ones(nevents, dtype=bool)
+            )
+            & (trigger_flags["DiMu"] | trigger_flags["TriMu"])
+            & ~trigger_flags["DiEle"]
+            & ~trigger_flags["TriEle"]
+        )
+        | (
+            ((dataset_key == "MuonEG") * np.ones(nevents, dtype=bool))
+            & trigger_flags["MuEle"]
+            & ~trigger_flags["DiMu"]
+            & ~trigger_flags["TriMu"]
+            & ~trigger_flags["DiEle"]
+            & ~trigger_flags["TriEle"]
+        )
+        | (
+            ((dataset_key == "EGamma") * np.ones(nevents, dtype=bool))
+            & trigger_flags["SingleEle"]
+            & ~trigger_flags["MuEle"]
+            & ~trigger_flags["DiMu"]
+            & ~trigger_flags["TriMu"]
+            & ~trigger_flags["DiEle"]
+            & ~trigger_flags["TriEle"]
+        )
+        | (
+            (
+                ((dataset_key == "Muon") or (dataset_key == "SingleMuon"))
+                * np.ones(nevents, dtype=bool)
+            )
+            & trigger_flags["SingleMu"]
+            & ~trigger_flags["SingleEle"]
+            & ~trigger_flags["MuEle"]
+            & ~trigger_flags["DiMu"]
+            & ~trigger_flags["TriMu"]
+            & ~trigger_flags["DiEle"]
+            & ~trigger_flags["TriEle"]
+        )
+    )
+    return pd_trigger_mask
+
+
 def trigger_mask(events, hlt_paths, dataset_key):
     # compute all trigger masks based on the flags in hlt_paths
     trigger_flags = {}

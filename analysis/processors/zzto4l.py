@@ -16,7 +16,7 @@ from analysis.corrections.electron import ElectronWeights, ElectronSS
 from analysis.selections import (
     ObjectSelector,
     get_lumi_mask,
-    get_trigger_mask,
+    get_zzto4l_trigger_mask,
 )
 
 
