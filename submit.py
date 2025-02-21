@@ -38,7 +38,15 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        help="processor to be used {ztomumu, ztoee, zzto4l, hww}",
+        choices=["ztomumu", "ztoee", "zzto4l", "hww"],
+        help="processor to be used",
+    )
+    parser.add_argument(
+        "--year",
+        dest="year",
+        type=str,
+        choices=["2022preEE", "2022postEE"],
+        help="dataset year",
     )
     parser.add_argument(
         "--dataset",
@@ -53,12 +61,6 @@ if __name__ == "__main__":
         help="partition_fileset needed to preprocess a fileset",
     )
     parser.add_argument(
-        "--year",
-        dest="year",
-        type=str,
-        help="year of the data {2022preEE, 2022postEE}",
-    )
-    parser.add_argument(
         "--output_path",
         dest="output_path",
         type=str,
@@ -68,7 +70,8 @@ if __name__ == "__main__":
         "--output_format",
         type=str,
         default="coffea",
-        help="format of output histograms {root, coffea}",
+        choices=["coffea", "root"],
+        help="format of output histogram",
     )
     args = parser.parse_args()
     main(args)
