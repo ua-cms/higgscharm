@@ -1,36 +1,33 @@
 goldenjson: analysis/data/Cert_Collisions2022_355100_362760_Golden.txt
 lumidata: analysis/data/lumi2022.csv
 hlt_paths:
-  Muon:
-    - SingleMu
-    - DiMu
-    - TriMu
-  MuonEG:
-    - MuEle
-  EGamma:
-    - SingleEle
-    - DiEle
-    - TriEle
+  - SingleMu
+  - DiMu
+  - TriMu
+  - SingleEle
+  - DiEle
+  - TriEle
+  - MuEle
 object_selection:
   muons:
     field: events.Muon
     cuts:
       pt: events.Muon.pt > 5
       abseta: np.abs(events.Muon.eta) < 2.4
-      dxy: events.Muon.dxy < 0.5
-      dz: events.Muon.dz < 1
-      sip3d: events.Muon.sip3d < 4
-      reco: events.Muon.isGlobal | events.Muon.isTracker
+      dxy: np.abs(events.Muon.dxy) < 0.5
+      dz: np.abs(events.Muon.dz) < 1
+      sip3d: np.abs(events.Muon.sip3d) < 4
+      reco: events.Muon.isGlobal | (events.Muon.isTracker & (events.Muon.nStations > 0))
       reliso: events.Muon.pfRelIso03_all < 0.35
-      pt_id: ((events.Muon.pt < 200) & events.Muon.tightId) | ((events.Muon.pt >= 200) & ((events.Muon.tightId) | (events.Muon.highPtId == 1)))
+      pt_id: (events.Muon.isPFcand) | ((events.Muon.highPtId > 0) & (events.Muon.pt >= 200))
   electrons:
     field: events.Electron
     cuts:
       pt: events.Electron.pt > 7
       abseta: np.abs(events.Electron.eta) < 2.5
-      dxy: events.Electron.dxy < 0.5
-      dz: events.Electron.dz < 1
-      sip3d: events.Electron.sip3d < 4
+      dxy: np.abs(events.Electron.dxy) < 0.5
+      dz: np.abs(events.Electron.dz) < 1
+      sip3d: np.abs(events.Electron.sip3d) < 4
       electron_id: bdt
       electron_muon_dr: delta_r_higher(events.Electron, objects['muons'], 0.05)
   leptons:
@@ -57,7 +54,7 @@ object_selection:
     cuts: null
 event_selection:
   selections:
-    trigger: get_trigger_mask(events, hlt_paths, dataset_key)
+    trigger: get_zzto4l_trigger_mask(events, hlt_paths, dataset_key)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     lumimask: get_lumi_mask(events, goldenjson)
     atleast_one_zz: ak.num(objects['zz_pairs']) > 0
