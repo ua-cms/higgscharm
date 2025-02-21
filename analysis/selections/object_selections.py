@@ -8,7 +8,6 @@ from analysis.selections import (
     delta_r_higher,
     delta_r_lower,
     select_dileptons,
-    select_zzto4l_zz_candidates,
     transverse_mass,
 )
 
@@ -95,6 +94,7 @@ class ObjectSelector:
                 "mass": self.objects[leptons].mass,
                 "pdgId": self.objects[leptons].pdgId,
                 "idx": self.objects[leptons].idx,
+                "fsrPhotonIdx": self.objects[leptons].fsrPhotonIdx,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -214,33 +214,214 @@ class ObjectSelector:
         )
 
     def select_zzto4l_zzpairs(self):
-        # sort lepton pairs by proximity to Z mass
+        zz_pairs = ak.combinations(self.objects["ll_pairs"], 2, fields=["z1", "z2"])
+        zz_pairs = ak.zip(
+            {
+                "z1": ak.zip(
+                    {
+                        "l1": zz_pairs.z1.l1,
+                        "l2": zz_pairs.z1.l2,
+                        "p4": zz_pairs.z1.l1 + zz_pairs.z1.l2,
+                    }
+                ),
+                "z2": ak.zip(
+                    {
+                        "l1": zz_pairs.z2.l1,
+                        "l2": zz_pairs.z2.l2,
+                        "p4": zz_pairs.z2.l1 + zz_pairs.z2.l2,
+                    }
+                ),
+            }
+        )
+        # sort zz pairs by they proximity to Z mass
         zmass = 91.1876
-        dist_from_z_all_pairs = np.abs(
-            (self.objects["ll_pairs"].l1 + self.objects["ll_pairs"].l2).mass - zmass
+        dist_from_z1_to_zmass = np.abs(zz_pairs.z1.p4.mass - zmass)
+        dist_from_z2_to_zmass = np.abs(zz_pairs.z2.p4.mass - zmass)
+        z1 = ak.where(
+            dist_from_z1_to_zmass > dist_from_z2_to_zmass,
+            zz_pairs.z2,
+            zz_pairs.z1,
         )
-        sorted_ll_pairs = self.objects["ll_pairs"][
-            ak.argsort(dist_from_z_all_pairs, axis=1)
-        ]
-        # ZZ candidates
-        zz_pairs = select_zzto4l_zz_candidates(sorted_ll_pairs)
-        # mass-sorted alternative pairing Z candidates
-        alt_sorted_ll_pairs = self.objects["ll_pairs"][
-            ak.argsort(
-                -(self.objects["ll_pairs"].l1 + self.objects["ll_pairs"].l2).mass,
-                axis=1,
-            )
-        ]
-        alt_zz_pairs = select_zzto4l_zz_candidates(alt_sorted_ll_pairs)
-        # 'smart cut': require NOT(|mZa - mZ| < |mZ1 − mZ| AND mZb < 12)
-        # This cut discards 4µ and 4e candidates where the alternative pairing looks like an on-shell Z + low-mass l+l−
-        smart_cut = ~(
+        z2 = ak.where(
+            dist_from_z1_to_zmass < dist_from_z2_to_zmass,
+            zz_pairs.z2,
+            zz_pairs.z1,
+        )
+        zz_pairs = ak.zip(
+            {
+                "z1": ak.zip(
+                    {
+                        "l1": z1.l1,
+                        "l2": z1.l2,
+                        "p4": z1.l1 + z1.l2,
+                    }
+                ),
+                "z2": ak.zip(
+                    {
+                        "l1": z2.l1,
+                        "l2": z2.l2,
+                        "p4": z2.l1 + z2.l2,
+                    }
+                ),
+            }
+        )
+        # get zz pairs with original lepton 4-vectors
+        zz_pairs_orig = ak.zip(
+            {
+                "z1": ak.zip(
+                    {
+                        "l1": zz_pairs.z1.l1.orig,
+                        "l2": zz_pairs.z1.l2.orig,
+                        "p4": zz_pairs.z1.l1.orig + zz_pairs.z1.l2.orig,
+                    }
+                ),
+                "z2": ak.zip(
+                    {
+                        "l1": zz_pairs.z2.l1.orig,
+                        "l2": zz_pairs.z2.l2.orig,
+                        "p4": zz_pairs.z2.l1.orig + zz_pairs.z2.l2.orig,
+                    }
+                ),
+            }
+        )
+        # ghost removal: ∆R(η, φ) > 0.02 between each of the four leptons
+        ghost_removal_mask = (
+            (zz_pairs.z1.l1.delta_r(zz_pairs.z1.l2) > 0.02)
+            & (zz_pairs.z1.l1.delta_r(zz_pairs.z2.l1) > 0.02)
+            & (zz_pairs.z1.l1.delta_r(zz_pairs.z2.l2) > 0.02)
+            & (zz_pairs.z1.l2.delta_r(zz_pairs.z2.l1) > 0.02)
+            & (zz_pairs.z1.l2.delta_r(zz_pairs.z2.l2) > 0.02)
+            & (zz_pairs.z2.l1.delta_r(zz_pairs.z2.l2) > 0.02)
+        )
+        # Lepton pT: two of the four selected leptons should pass pT,i > 20 GeV and pT,j > 10
+        lepton_pt_mask = (
             (
-                np.abs(alt_zz_pairs.z1.p4.mass - zmass)
-                < np.abs(zz_pairs.z1.p4.mass - zmass)
+                ak.any(zz_pairs.z1.l1.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z1.l2.pt > 10, axis=-1)
             )
-            & (alt_zz_pairs.z2.p4.mass < 12)
+            | (
+                ak.any(zz_pairs.z1.l1.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z2.l1.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z1.l1.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z2.l2.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z1.l2.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z1.l1.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z1.l2.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z2.l1.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z1.l2.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z2.l2.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z2.l1.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z1.l1.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z2.l1.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z1.l2.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z2.l1.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z2.l2.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z2.l2.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z1.l1.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z2.l2.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z1.l2.pt > 10, axis=-1)
+            )
+            | (
+                ak.any(zz_pairs.z2.l2.pt > 20, axis=-1)
+                & ak.any(zz_pairs.z2.l1.pt > 10, axis=-1)
+            )
         )
+        # QCD suppression: all four opposite-sign pairs that can be built with the four leptons (regardless of lepton flavor) must satisfy m > 4 GeV
+        qcd_condition_mask = (
+            (zz_pairs_orig.z1.p4.mass > 4)
+            & (zz_pairs_orig.z2.p4.mass > 4)
+            & (
+                (zz_pairs_orig.z1.l1.charge + zz_pairs_orig.z2.l1.charge != 0)
+                | (
+                    (zz_pairs_orig.z1.l1.charge + zz_pairs_orig.z2.l1.charge == 0)
+                    & ((zz_pairs_orig.z1.l1 + zz_pairs_orig.z2.l1).mass > 4)
+                )
+            )
+            & (
+                (zz_pairs_orig.z1.l1.charge + zz_pairs_orig.z2.l2.charge != 0)
+                | (
+                    (zz_pairs_orig.z1.l1.charge + zz_pairs_orig.z2.l2.charge == 0)
+                    & ((zz_pairs_orig.z1.l1 + zz_pairs_orig.z2.l2).mass > 4)
+                )
+            )
+            & (
+                (zz_pairs_orig.z1.l2.charge + zz_pairs_orig.z2.l1.charge != 0)
+                | (
+                    (zz_pairs_orig.z1.l2.charge + zz_pairs_orig.z2.l1.charge == 0)
+                    & ((zz_pairs_orig.z1.l2 + zz_pairs_orig.z2.l1).mass > 4)
+                )
+            )
+            & (
+                (zz_pairs_orig.z1.l2.charge + zz_pairs_orig.z2.l2.charge != 0)
+                | (
+                    (zz_pairs_orig.z1.l2.charge + zz_pairs_orig.z2.l2.charge == 0)
+                    & ((zz_pairs_orig.z1.l2 + zz_pairs_orig.z2.l2).mass > 4)
+                )
+            )
+        )
+        # Z1 mass > 40 GeV
+        mass_mask = zz_pairs.z1.p4.mass > 40
+        zz_pairs = zz_pairs[
+            ak.fill_none(
+                ghost_removal_mask & lepton_pt_mask & qcd_condition_mask & mass_mask,
+                False,
+            )
+        ]
+
+        # get alternative pairing Z candidates:
+        # select same flavor zz pairs
+        sf_pairs = np.abs(zz_pairs.z1.l1.pdgId) == np.abs(zz_pairs.z2.l1.pdgId)
+        zz_pairs_sf = zz_pairs.mask[sf_pairs]
+        # get initial alternative pairs
+        ops = zz_pairs_sf.z1.l1.pdgId == -zz_pairs_sf.z2.l1.pdgId
+        za0 = ak.where(
+            ops,
+            zz_pairs_sf.z1.l1 + zz_pairs_sf.z2.l1,
+            zz_pairs_sf.z1.l1 + zz_pairs_sf.z2.l2,
+        )
+        zb0 = ak.where(
+            ops,
+            zz_pairs_sf.z1.l2 + zz_pairs_sf.z2.l2,
+            zz_pairs_sf.z1.l2 + zz_pairs_sf.z2.l1,
+        )
+        # get final alternative pairs selecting Za as the one closest to the Z mass
+        zmass = 91.1876
+        dist_from_za_to_zmass = np.abs(za0.mass - zmass)
+        dist_from_zb_to_zmass = np.abs(zb0.mass - zmass)
+        za = ak.where(
+            dist_from_zb_to_zmass > dist_from_za_to_zmass,
+            za0,
+            zb0,
+        )
+        zb = ak.where(
+            dist_from_zb_to_zmass < dist_from_za_to_zmass,
+            za0,
+            zb0,
+        )
+        smart_cut = ~(
+            (np.abs(za.mass - zmass) < np.abs(zz_pairs.z1.p4.mass - zmass))
+            & (zb.mass < 12)
+        )
+        smart_cut = ak.fill_none(smart_cut, True)
+
         self.objects["zz_pairs"] = zz_pairs[smart_cut]
         self.objects["zz_pairs"].pt = (
             self.objects["zz_pairs"].z1.p4.pt + self.objects["zz_pairs"].z2.p4.pt
