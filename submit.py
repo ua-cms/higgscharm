@@ -27,7 +27,7 @@ def main(args):
     )
     savepath = f"{args.output_path}/{args.dataset}"
     if args.output_format == "coffea":
-        save(out, f"{asavepath}.coffea")
+        save(out, f"{sasavepath}.coffea")
     elif args.output_format == "root":
         write_root(out, savepath, args)
         
