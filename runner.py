@@ -85,7 +85,7 @@ DATASETS = {
             "data": PD_DATASETS["SingleMuon"]["2022preEE"] + PD_DATASETS["DoubleMuon"]["2022preEE"] + PD_DATASETS["Muon"]["2022preEE"] + PD_DATASETS["MuonEG"]["2022preEE"] + PD_DATASETS["EGamma"]["2022preEE"],
         },
         "2022postEE": {
-            "mc": MC_DATASETS["higgs"] + MC_DATASETS["ggtozz"] + MC_DATASETS["qqtozz"],
+            "mc": MC_DATASETS["higgs"] + MC_DATASETS["ggtozz"] + MC_DATASETS["qqtozz"] + MC_DATASETS["ew"],
             "data": PD_DATASETS["Muon"]["2022postEE"] + PD_DATASETS["MuonEG"]["2022postEE"] + PD_DATASETS["EGamma"]["2022postEE"],
         }
     },
