@@ -2,17 +2,6 @@ import os
 import argparse
 
 
-ERAS = {"2022preEE": ["C", "D"], "2022postEE": ["E", "F", "G"]}
-PRIMARY_DATASETS = ["Muon", "MuonEG", "EGamma"]
-DATA_SAMPLES = {}
-for year, eras in ERAS.items():
-    DATA_SAMPLES[year] = {}
-    for primary_dataset in PRIMARY_DATASETS:
-        DATA_SAMPLES[year][primary_dataset] = []
-        for era in eras:
-            DATA_SAMPLES[year][primary_dataset].append(f"{primary_dataset}{era}")
-
-            
 MC_DATASETS = {
     "ttbar": ["TTto2L2Nu", "TTto4Q", "TTtoLNu2Q"],
     "singletop": [
@@ -45,26 +34,81 @@ MC_DATASETS = {
         "GluGlutoContinto2Zto4Tau",
     ],
     "qqtozz": ["ZZto4L"],
+    "ew": [
+        "ZZZ",
+        "WZZ",
+        "WWZ",
+        "TTWW",
+        "TTZZ",
+        "TTZ",
+        "WZto3LNu"
+    ]
 }
 
+PD_DATASETS = {
+    "Muon": {
+        "2022preEE": ["MuonC", "MuonD"],
+        "2022postEE": ["MuonE", "MuonF", "MuonG"],
+    },
+    "SingleMuon": {
+        "2022preEE": ["SingleMuonC"],
+        "2022postEE": [],
+    },
+    "DoubleMuon": {
+        "2022preEE": ["DoubleMuonC"],
+        "2022postEE": [],
+    },
+    "EGamma": {
+        "2022preEE": ["EGammaC", "EGammaD"],
+        "2022postEE": ["EGammaE", "EGammaF", "EGammaG"],
+    },
+    "MuonEG": {
+        "2022preEE": ["MuonEGC", "MuonEGD"],
+        "2022postEE": ["MuonEGE", "MuonEGF", "MuonEGG"],
+    }
+}
 
 DATASETS = {
     "hww": {
-        "mc": ["ttbar", "singletop", "diboson"],
-        "data": ["Muon", "MuonEG", "EGamma"],
+        "2022preEE": {
+            "mc": MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
+            "data": PD_DATASETS["Muon"]["2022preEE"] + PD_DATASETS["MuonEG"]["2022preEE"] + PD_DATASETS["EGamma"]["2022preEE"],
+        },
+        "2022postEE": {
+            "mc": MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
+            "data": PD_DATASETS["Muon"]["2022postEE"] + PD_DATASETS["MuonEG"]["2022postEE"] + PD_DATASETS["EGamma"]["2022postEE"],
+        },
     },
     "zzto4l": {
-        "mc": ["higgs", "ggtozz", "qqtozz"],
-        "data": ["Muon", "MuonEG", "EGamma"],
+        "2022preEE": {
+            "mc": MC_DATASETS["higgs"] + MC_DATASETS["ggtozz"] + MC_DATASETS["qqtozz"] + MC_DATASETS["ew"],
+            "data": PD_DATASETS["SingleMuon"]["2022preEE"] + PD_DATASETS["DoubleMuon"]["2022preEE"] + PD_DATASETS["Muon"]["2022preEE"] + PD_DATASETS["MuonEG"]["2022preEE"] + PD_DATASETS["EGamma"]["2022preEE"],
+        },
+        "2022postEE": {
+            "mc": MC_DATASETS["higgs"] + MC_DATASETS["ggtozz"] + MC_DATASETS["qqtozz"],
+            "data": PD_DATASETS["Muon"]["2022postEE"] + PD_DATASETS["MuonEG"]["2022postEE"] + PD_DATASETS["EGamma"]["2022postEE"],
+        }
     },
     "ztoee": {
-        "mc": ["ttbar", "singletop", "diboson"], 
-        "data": ["EGamma"]
+        "2022preEE": {
+            "mc": MC_DATASETS["dyjets"] + MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
+            "data": PD_DATASETS["EGamma"]["2022preEE"]
+        },
+        "2022postEE": {
+            "mc": MC_DATASETS["dyjets"] + MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
+            "data": PD_DATASETS["EGamma"]["2022postEE"]
+        } 
     },
     "ztomumu": {
-        "mc": ["ttbar", "singletop", "diboson"], 
-        "data": ["EGamma"]
-    },
+        "2022preEE": {
+            "mc": MC_DATASETS["dyjets"] + MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
+            "data": PD_DATASETS["Muon"]["2022preEE"]
+        },
+        "2022postEE": {
+            "mc": MC_DATASETS["dyjets"] + MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
+            "data": PD_DATASETS["Muon"]["2022postEE"]
+        } 
+    }
 }
 
 
@@ -106,18 +150,9 @@ if __name__ == "__main__":
         help="format of output histograms {root, coffea}",
     )
     args = parser.parse_args()
+    
     # get datasets for processor and year
-    mc = [
-        sample
-        for dataset in DATASETS[args.processor]["mc"]
-        for sample in MC_DATASETS[dataset]
-    ]
-    data = [
-        sample
-        for dataset in DATASETS[args.processor]["data"]
-        for sample in DATA_SAMPLES[args.year][dataset]
-    ]
-    datasets = mc + data
+    datasets = DATASETS[args.processor][args.year]["mc"] + DATASETS[args.processor][args.year]["data"]
     # submit job for each dataset
     for dataset in datasets:
         cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles} --output_format {args.output_format}"
