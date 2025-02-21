@@ -1,3 +1,13 @@
+DoubleMuonC:
+  era: C
+  query: DoubleMuon/Run2022C-22Sep2023-v1/NANOAOD
+  process: Data
+  xsec: None
+SingleMuonC:
+  era: C
+  query: SingleMuon/Run2022C-22Sep2023-v1/NANOAOD
+  process: Data
+  xsec: None
 MuonC:
   era: C
   query: Muon/Run2022C-22Sep2023-v1/NANOAOD
