@@ -26,11 +26,9 @@ def main(args):
 
     run_done = []
     for sample in datasets:
-        output_list = glob.glob(f"{args.output_path}/*{sample}*.pkl")
+        output_list = glob.glob(f"{args.output_path}/*/{sample}*.{args.output_format}")
         for f in output_list:
-            run_done.append(
-                f.split("/")[-1].replace(".pkl", "").replace(f"{args.year}_", "")
-            )
+            run_done.append(f.split("/")[-1].replace(f".{args.output_format}", ""))
     total_run = len(run_done)
 
     # show (and optionally resubmit) missing jobs
@@ -52,28 +50,35 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--resubmit",
-        action="store_true",
-        help="if True resubmit the jobs. if False only print the missing jobs",
-    )
-    parser.add_argument(
         "--processor",
         dest="processor",
         type=str,
-        default="ztoee",
-        help="processor to be used {ztomumu, ztoee}",
+        choices=["ztomumu", "ztoee", "zzto4l", "hww"],
+        help="processor to be used",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
-        default="2022postEE",
-        help="year of the data {2022preEE, 2022postEE}",
+        choices=["2022preEE", "2022postEE"],
+        help="year of the data",
     )
     parser.add_argument(
         "--eos",
         action="store_true",
         help="Enable reading outputs from /eos",
+    )
+    parser.add_argument(
+        "--resubmit",
+        action="store_true",
+        help="if True resubmit the jobs. if False only print the missing jobs",
+    )
+    parser.add_argument(
+        "--output_format",
+        type=str,
+        default="coffea",
+        choices=["coffea", "root"],
+        help="format of output histograms",
     )
     args = parser.parse_args()
     main(args)
