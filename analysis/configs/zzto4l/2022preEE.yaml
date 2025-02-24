@@ -18,8 +18,7 @@ object_selection:
       dz: np.abs(events.Muon.dz) < 1
       sip3d: np.abs(events.Muon.sip3d) < 4
       reco: events.Muon.isGlobal | (events.Muon.isTracker & (events.Muon.nStations > 0))
-      reliso: events.Muon.pfRelIso03_all < 0.35
-      pt_id: (events.Muon.isPFcand) | ((events.Muon.highPtId > 0) & (events.Muon.pt >= 200))
+      pt_id: (events.Muon.isPFcand) | ((events.Muon.highPtId > 0) & (events.Muon.pt > 200))
   electrons:
     field: events.Electron
     cuts:
@@ -30,6 +29,12 @@ object_selection:
       sip3d: np.abs(events.Electron.sip3d) < 4
       electron_id: bdt
       electron_muon_dr: delta_r_higher(events.Electron, objects['muons'], 0.05)
+  fsr_photons:
+    field: events.FsrPhoton
+    cuts:
+      pt: events.FsrPhoton.pt > 2
+      abseta: np.abs(events.FsrPhoton.eta) < 2.4
+      iso: events.FsrPhoton.relIso03 < 1.8
   leptons:
     field: select_zzto4l_leptons
     cuts: null
