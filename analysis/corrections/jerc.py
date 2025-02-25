@@ -1,129 +1,21 @@
 # tools to apply JEC/JER and compute their uncertainties (https://cms-jerc.web.cern.ch/Recommendations/)
 # copied from https://github.com/green-cabbage/copperheadV2/blob/main/corrections/jet.py
+import yaml
 import contextlib
 import numpy as np
 import awkward as ak
 import importlib.resources
 from pathlib import Path
-from analysis.corrections.utils import get_era
+from analysis.filesets.utils import get_dataset_era
 from coffea.lookup_tools import extractor
 from coffea.jetmet_tools import JECStack, CorrectedJetsFactory
 
+
 # Run3 recommendations: # https://cms-jerc.web.cern.ch/JEC/
-JEC_PARAMS = {
-    "runs": {
-        "2022preEE": ["C", "D"],
-        "2022postEE": ["E", "F", "G"],
-    },
-    # PUPPI jets do not need the L1 Pileup corrections
-    "jec_levels_mc": {
-        "2022preEE": [
-            # "L1FastJet",
-            "L2Relative",
-            "L3Absolute",
-        ],
-        "2022postEE": [
-            # "L1FastJet",
-            "L2Relative",
-            "L3Absolute",
-        ],
-    },
-    "jec_levels_data": {
-        "2022preEE": [
-            # "L1FastJet",
-            "L2Relative",
-            "L3Absolute",
-            "L2L3Residual",
-        ],
-        "2022postEE": [
-            # "L1FastJet",
-            "L2Relative",
-            "L3Absolute",
-            "L2L3Residual",
-        ],
-    },
-    # I modified the original names since coffea jetmet_tools requires file names
-    # of "5 words in length" ('Summer22EE22Sep2023_V2_MC_L1FastJet_AK4PFPuppi.jec')
-    "jec_tags": {
-        "2022preEE": "Summer2222Sep2023_V2_MC",
-        "2022postEE": "Summer22EE22Sep2023_V2_MC",
-    },
-    "jer_tags": {
-        "2022preEE": "Summer2222Sep2023_JRV1_MC",
-        "2022postEE": "Summer22EE22Sep2023_JRV1_MC",
-    },
-    "jec_data_tags": {
-        "2022preEE": {"Summer2222Sep2023_RunCD_V2_DATA": ["C", "D"]},
-        "2022postEE": {
-            "Summer22EE22Sep2023_RunE_V2_DATA": ["E"],
-            "Summer22EE22Sep2023_RunF_V2_DATA": ["F"],
-            "Summer22EE22Sep2023_RunG_V2_DATA": ["G"],
-        },
-    },
-    # Do we need the PileUp* variations? (L1 Pileup corrections are turn off)
-    "jec_variations": {
-        "2022preEE": [
-            "AbsoluteMPFBias",
-            "AbsoluteScale",
-            "AbsoluteStat",
-            "FlavorQCD",
-            "Fragmentation",
-            "PileUpDataMC",
-            "PileUpPtBB",
-            "PileUpPtEC1",
-            "PileUpPtEC2",
-            "PileUpPtHF",
-            "PileUpPtRef",
-            "RelativeFSR",
-            "RelativeJEREC1",
-            "RelativeJEREC2",
-            "RelativeJERHF",
-            "RelativePtBB",
-            "RelativePtEC1",
-            "RelativePtEC2",
-            "RelativePtHF",
-            "RelativeBal",
-            "RelativeSample",
-            "RelativeStatEC",
-            "RelativeStatFSR",
-            "RelativeStatHF",
-            "SinglePionECAL",
-            "SinglePionHCAL",
-            "TimePtEta",
-            "Total",
-        ],
-        "2022postEE": [
-            "AbsoluteMPFBias",
-            "AbsoluteScale",
-            "AbsoluteStat",
-            "FlavorQCD",
-            "Fragmentation",
-            "PileUpDataMC",
-            "PileUpPtBB",
-            "PileUpPtEC1",
-            "PileUpPtEC2",
-            "PileUpPtHF",
-            "PileUpPtRef",
-            "RelativeFSR",
-            "RelativeJEREC1",
-            "RelativeJEREC2",
-            "RelativeJERHF",
-            "RelativePtBB",
-            "RelativePtEC1",
-            "RelativePtEC2",
-            "RelativePtHF",
-            "RelativeBal",
-            "RelativeSample",
-            "RelativeStatEC",
-            "RelativeStatFSR",
-            "RelativeStatHF",
-            "SinglePionECAL",
-            "SinglePionHCAL",
-            "TimePtEta",
-            "Total",
-        ],
-    },
-}
+with importlib.resources.open_text(
+    f"analysis.corrections", f"jerc_params.yaml"
+) as file:
+    JEC_PARAMS = yaml.safe_load(file)
 
 
 def jec_names_and_sources(year):
@@ -203,14 +95,13 @@ def get_jet_evaluator(year):
 
 def apply_jerc_corrections(
     events,
+    year,
     dataset,
-    year="2022postEE",
-    apply_jec=True,
-    apply_jer=False,
-    apply_junc=False,
+    apply_jec,
+    apply_jer,
+    apply_junc,
 ):
-    # retrive era from dataset
-    era = get_era(dataset)
+    era = get_dataset_era(dataset, year)
     # add requiered variables to Jet collection
     jets = events.Jet
     if apply_jec:

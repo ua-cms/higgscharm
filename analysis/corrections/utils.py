@@ -10,7 +10,7 @@ POG_JSONS = {
     "muon": ["MUO", "muon_Z.json.gz"],
     "electron_id": ["EGM", "electron.json.gz"],
     "electron_hlt": ["EGM", "electronHlt.json.gz"],
-    "electron_scale": ["EGM", "electronSS.json.gz"],
+    "electron_ss": ["EGM", "electronSS.json.gz"],
     "jetvetomaps": ["JME", "jetvetomaps.json.gz"],
     "jec": ["JME", "jet_jerc.json.gz"],
     "ctag": ["BTV", "ctagging.json.gz"],
@@ -18,8 +18,21 @@ POG_JSONS = {
 POG_YEARS = {
     "2022preEE": "2022_Summer22",
     "2022postEE": "2022_Summer22EE",
+    "2023preBPix": "2023_Summer23",
+    "2023postBPix": "2023_Summer23BPix",
 }
-
+# summary of corrections: https://twiki.cern.ch/twiki/bin/view/CMS/EgammSFandSSRun3#JSONs
+EGAMMA_CORRECTION_PATH = "/eos/cms/store/group/phys_egamma/ScaleFactors"
+EGAMMA_YEARS = {
+    "2022preEE": "Data2022/ForRe-recoBCD",
+    "2022postEE": "Data2022/ForRe-recoE+PromptFG",
+    "2023preBPix": "Data2023/ForPrompt23C",
+    "2023postBPix": "Data2023/ForPrompt23D",
+}
+EGAMMA_JSONS = {
+    "electron_ss": ["SS", "electronSS_EtDependent.json.gz"]
+}
+    
 
 def get_pog_json(json_name: str, year: str) -> str:
     """
@@ -30,7 +43,7 @@ def get_pog_json(json_name: str, year: str) -> str:
         json_name:
             pog json name
         year:
-            dataset year {2022preEE, 2022postEE}
+            dataset year {2022preEE, 2022postEE, 2023preBPix, 2023postBPix}
     """
     if json_name in POG_JSONS:
         pog_json = POG_JSONS[json_name]
@@ -38,6 +51,24 @@ def get_pog_json(json_name: str, year: str) -> str:
         print(f"No json for {json_name}")
     return f"{POG_CORRECTION_PATH}/POG/{pog_json[0]}/{POG_YEARS[year]}/{pog_json[1]}"
 
+
+def get_egamma_json(json_name: str, year: str) -> str:
+    """
+    returns egamma json file path
+
+    Parameters:
+    -----------
+        json_name:
+            json name
+        year:
+            dataset year {2022preEE, 2022postEE, 2023preBPix, 2023postBPix}
+    """
+    if json_name in EGAMMA_JSONS:
+        egamma_json = EGAMMA_JSONS[json_name]
+    else:
+        print(f"No json for {json_name}")
+    return f"{EGAMMA_CORRECTION_PATH}/{EGAMMA_YEARS[year]}/{egamma_json[0]}/{egamma_json[1]}"
+    
 
 def unflat_sf(sf: ak.Array, in_limit_mask: ak.Array, n: ak.Array):
     """
@@ -55,15 +86,3 @@ def unflat_sf(sf: ak.Array, in_limit_mask: ak.Array, n: ak.Array):
     """
     sf = ak.where(in_limit_mask, sf, ak.ones_like(sf))
     return ak.fill_none(ak.prod(ak.unflatten(sf, n), axis=1), value=1)
-
-
-def get_era(input_str):
-    # Check if the input string starts with "Muon" or "EGamma"
-    if ("Muon" in input_str) or input_str.startswith("MuonEG") or input_str.startswith("EGamma"):
-        # Use regex to find the letter following "Muon" or "EGamma"
-        match = re.search(r"MuonEG([A-Za-z])|Muon([A-Za-z])|EGamma([A-Za-z]|SingleMuon([A-Za-z])|DoubleMuon([A-Za-z]))", input_str)
-        if match:
-            # Return the first matched group (the letter following "Muon", "MuonEG" or "EGamma")
-            return next(g for g in match.groups() if g is not None)
-    # If the input doesn't start with "Muon" or "EGamma", return "MC"
-    return "MC"

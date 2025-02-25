@@ -18,6 +18,8 @@ def jetvetomaps_mask(jets: ak.Array, year: str, mapname: str = "jetvetomap"):
     vetomap_names = {
         "2022preEE": "Summer22_23Sep2023_RunCD_V1",
         "2022postEE": "Summer22EE_23Sep2023_RunEFG_V1",
+        "2023preBPix": "Summer23Prompt23_RunC_V1",
+        "2023postBPix": "Summer23BPixPrompt23_RunD_V1"
     }
     cset = correctionlib.CorrectionSet.from_file(get_pog_json("jetvetomaps", year))
 

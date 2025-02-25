@@ -10,55 +10,6 @@ from analysis.corrections.utils import get_pog_json, unflat_sf
 from analysis.selections.event_selections import get_trigger_mask
 
 
-ID_CORRECTIONS = {
-    "2022preEE": {
-        "loose": "NUM_LooseID_DEN_TrackerMuons",
-        "medium": "NUM_MediumID_DEN_TrackerMuons",
-        "tight": "NUM_TightID_DEN_TrackerMuons",
-    },
-    "2022postEE": {
-        "loose": "NUM_LooseID_DEN_TrackerMuons",
-        "medium": "NUM_MediumID_DEN_TrackerMuons",
-        "tight": "NUM_TightID_DEN_TrackerMuons",
-    },
-}
-ISO_CORRECTIONS = {
-    "2022preEE": {
-        "loose": {
-            "loose": "NUM_LoosePFIso_DEN_LooseID",
-            "medium": "NUM_LoosePFIso_DEN_MediumID",
-            "tight": "NUM_LoosePFIso_DEN_TightID",
-        },
-        "medium": {
-            "loose": None,
-            "medium": None,
-            "tight": None,
-        },
-        "tight": {
-            "loose": None,
-            "medium": "NUM_TightPFIso_DEN_MediumID",
-            "tight": "NUM_TightPFIso_DEN_TightID",
-        },
-    },
-    "2022postEE": {
-        "loose": {
-            "loose": "NUM_LoosePFIso_DEN_LooseID",
-            "medium": "NUM_LoosePFIso_DEN_MediumID",
-            "tight": "NUM_LoosePFIso_DEN_TightID",
-        },
-        "medium": {
-            "loose": None,
-            "medium": None,
-            "tight": None,
-        },
-        "tight": {
-            "loose": None,
-            "medium": "NUM_TightPFIso_DEN_MediumID",
-            "tight": "NUM_TightPFIso_DEN_TightID",
-        },
-    },
-}
-
 
 class MuonWeights:
     """
@@ -71,7 +22,7 @@ class MuonWeights:
         weights:
             Weights container
         year:
-            Year of the dataset {2022preEE, 2022postEE}
+            Year of the dataset {2022postEE, 2022preEE, 2023preBPix, 2023postBPix}
         variation:
             syst variation
         id_wp:
@@ -159,21 +110,21 @@ class MuonWeights:
                 weight=nominal_weights,
             )
 
-    def add_trigger_weights(self, hlt_paths, dataset_key):
+    def add_trigger_weights(self, hlt_paths, dataset):
         """
         add muon iso weights to weights container
         """
         # get nominal scale factors
         nominal_weights = self.get_hlt_weights(
-            variation="nominal", hlt_paths=hlt_paths, dataset_key=dataset_key
+            variation="nominal", hlt_paths=hlt_paths, dataset=dataset
         )
         if self.variation == "nominal":
             # get 'up' and 'down' weights
             up_weights = self.get_hlt_weights(
-                variation="systup", hlt_paths=hlt_paths, dataset_key=dataset_key
+                variation="systup", hlt_paths=hlt_paths, dataset=dataset
             )
             down_weights = self.get_hlt_weights(
-                variation="systdown", hlt_paths=hlt_paths, dataset_key=dataset_key
+                variation="systdown", hlt_paths=hlt_paths, dataset=dataset
             )
             # add nominal, up and down weights to weights container
             self.weights.add(
@@ -198,6 +149,11 @@ class MuonWeights:
             variation:
                 {nominal, systup, systdown}
         """
+        id_corrections = {
+            "loose": "NUM_LooseID_DEN_TrackerMuons",
+            "medium": "NUM_MediumID_DEN_TrackerMuons",
+            "tight": "NUM_TightID_DEN_TrackerMuons",
+        }
         # get muons that pass the id wp, and within SF binning
         muon_pt_mask = self.flat_muons.pt > 15.0
         muon_eta_mask = np.abs(self.flat_muons.eta) < 2.399
@@ -209,7 +165,7 @@ class MuonWeights:
         muon_eta = np.abs(ak.fill_none(in_muons.eta, 0.0))
 
         weights = unflat_sf(
-            self.cset[ID_CORRECTIONS[self.year][self.id_wp]].evaluate(
+            self.cset[id_corrections[self.id_wp]].evaluate(
                 muon_eta,
                 muon_pt,
                 variation,
@@ -228,6 +184,23 @@ class MuonWeights:
             variation:
                 {nominal, systup, systdown}
         """
+        iso_corrections = {
+            "loose": {
+                "loose": "NUM_LoosePFIso_DEN_LooseID",
+                "medium": "NUM_LoosePFIso_DEN_MediumID",
+                "tight": "NUM_LoosePFIso_DEN_TightID",
+            },
+            "medium": {
+                "loose": None,
+                "medium": None,
+                "tight": None,
+            },
+            "tight": {
+                "loose": None,
+                "medium": "NUM_TightPFIso_DEN_MediumID",
+                "tight": "NUM_TightPFIso_DEN_TightID",
+            },
+        }
         # get 'in-limits' muons
         muon_pt_mask = self.flat_muons.pt > 15
         muon_eta_mask = np.abs(self.flat_muons.eta) < 2.399
@@ -241,7 +214,7 @@ class MuonWeights:
         muon_eta = np.abs(ak.fill_none(in_muons.eta, 0.0))
 
         weights = unflat_sf(
-            self.cset[ISO_CORRECTIONS[self.year][self.iso_wp][self.id_wp]].evaluate(
+            self.cset[iso_corrections[self.iso_wp][self.id_wp]].evaluate(
                 muon_eta,
                 muon_pt,
                 variation,
@@ -251,7 +224,7 @@ class MuonWeights:
         )
         return weights
 
-    def get_hlt_weights(self, variation, hlt_paths, dataset_key):
+    def get_hlt_weights(self, variation, hlt_paths, dataset):
         """
         Compute muon HLT weights
 
@@ -264,7 +237,7 @@ class MuonWeights:
         muon_pt_mask = self.flat_muons.pt > 26.0
         muon_eta_mask = np.abs(self.flat_muons.eta) < 2.4
         # get trigger masks
-        trigger = get_trigger_mask(self.events, hlt_paths, dataset_key)
+        trigger = get_trigger_mask(self.events, hlt_paths, dataset)
         trigger_match = trigger_match_mask(
             events=self.events, leptons=self.muons, hlt_paths=hlt_paths
         )

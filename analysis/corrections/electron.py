@@ -4,12 +4,10 @@ import awkward as ak
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.working_points import working_points
-from analysis.corrections.met import update_met
-from analysis.corrections.utils import get_pog_json, unflat_sf
 from analysis.selections.trigger import trigger_match_mask
 from analysis.selections.event_selections import get_trigger_mask
-
-import importlib.resources
+from analysis.corrections.met import update_met
+from analysis.corrections.utils import get_pog_json, get_egamma_json, unflat_sf
 
 
 class ElectronWeights:
@@ -23,7 +21,7 @@ class ElectronWeights:
         weights:
             Weights container
         year:
-            Year of the dataset {2022postEE, 2022preEE}
+            Year of the dataset {2022postEE, 2022preEE, 2023preBPix, 2023postBPix}
         variation:
             syst variation
         id_wp:
@@ -62,6 +60,8 @@ class ElectronWeights:
         self.year_map = {
             "2022postEE": "2022Re-recoE+PromptFG",
             "2022preEE": "2022Re-recoBCD",
+            "2023preBPix": "2023PromptC",
+            "2023postBPix": "2023PromptD",
         }
 
     def add_id_weights(self, id_wp):
@@ -110,25 +110,25 @@ class ElectronWeights:
                 weight=nominal_weights,
             )
 
-    def add_hlt_weights(self, hlt_paths, dataset_key, id_wp):
+    def add_hlt_weights(self, hlt_paths, dataset, id_wp):
         """
         add electron HLT weights to weights container
         """
         nominal_weights = self.get_hlt_weights(
-            variation="sf", hlt_paths=hlt_paths, dataset_key=dataset_key, id_wp=id_wp
+            variation="sf", hlt_paths=hlt_paths, dataset=dataset, id_wp=id_wp
         )
         if self.variation == "nominal":
             # get 'up' and 'down' weights
             up_weights = self.get_hlt_weights(
                 variation="sfup",
                 hlt_paths=hlt_paths,
-                dataset_key=dataset_key,
+                dataset=dataset,
                 id_wp=id_wp,
             )
             down_weights = self.get_hlt_weights(
                 variation="sfdown",
                 hlt_paths=hlt_paths,
-                dataset_key=dataset_key,
+                dataset=dataset,
                 id_wp=id_wp,
             )
             # add scale factors to weights container
@@ -166,15 +166,19 @@ class ElectronWeights:
         # get electrons pT and abseta (replace None values with some 'in-limit' value)
         electron_pt = ak.fill_none(in_electrons.pt, 15.0)
         electron_eta = ak.fill_none(in_electrons.eta, 0)
-
+        electron_phi = ak.fill_none(in_electrons.phi, 0)
+        
+        cset_args = [
+            self.year_map[self.year],
+            variation,
+            self.id_map[id_wp],
+            electron_eta,
+            electron_pt
+        ]
+        if self.year.startswith("2023"):
+            cset_args += [electron_phi]
         weights = unflat_sf(
-            cset["Electron-ID-SF"].evaluate(
-                self.year_map[self.year],
-                variation,
-                self.id_map[id_wp],
-                electron_eta,
-                electron_pt,
-            ),
+            cset["Electron-ID-SF"].evaluate(*cset_args),
             in_electron_mask,
             self.electrons_counts,
         )
@@ -212,21 +216,25 @@ class ElectronWeights:
         }
         electron_pt = ak.fill_none(in_electrons.pt, electron_pt_limits[reco_range])
         electron_eta = ak.fill_none(in_electrons.eta, 0)
+        electron_phi = ak.fill_none(in_electrons.phi, 0)
 
+        cset_args = [
+            self.year_map[self.year],
+            variation,
+            reco_range,
+            electron_eta,
+            electron_pt
+        ]
+        if self.year.startswith("2023"):
+            cset_args += [electron_phi]
         weights = unflat_sf(
-            cset["Electron-ID-SF"].evaluate(
-                self.year_map[self.year],
-                variation,
-                reco_range,
-                electron_eta,
-                electron_pt,
-            ),
+            cset["Electron-ID-SF"].evaluate(*cset_args),
             in_electrons_mask,
             self.electrons_counts,
         )
         return weights
 
-    def get_hlt_weights(self, variation, hlt_paths, id_wp, dataset_key):
+    def get_hlt_weights(self, variation, hlt_paths, id_wp, dataset):
         """
         Compute electron HLT weights
 
@@ -240,7 +248,7 @@ class ElectronWeights:
             get_pog_json(json_name="electron_hlt", year=self.year)
         )
         # get trigger masks
-        trigger = get_trigger_mask(self.events, hlt_paths, dataset_key)
+        trigger = get_trigger_mask(self.events, hlt_paths, dataset)
         trigger_match = trigger_match_mask(
             events=self.events, leptons=self.electrons, hlt_paths=hlt_paths
         )
@@ -279,6 +287,8 @@ class ElectronSS:
     """
     Electron Scale and Smearing (energy scale and resolution) corrector
 
+        'The purpose of scale and smearing (more formal: energy scale and resolution corrections) is to correct and calibrate electron and photon energies in data and MC. This step is performed after the MC-based semi-parametric EGamma energy regression, which is applied to both MC and data (aiming to correct for inherent imperfections that are not in principle related to data/MC differences like crystal-by-crystal differences, intermodule gaps, ...). The scale and smearing values are extracted from matching the Zee peaks in data and MC. Usually, energies in data are shifted to the right since, on average, the measured energy is underestimated compared to MC. The energies in MC are smeared out stochastically since the predicted resolution in MC is optimistic'
+
     more info: https://twiki.cern.ch/twiki/bin/view/CMS/EgammSFandSSRun3#Scale_factors_and_correction_AN1
 
     coffea0.7 example: https://gitlab.cern.ch/cms-analysis/general/HiggsDNA/-/blob/master/higgs_dna/systematics/electron_systematics.py?ref_type=heads
@@ -293,11 +303,17 @@ class ElectronSS:
         self.events = events
         self.year = year
         self.variation = variation
+        # get correction set from POG
+        self.cset = correctionlib.CorrectionSet.from_file(
+            get_pog_json(json_name="electron_ss", year=self.year)
+        )
+        # define Electron pt_raw field (needed for MET recalculation)
+        self.events["Electron", "pt_raw"] = (
+            ak.ones_like(self.events.Electron.pt) * self.events.Electron.pt
+        )
+        # select electrons
         self.flat_electrons = ak.flatten(events.Electron)
         self.electrons_counts = ak.num(events.Electron)
-        self.cset = correctionlib.CorrectionSet.from_file(
-            get_pog_json(json_name="electron_scale", year=self.year)
-        )
 
     def apply_scale(self):
         """
@@ -309,10 +325,6 @@ class ElectronSS:
              when loading the nanoAOD in the framework below due to Lorentzvector behaviours'.
 
         """
-        # define Electron pt_raw field (needed for MET recalculation)
-        self.events["Electron", "pt_raw"] = (
-            ak.ones_like(self.events.Electron.pt) * self.events.Electron.pt
-        )
         # get correction input variables
         gain = self.flat_electrons.seedGain
         run = np.repeat(self.events.run, self.electrons_counts)
@@ -328,10 +340,16 @@ class ElectronSS:
             r9,
             pt,
         )
+        # scale is multiplicative correction, unlike smearing, it is deterministic
         if self.variation == "nominal":
-            # scale is multiplicative correction, unlike smearing, it is deterministic
+            # apply scale correction only to electons with pT > 20 GeV
+            corrected_flat_electrons_pt = ak.where(
+                self.flat_electrons.pt > 20,
+                self.flat_electrons.pt * scale,
+                self.flat_electrons.pt,
+            )
             self.events["Electron", "pt"] = ak.unflatten(
-                self.flat_electrons.pt * scale, self.electrons_counts
+                corrected_flat_electrons_pt, self.electrons_counts
             )
             # propagate electron pT corrections to MET
             update_met(events=self.events, lepton="Electron")
@@ -340,14 +358,9 @@ class ElectronSS:
             pass
 
     def apply_smearing(self, seed=42):
-        # define Electron pt_raw field (needed for MET recalculation)
-        self.events["Electron", "pt_raw"] = (
-            ak.ones_like(self.events.Electron.pt) * self.events.Electron.pt
-        )
         # get correction input variables
         etasc = self.flat_electrons.eta + self.flat_electrons.deltaEtaSC
         r9 = self.flat_electrons.r9
-
         # rho does not correspond to the pileup rho energy density,
         # instead it is the standard deviation of the Gaussian used to draw the smearing
         rho = self.cset["Smearing"].evaluate(
@@ -355,12 +368,18 @@ class ElectronSS:
             etasc,
             r9,
         )
-        # The smearing is done statistically, so we need some random numbers
         if self.variation == "nominal":
+            # The smearing is done statistically, so we need some random numbers
             rng = np.random.default_rng(seed=seed)
             smearing = rng.normal(loc=1.0, scale=rho)
+            # apply smearing correction only to electons with pT > 20 GeV
+            corrected_flat_electrons_pt = ak.where(
+                self.flat_electrons.pt > 20,
+                self.flat_electrons.pt * smearing,
+                self.flat_electrons.pt,
+            )
             self.events["Electron", "pt"] = ak.unflatten(
-                self.flat_electrons.pt * smearing, self.electrons_counts
+                corrected_flat_electrons_pt, self.electrons_counts
             )
             # propagate electron pT corrections to MET
             update_met(events=self.events, lepton="Electron")
