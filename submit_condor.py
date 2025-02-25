@@ -21,14 +21,14 @@ def main(args):
     with open(f"{fileset_path}/fileset_{args['year']}_NANO_lxplus.json", "r") as f:
         root_files = json.load(f)[args["dataset"]]
     root_files_list = divide_list(root_files, args["nfiles"])
-    
+
     # submit job for each partition
     for i, partition in enumerate(root_files_list, start=1):
         if len(root_files_list) == 1:
             dataset_key = args["dataset"]
         else:
             dataset_key = f'{args["dataset"]}_{i}'
-        
+
         partition_fileset = {dataset_key: partition}
         # set condor and submit args
         args["dataset_key"] = dataset_key
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         "--year",
         dest="year",
         type=str,
-        choices=["2022preEE", "2022postEE"],
+        choices=["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
         help="dataset year",
     )
     parser.add_argument(

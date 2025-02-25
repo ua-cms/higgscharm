@@ -30,7 +30,7 @@ def main(args):
         save(out, f"{savepath}.coffea")
     elif args.output_format == "root":
         write_root(out, savepath, args)
-        
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -45,7 +45,7 @@ if __name__ == "__main__":
         "--year",
         dest="year",
         type=str,
-        choices=["2022preEE", "2022postEE"],
+        choices=["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
         help="dataset year",
     )
     parser.add_argument(

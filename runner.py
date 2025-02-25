@@ -34,82 +34,89 @@ MC_DATASETS = {
         "GluGlutoContinto2Zto4Tau",
     ],
     "qqtozz": ["ZZto4L"],
-    "ew": [
-        "ZZZ",
-        "WZZ",
-        "WWZ",
-        "TTWW",
-        "TTZZ",
-        "TTZ",
-        "WZto3LNu"
-    ]
+    "ew": ["ZZZ", "WZZ", "WWZ", "TTWW", "TTZZ", "TTZ", "WZto3LNu"],
 }
-
 PD_DATASETS = {
     "Muon": {
         "2022preEE": ["MuonC", "MuonD"],
         "2022postEE": ["MuonE", "MuonF", "MuonG"],
+        "2023preBPix": [
+            "Muon0v1C",
+            "Muon0v2C",
+            "Muon0v3C",
+            "Muon0v4C",
+            "Muon1v1C",
+            "Muon1v2C",
+            "Muon1v3C",
+            "Muon1v4C",
+        ],
+        "2023postBPix": ["Muon0v1D", "Muon0v2D", "Muon1v1D", "Muon1v2D"],
     },
     "SingleMuon": {
         "2022preEE": ["SingleMuonC"],
         "2022postEE": [],
+        "2023preBPix": [],
+        "2023postBPix": [],
     },
     "DoubleMuon": {
         "2022preEE": ["DoubleMuonC"],
         "2022postEE": [],
+        "2023preBPix": [],
+        "2023postBPix": [],
     },
     "EGamma": {
         "2022preEE": ["EGammaC", "EGammaD"],
         "2022postEE": ["EGammaE", "EGammaF", "EGammaG"],
+        "2023preBPix": [
+            "EGamma0v1C",
+            "EGamma0v2C",
+            "EGamma0v3C",
+            "EGamma0v4C",
+            "EGamma1v1C",
+            "EGamma1v2C",
+            "EGamma1v3C",
+            "EGamma1v4C",
+        ],
+        "2023postBPix": ["EGamma0v1D", "EGamma0v2D", "EGamma1v1D", "EGamma1v2D"],
     },
     "MuonEG": {
         "2022preEE": ["MuonEGC", "MuonEGD"],
         "2022postEE": ["MuonEGE", "MuonEGF", "MuonEGG"],
-    }
+        "2023preBPix": ["MuonEGv1C", "MuonEGv2C", "MuonEGv3C", "MuonEGv4C"],
+        "2023postBPix": ["MuonEGv1D", "MuonEGv2D"],
+    },
+}
+DATASETS = {
+    "ztoee": {"mc": ["dyjets", "ttbar", "singletop", "diboson"], "data": ["EGamma"]},
+    "ztomumu": {"mc": ["dyjets", "ttbar", "singletop", "diboson"], "data": ["Muon"]},
+    "zzto4l": {
+        "mc": ["higgs", "ggtozz", "qqtozz", "ew"],
+        "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
+    },
+    "hww": {
+        "mc": ["ttbar", "singletop", "diboson"],
+        "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
+    },
 }
 
-DATASETS = {
-    "hww": {
-        "2022preEE": {
-            "mc": MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
-            "data": PD_DATASETS["Muon"]["2022preEE"] + PD_DATASETS["MuonEG"]["2022preEE"] + PD_DATASETS["EGamma"]["2022preEE"],
-        },
-        "2022postEE": {
-            "mc": MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
-            "data": PD_DATASETS["Muon"]["2022postEE"] + PD_DATASETS["MuonEG"]["2022postEE"] + PD_DATASETS["EGamma"]["2022postEE"],
-        },
-    },
-    "zzto4l": {
-        "2022preEE": {
-            "mc": MC_DATASETS["higgs"] + MC_DATASETS["ggtozz"] + MC_DATASETS["qqtozz"] + MC_DATASETS["ew"],
-            "data": PD_DATASETS["SingleMuon"]["2022preEE"] + PD_DATASETS["DoubleMuon"]["2022preEE"] + PD_DATASETS["Muon"]["2022preEE"] + PD_DATASETS["MuonEG"]["2022preEE"] + PD_DATASETS["EGamma"]["2022preEE"],
-        },
-        "2022postEE": {
-            "mc": MC_DATASETS["higgs"] + MC_DATASETS["ggtozz"] + MC_DATASETS["qqtozz"] + MC_DATASETS["ew"],
-            "data": PD_DATASETS["Muon"]["2022postEE"] + PD_DATASETS["MuonEG"]["2022postEE"] + PD_DATASETS["EGamma"]["2022postEE"],
-        }
-    },
-    "ztoee": {
-        "2022preEE": {
-            "mc": MC_DATASETS["dyjets"] + MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
-            "data": PD_DATASETS["EGamma"]["2022preEE"]
-        },
-        "2022postEE": {
-            "mc": MC_DATASETS["dyjets"] + MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
-            "data": PD_DATASETS["EGamma"]["2022postEE"]
-        } 
-    },
-    "ztomumu": {
-        "2022preEE": {
-            "mc": MC_DATASETS["dyjets"] + MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
-            "data": PD_DATASETS["Muon"]["2022preEE"]
-        },
-        "2022postEE": {
-            "mc": MC_DATASETS["dyjets"] + MC_DATASETS["ttbar"] + MC_DATASETS["singletop"] + MC_DATASETS["diboson"],
-            "data": PD_DATASETS["Muon"]["2022postEE"]
-        } 
-    }
-}
+
+def main(args):
+    # get datasets to run
+    to_run = []
+    for kind, datasets in DATASETS[args.processor].items():
+        for dataset in datasets:
+            if kind == "mc":
+                to_run += MC_DATASETS[dataset]
+            if kind == "data":
+                to_run += PD_DATASETS[dataset][args.year]
+    # submit jobs for each dataset
+    for dataset in to_run:
+        cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles} --output_format {args.output_format}"
+        if args.submit:
+            cmd += " --submit"
+        if args.eos:
+            cmd += " --eos"
+        os.system(cmd)
 
 
 if __name__ == "__main__":
@@ -118,13 +125,15 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        help="processor to be used {ztomumu, ztoee, zzto4l, hww}",
+        choices=["ztomumu", "ztoee", "zzto4l", "hww"],
+        help="processor to be used",
     )
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
-        help="dataset year {2022preEE, 2022postEE}",
+        choices=["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
+        help="dataset year",
     )
     parser.add_argument(
         "--nfiles",
@@ -147,17 +156,8 @@ if __name__ == "__main__":
         "--output_format",
         type=str,
         default="coffea",
-        help="format of output histograms {root, coffea}",
+        choices=["coffea", "root"],
+        help="format of output histogram",
     )
     args = parser.parse_args()
-    
-    # get datasets for processor and year
-    datasets = DATASETS[args.processor][args.year]["mc"] + DATASETS[args.processor][args.year]["data"]
-    # submit job for each dataset
-    for dataset in datasets:
-        cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles} --output_format {args.output_format}"
-        if args.submit:
-            cmd += " --submit"
-        if args.eos:
-            cmd += " --eos"
-        os.system(cmd)
+    main(args)
