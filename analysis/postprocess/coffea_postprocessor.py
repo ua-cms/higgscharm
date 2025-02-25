@@ -151,7 +151,7 @@ class CoffeaPostprocessor:
     def set_lumixsec_weights(self):
         print_header("Computing lumi-xsec weights")
         # load luminosities
-        with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:
+        with open(f"{Path.cwd()}/analysis/postprocess/luminosity.yaml", "r") as f:
             self.luminosities = yaml.safe_load(f)
         logging.info(f"luminosity [/pb] {self.luminosities[self.year]}")
         # compute lumi-xsec weights
