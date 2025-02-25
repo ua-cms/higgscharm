@@ -60,7 +60,7 @@ if __name__ == "__main__":
         "--year",
         dest="year",
         type=str,
-        choices=["2022preEE", "2022postEE"],
+        choices=["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
         help="year of the data",
     )
     parser.add_argument(
