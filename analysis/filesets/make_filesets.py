@@ -26,6 +26,7 @@ SITES = [
     "T2_ES_CIEMAT",
     "T2_CH_CSCS",
     "T2_IT_Rome",
+    "T2_FR_IPHC",
     "T3_US_FNALLPC",
     "T3_CH_PSI",
 ]
@@ -40,7 +41,7 @@ def main(args):
     for sample in dataset_configs:
         das_queries[sample] = dataset_configs[sample]["query"]
 
-    for year in ["2022preEE", "2022postEE"]:
+    for year in ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"]:
         if args.year != "all":
             if year != args.year:
                 continue
@@ -90,8 +91,7 @@ if __name__ == "__main__":
         "--year",
         dest="year",
         type=str,
-        default="all",
-        help="year of the data {2022preEE, 2022postEE, all}",
+        choices=["all", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
     )
     args = parser.parse_args()
     main(args)
