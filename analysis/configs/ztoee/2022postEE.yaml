@@ -9,9 +9,9 @@ object_selection:
     cuts:
       pt: events.Muon.pt > 10
       abseta: np.abs(events.Muon.eta) < 2.4
-      dxy: events.Muon.dxy < 0.5
-      dz: events.Muon.dz < 1
-      sip3d: events.Muon.sip3d < 4
+      dxy: np.abs(events.Muon.dxy) < 0.5
+      dz: np.abs(events.Muon.dz) < 1
+      sip3d: np.abs(events.Muon.sip3d) < 4
       muon_id: tight
       muon_iso: tight
   electrons:
@@ -42,7 +42,7 @@ event_selection:
   selections:
     atleast_one_goodvertex: events.PV.npvsGood > 0
     lumimask: get_lumi_mask(events, goldenjson)
-    trigger: get_trigger_mask(events, hlt_paths, dataset_key)
+    trigger: get_trigger_mask(events, hlt_paths, dataset)
     first_electron_pt: ak.firsts(objects['electrons'].pt) > 33
     second_electron_pt: ak.pad_none(objects['electrons'], target=2)[:, 1].pt > 15
     muon_veto: ak.num(objects["muons"]) == 0
