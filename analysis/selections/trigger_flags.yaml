@@ -1,0 +1,19 @@
+SingleMu:
+  - IsoMu24
+SingleEle:
+  - Ele30_WPTight_Gsf
+DiEle:
+  - Ele23_Ele12_CaloIdL_TrackIdL_IsoVL
+  - DoubleEle25_CaloIdL_MW
+DiMu:
+  - Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8
+MuEle:
+  - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL
+  - Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+  - Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ
+  - Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ
+  - DiMu9_Ele9_CaloIdL_TrackIdL_DZ
+  - Mu8_DiEle12_CaloIdL_TrackIdL_DZ
+TriMu:
+  - TripleMu_10_5_5_DZ
+  - TripleMu_12_10_5
