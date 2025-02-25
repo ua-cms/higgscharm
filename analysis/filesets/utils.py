@@ -46,9 +46,19 @@ def divide_list(lst: list, nfiles: int = 20) -> list:
         start = end
     return result
 
-def get_dataset_name(dataset_key):
-    dataset_names = ["MuonEG", "EGamma", "Muon"]
-    for name in dataset_names:
-        if dataset_key.startswith(name):
-            return name
+
+def get_dataset_key(dataset):
+    datasets = ["MuonEG", "Muon", "EGamma", "SingleMuon", "DoubleMuon"]
+    for dataset_key in datasets:
+        if dataset.startswith(dataset_key):
+            return dataset_key
     return "MC"
+
+
+def get_dataset_era(dataset, year):
+    fileset_path = Path(f"{Path.cwd()}/analysis/filesets")
+    with open(f"{fileset_path}/{year}_nanov12.yaml", "r") as f:
+        dataset_config = yaml.safe_load(f)
+    for dataset_key in dataset_config:
+        if dataset.startswith(dataset_key):
+            return dataset_config[dataset_key]["era"]

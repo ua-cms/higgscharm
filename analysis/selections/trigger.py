@@ -2,10 +2,11 @@ import yaml
 import numpy as np
 import awkward as ak
 import importlib.resources
+from analysis.filesets.utils import get_dataset_key
 
 
 def get_hltpaths_from_flag(flag):
-    with importlib.resources.open_text(f"analysis.data", f"trigger_flags.yaml") as file:
+    with importlib.resources.open_text(f"analysis.selections", f"trigger_flags.yaml") as file:
         hlt_paths = yaml.safe_load(file)[flag]
     return hlt_paths
 
@@ -18,7 +19,10 @@ def trigger_from_flag(events, flag):
     return trigger_mask
 
 
-def zzto4l_trigger(events, hlt_paths, dataset_key):
+def zzto4l_trigger(events, hlt_paths, dataset):
+    nevents = len(events)
+    dataset_key = get_dataset_key(dataset)
+    print(f"{dataset_key=}")
     # compute all trigger masks based on the flags in hlt_paths
     trigger_flags = {}
     for flag in hlt_paths:
@@ -26,15 +30,17 @@ def zzto4l_trigger(events, hlt_paths, dataset_key):
 
     if hasattr(events, "genWeight"):
         # compute the combined OR of all flags (for MC datasets)
-        mc_trigger_mask = np.zeros(len(events), dtype="bool")
+        mc_trigger_mask = np.zeros(nevents, dtype="bool")
         for flag in trigger_flags:
             mc_trigger_mask = mc_trigger_mask | trigger_flags[flag]
         return mc_trigger_mask
+    
+    trigger_flags["TriEle"] = np.zeros(nevents, dtype="bool")
 
     # ensure each event is taken only from a single PD
-    nevents = len(events)
     pd_trigger_mask = (
-        (
+        (np.zeros(nevents, dtype="bool"))
+        | (
             ((dataset_key == "EGamma") * np.ones(nevents, dtype=bool))
             & (trigger_flags["DiEle"] | trigger_flags["TriEle"])
         )
@@ -81,7 +87,8 @@ def zzto4l_trigger(events, hlt_paths, dataset_key):
     return pd_trigger_mask
 
 
-def trigger_mask(events, hlt_paths, dataset_key):
+def trigger_mask(events, hlt_paths, dataset):
+    dataset_key = get_dataset_key(dataset)
     # compute all trigger masks based on the flags in hlt_paths
     trigger_flags = {}
     for dataset_flags in hlt_paths.values():
