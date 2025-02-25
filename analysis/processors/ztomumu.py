@@ -7,7 +7,6 @@ from coffea.lumi_tools import LumiData, LumiList
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.configs import ProcessorConfigBuilder
-from analysis.filesets.utils import get_dataset_name
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.electron import ElectronSS
 from analysis.corrections.pileup import add_pileup_weight
@@ -34,7 +33,6 @@ class ZToMuMuProcessor(processor.ProcessorABC):
 
     def process(self, events):
         dataset = events.metadata["dataset"]
-        dataset_key = get_dataset_name(dataset)
         # get golden json, triggers, selections and histograms
         year = self.year
         goldenjson = self.processor_config.goldenjson
@@ -74,17 +72,20 @@ class ZToMuMuProcessor(processor.ProcessorABC):
             apply_junc=apply_junc,
         )
         # electron scale and smearing corrections
-        electron_ss = ElectronSS(
-            events=events,
-            year=year,
-            variation="nominal",
-        )
-        if is_mc:
-            # energies in MC are smeared
-            electron_ss.apply_smearing()
+        if year.startswith("2022"):
+            electron_ss = ElectronSS(
+                events=events,
+                year=year,
+                variation="nominal",
+            )
+            if is_mc:
+                # energies in MC are smeared
+                electron_ss.apply_smearing()
+            else:
+                # energies in data are scaled
+                electron_ss.apply_scale()
         else:
-            # energies in data are scaled
-            electron_ss.apply_scale()
+            events["Electron", "pt_raw"] = events.Electron.pt
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
@@ -112,7 +113,7 @@ class ZToMuMuProcessor(processor.ProcessorABC):
             muon_weights.add_id_weights()
             muon_weights.add_iso_weights()
             muon_weights.add_trigger_weights(
-                hlt_paths=hlt_paths, dataset_key=dataset_key
+                hlt_paths=hlt_paths, dataset=dataset
             )
         else:
             weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))

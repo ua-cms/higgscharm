@@ -7,7 +7,6 @@ from coffea.lumi_tools import LumiData, LumiList
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.configs import ProcessorConfigBuilder
-from analysis.filesets.utils import get_dataset_name
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.electron import ElectronWeights, ElectronSS
@@ -33,7 +32,6 @@ class ZToEEProcessor(processor.ProcessorABC):
 
     def process(self, events):
         dataset = events.metadata["dataset"]
-        dataset_key = get_dataset_name(dataset)
         # get golden json, triggers, selections and histograms
         year = self.year
         goldenjson = self.processor_config.goldenjson
@@ -72,17 +70,21 @@ class ZToEEProcessor(processor.ProcessorABC):
             apply_junc=apply_junc,
         )
         # electron scale and smearing corrections
-        electron_ss = ElectronSS(
-            events=events,
-            year=year,
-            variation="nominal",
-        )
-        if is_mc:
-            # energies in MC are smeared
-            electron_ss.apply_smearing()
+        if year.startswith("2022"):
+            electron_ss = ElectronSS(
+                events=events,
+                year=year,
+                variation="nominal",
+            )
+        
+            if is_mc:
+                # energies in MC are smeared
+                electron_ss.apply_smearing()
+            else:
+                # energies in data are scaled
+                electron_ss.apply_scale()
         else:
-            # energies in data are scaled
-            electron_ss.apply_scale()
+            events["Electron", "pt_raw"] = events.Electron.pt
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------
@@ -110,7 +112,7 @@ class ZToEEProcessor(processor.ProcessorABC):
             )
             electron_weights.add_hlt_weights(
                 hlt_paths=hlt_paths,
-                dataset_key=dataset_key,
+                dataset=dataset,
                 id_wp=object_selections["electrons"]["cuts"]["electron_id"],
             )
             electron_weights.add_reco_weights("RecoBelow20")
