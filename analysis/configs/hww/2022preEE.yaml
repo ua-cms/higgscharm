@@ -57,7 +57,7 @@ object_selection:
     cuts: null
 event_selection:
   selections:
-    trigger: get_trigger_mask(events, hlt_paths, dataset_key)
+    trigger: get_trigger_mask(events, hlt_paths, dataset)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     lumimask: get_lumi_mask(events, goldenjson)
     met_filters: get_metfilters_mask(events, year)
