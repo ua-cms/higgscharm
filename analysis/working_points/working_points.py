@@ -127,6 +127,22 @@ class WorkingPoints:
                 "tight": (events.Jet.btagPNetCvB > 0.258)
                 & (events.Jet.btagPNetCvL > 0.491),
             },
+            "2023preBPix": {
+                "loose": (events.Jet.btagPNetCvB > 0.220)
+                & (events.Jet.btagPNetCvL > 0.052),
+                "medium": (events.Jet.btagPNetCvB > 0.353)
+                & (events.Jet.btagPNetCvL > 0.148),
+                "tight": (events.Jet.btagPNetCvB > 0.300)
+                & (events.Jet.btagPNetCvL > 0.434),
+            },
+            "2023postBPix": {
+                "loose": (events.Jet.btagPNetCvB > 0.091)
+                & (events.Jet.btagPNetCvL > 0.038),
+                "medium": (events.Jet.btagPNetCvB > 0.157)
+                & (events.Jet.btagPNetCvL > 0.109),
+                "tight": (events.Jet.btagPNetCvB > 0.116)
+                & (events.Jet.btagPNetCvL > 0.308),
+            },
         }
         return wps[year][wp]
 
@@ -146,6 +162,20 @@ class WorkingPoints:
                 "tight": events.Jet.btagPNetB > 0.7061,
                 "verytight": events.Jet.btagPNetB > 0.8184,
                 "supertight": events.Jet.btagPNetB > 0.9649,
+            },
+            "2023preBPix": {
+                "loose": events.Jet.btagPNetB > 0.0479,
+                "medium": events.Jet.btagPNetB > 0.2431,
+                "tight": events.Jet.btagPNetB > 0.6553,
+                "verytight": events.Jet.btagPNetB > 0.7667,
+                "supertight": events.Jet.btagPNetB > 0.9459,
+            },
+            "2023postBPix": {
+                "loose": events.Jet.btagPNetB > 0.048,
+                "medium": events.Jet.btagPNetB > 0.2435,
+                "tight": events.Jet.btagPNetB > 0.6563,
+                "verytight": events.Jet.btagPNetB > 0.7671,
+                "supertight": events.Jet.btagPNetB > 0.9483,
             },
         }
         return wps[year][wp]
