@@ -1,0 +1,305 @@
+goldenjson: analysis/data/Cert_Collisions2023_366442_370790_Golden.txt
+lumidata: analysis/data/lumi2023.csv
+hlt_paths:
+  MuonEG:
+    - MuEle
+  Muon:
+    - SingleMu
+  EGamma:
+    - SingleEle
+object_selection:
+  muons:
+    field: events.Muon
+    cuts:
+      pt: events.Muon.pt > 15
+      abseta: np.abs(events.Muon.eta) < 2.4
+      muon_iso: tight
+      muon_id: tight
+  electrons:
+    field: events.Electron
+    cuts:
+      pt: events.Electron.pt > 15
+      abseta: np.abs(events.Electron.eta) < 2.5
+      electron_id: tight
+      electron_iso: tight
+      electron_muon_dr: delta_r_higher(events.Electron, objects['muons'], 0.4)
+  leptons:
+    field: select_hww_leptons
+    cuts: null
+  ll_pairs:
+    field: select_hww_ll_pairs
+    cuts:
+      pt: (objects["ll_pairs"].l1 + objects["ll_pairs"].l2).pt > 30
+      charge: (objects["ll_pairs"].l1.charge + objects["ll_pairs"].l2.charge) == 0 
+      mass: (objects["ll_pairs"].l1 + objects["ll_pairs"].l2).mass > 12
+  cjets:
+    field: events.Jet
+    cuts:
+      min_pt: events.Jet.pt > 20
+      abseta: np.abs(events.Jet.eta) < 2.4
+      jet_id: tightlepveto
+      jet_particlenet_c: medium
+      jet_muon_dr: delta_r_higher(events.Jet, objects['leptons'], 0.4)
+  candidate_jet:
+    field: select_candidate_cjet
+    cuts: null
+  met:
+    field: events.PuppiMET
+    cuts: null
+  mll:
+    field: select_hww_mll
+    cuts: null
+  ml1:
+    field: select_hww_ml1
+    cuts: null
+  ml2: 
+    field: select_hww_ml2
+    cuts: null
+event_selection:
+  selections:
+    trigger: get_trigger_mask(events, hlt_paths, dataset)
+    atleast_one_goodvertex: events.PV.npvsGood > 0
+    lumimask: get_lumi_mask(events, goldenjson)
+    met_filters: get_metfilters_mask(events, year)
+    met_45: objects['met'].pt > 45
+    one_electron: ak.num(objects['electrons']) == 1
+    one_muon: ak.num(objects['muons']) == 1
+    atleast_one_cjet: ak.num(objects['cjets']) > 0
+    atleast_two_cjets: ak.num(objects['cjets']) > 1
+    transverse_mass_signal: ak.all((objects["ml2"] > 30) & (objects["mll"] > 60), axis=1)
+    transverse_mass_top: ak.all((objects["ml2"] > 30) & (objects["mll"] <= 60), axis=1)
+    dilepton_mass_signal: ak.all(objects["mll"] <= 72, axis=1)
+    dilepton_mass_top: ak.all(objects["mll"] > 72, axis=1)
+  categories:
+    base:
+      - atleast_one_goodvertex
+      - lumimask
+      - met_filters
+      - trigger
+      - met_45
+      - one_electron
+      - one_muon
+histogram_config:
+  add_syst_axis: true
+  add_weight: true
+  axes:
+    met_pt:
+      type: Variable
+      edges:
+        - 45
+        - 55
+        - 65
+        - 75
+        - 85
+        - 95
+        - 105
+        - 115
+        - 125
+        - 135
+        - 145
+        - 155
+        - 170
+        - 185
+        - 200
+        - 220
+        - 250
+        - 300
+        - 350
+        - 400
+        - 500
+        - 600
+      label: $p_T^{miss}$ [GeV]
+      expression: objects['met'].pt
+    met_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(p_T^{miss})$ [GeV]
+      expression: objects['met'].phi
+    lepton1_pt:
+      type: Variable
+      edges:
+        - 15
+        - 25
+        - 35
+        - 45
+        - 55
+        - 65
+        - 75
+        - 85
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 350
+        - 400
+        - 500
+      label: $p_T(\ell_1)$ [GeV]
+      expression: objects["ll_pairs"].l1.pt
+    lepton2_pt:
+      type: Variable
+      edges:
+        - 15
+        - 25
+        - 35
+        - 45
+        - 55
+        - 65
+        - 75
+        - 85
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 350
+        - 400
+        - 500
+      label: $p_T(\ell_2)$ [GeV]
+      expression: objects["ll_pairs"].l2.pt
+    mtl1:
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 230
+        - 260
+        - 300
+        - 350
+        - 400
+        - 500
+      label: $m_T^{\ell_1}$ [GeV]
+      expression: objects['ml1']
+    mtl2:
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 230
+        - 260
+        - 300
+        - 350
+        - 400
+        - 500
+      label: $m_T^{\ell_2}$ [GeV]
+      expression: objects['ml2']
+    mtll:
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 230
+        - 260
+        - 300
+        - 350
+        - 400
+        - 500
+      label: $m_T^{\ell \ell}$ [GeV]
+      expression: objects['mll']
+    jet_pt:
+      type: Variable
+      edges:
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 350
+        - 400
+        - 450
+        - 500
+        - 600
+        - 800
+      label: Candidate c-jet $p_T$ [GeV]
+      expression: objects['candidate_cjet'].pt
+    jet_eta:
+      type: Regular
+      bins: 50
+      start: -2.4
+      stop: 2.4
+      label: Candidate c-jet $\eta$
+      expression: objects['candidate_cjet'].eta
+    jet_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: Candidate c-jet $\phi$
+      expression: objects['candidate_cjet'].phi
+    jet_multiplicity:
+      type: IntCategory
+      categories:
+        - 0
+        - 1
+        - 2
+        - 3
+        - 4
+        - 5
+        - 6
+        - 7
+        - 8
+        - 9
+        - 10
+        - 11
+        - 12
+        - 13
+        - 14
+        - 15
+      label: c-jets multiplicity
+      expression: ak.num(objects['cjets'])
+  layout:
+    met:
+      - met_pt
+      - met_phi
+    lepton:
+      - lepton1_pt
+      - lepton2_pt
+    mass:
+      - mtl1
+      - mtl2
+      - mtll
+    candidate_jet:
+      - jet_pt
+      - jet_eta
+      - jet_phi
+    jet_multiplicity:
+      - jet_multiplicity
