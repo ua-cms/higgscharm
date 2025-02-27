@@ -1,9 +1,9 @@
 import pickle
-import uproot
 from analysis.configs import ProcessorConfigBuilder
 
 
 def write_root(out, save_path, args):
+    import uproot
     # save metadata
     with open(f"{save_path}.pkl", "wb") as handle:
         pickle.dump(out["metadata"], handle, protocol=pickle.HIGHEST_PROTOCOL)
