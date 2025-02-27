@@ -9,7 +9,7 @@ Python package for analyzing H+c events. The package uses a columnar framework t
 
 ### Processors
 
-* `zzto4l`: Select events in a $H \rightarrow ZZ \rightarrow \ell\ell$ region
+* `zzto4l`: Select events in a $H \rightarrow ZZ \rightarrow 4\ell$ region
 * `ztomumu`: Select events in a $Z\rightarrow \mu \mu$ region
 * `ztoee`: Select events in a $Z\rightarrow ee$ region
 
