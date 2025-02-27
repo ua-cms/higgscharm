@@ -46,7 +46,7 @@ object_selection:
 ```
 With `field` you define how to select the object, either through a NanoAOD field (`events.Muon`) or a custom object-selection function (`select_dimuons`) defined as a method of the [ObjectSelector](https://github.com/deoache/higgscharm/blob/lxplus/analysis/selections/object_selections.py) class. Each object is added sequentially to a dictionary called `objects`, which can later be used to access the already selected objects.
 
-`cuts` defines the set of object-level cuts to apply. Similarly, you can use NanoAOD fields (`events.Muon.pt > 24`) to define a cut or any valid expression (`objects['dimuons'].z.mass < 120.0`). Alternatively, you can also use a working point function (WPF) defined in the [WorkingPoints class](https://github.com/deoache/higgscharm/tree/lxplus/analysis/working_points). For instance, given the WPF
+`cuts` defines the set of object-level cuts to apply. Similarly, you can use NanoAOD fields (`events.Muon.pt > 24`) to define a cut or any valid expression (`objects['dimuons'].z.mass < 120.0`). Alternatively, you can also use a working point function (WPF) defined in the [WorkingPoints class](https://github.com/deoache/higgscharm/blob/lxplus/analysis/working_points/working_points.py). For instance, given the WPF
 ```
 def muon_id(self, events, wp):
     muons_id_wps = {
