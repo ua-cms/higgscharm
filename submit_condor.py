@@ -1,36 +1,27 @@
 import json
-import yaml
 import argparse
-from copy import deepcopy
 from pathlib import Path
-from checker import run_checker
 from condor.utils import submit_condor
 from analysis.filesets.utils import divide_list
 from analysis.utils import make_output_directory
 
 
 def main(args):
-    run_checker(args)
     args = vars(args)
-
     # add output path to args
     args["output_path"] = make_output_directory(args)
-
     # split dataset into batches
     fileset_path = Path.cwd() / "analysis" / "filesets"
     with open(f"{fileset_path}/fileset_{args['year']}_NANO_lxplus.json", "r") as f:
         root_files = json.load(f)[args["dataset"]]
     root_files_list = divide_list(root_files, args["nfiles"])
-
     # submit job for each partition
     for i, partition in enumerate(root_files_list, start=1):
         if len(root_files_list) == 1:
             dataset_key = args["dataset"]
         else:
             dataset_key = f'{args["dataset"]}_{i}'
-
         partition_fileset = {dataset_key: partition}
-        # set condor and submit args
         args["dataset_key"] = dataset_key
         args["cmd"] = (
             "python3 submit.py "
@@ -38,11 +29,8 @@ def main(args):
             f"--year {args['year']} "
             f"--output_path {args['output_path']} "
             f"--dataset {dataset_key} "
-            # dictionaries must be passed as a string enclosed in single quotes,
-            # with strings within the dictionary enclosed in double quotes.
-            # we use json.dumps() to switch from single to double quotes within the dictionary
+            f"--output_format {args['output_format']} "
             f"--partition_fileset '{json.dumps(partition_fileset)}' "
-            f"--output_format {args['output_format']}"
         )
         submit_condor(args)
 
