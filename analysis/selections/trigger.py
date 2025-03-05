@@ -22,7 +22,6 @@ def trigger_from_flag(events, flag):
 def zzto4l_trigger(events, hlt_paths, dataset):
     nevents = len(events)
     dataset_key = get_dataset_key(dataset)
-    print(f"{dataset_key=}")
     # compute all trigger masks based on the flags in hlt_paths
     trigger_flags = {}
     for flag in hlt_paths:
