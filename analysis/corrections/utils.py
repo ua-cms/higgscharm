@@ -1,6 +1,6 @@
 import re
 import awkward as ak
-
+from pathlib import Path
 
 # summary of pog scale factors: https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/
 # CorrectionLib files are available from
@@ -30,7 +30,7 @@ EGAMMA_YEARS = {
     "2023postBPix": "Data2023/ForPrompt23D",
 }
 EGAMMA_JSONS = {
-    "electron_ss": ["SS", "electronSS_EtDependent.json.gz"]
+    "electron_ss": ["SS", "electronSS.json.gz"]
 }
     
 
@@ -52,7 +52,7 @@ def get_pog_json(json_name: str, year: str) -> str:
     return f"{POG_CORRECTION_PATH}/POG/{pog_json[0]}/{POG_YEARS[year]}/{pog_json[1]}"
 
 
-def get_egamma_json(json_name: str, year: str) -> str:
+def get_egamma_json(year: str) -> str:
     """
     returns egamma json file path
 
@@ -63,11 +63,14 @@ def get_egamma_json(json_name: str, year: str) -> str:
         year:
             dataset year {2022preEE, 2022postEE, 2023preBPix, 2023postBPix}
     """
+    """
     if json_name in EGAMMA_JSONS:
         egamma_json = EGAMMA_JSONS[json_name]
     else:
         print(f"No json for {json_name}")
     return f"{EGAMMA_CORRECTION_PATH}/{EGAMMA_YEARS[year]}/{egamma_json[0]}/{egamma_json[1]}"
+    """
+    return f"{Path.cwd()}/analysis/data/{year}_electronSS.json.gz"
     
 
 def unflat_sf(sf: ak.Array, in_limit_mask: ak.Array, n: ak.Array):

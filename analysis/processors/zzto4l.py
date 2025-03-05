@@ -73,20 +73,17 @@ class ZZTo4LProcessor(processor.ProcessorABC):
             apply_junc=apply_junc,
         )
         # electron scale and smearing corrections
-        if year.startswith("2022"):
-            electron_ss = ElectronSS(
-                events=events,
-                year=year,
-                variation="nominal",
-            )
-            if is_mc:
-                # energies in MC are smeared
-                electron_ss.apply_smearing()
-            else:
-                # energies in data are scaled
-                electron_ss.apply_scale()
+        electron_ss = ElectronSS(
+            events=events,
+            year=year,
+            variation="nominal",
+        )
+        if is_mc:
+            # energies in MC are smeared
+            electron_ss.apply_smearing()
         else:
-            events["Electron", "pt_raw"] = events.Electron.pt
+            # energies in data are scaled
+            electron_ss.apply_scale()
         # --------------------------------------------------------------
         # Weights
         # --------------------------------------------------------------

@@ -303,10 +303,22 @@ class ElectronSS:
         self.events = events
         self.year = year
         self.variation = variation
-        # get correction set from POG
-        self.cset = correctionlib.CorrectionSet.from_file(
-            get_pog_json(json_name="electron_ss", year=self.year)
-        )
+        if year.startswith("2022"):
+            # get correction set from POG
+            self.cset = correctionlib.CorrectionSet.from_file(
+                get_pog_json(json_name="electron_ss", year=self.year)
+            )
+        if year.startswith("2023"):
+            # get correction set from EG POG
+            self.cset = correctionlib.CorrectionSet.from_file(
+                get_egamma_json(year=self.year)
+            )
+        self.year_mapping = {
+            "2022preEE": ["Scale", "Smearing"],
+            "2022postEE": ["Scale", "Smearing"],
+            "2023preBPix": ["2023PromptC_ScaleJSON", "2023PromptC_SmearingJSON"],
+            "2023postBPix": ["2023PromptD_ScaleJSON", "2023PromptD_SmearingJSON"]
+        }
         # define Electron pt_raw field (needed for MET recalculation)
         self.events["Electron", "pt_raw"] = (
             ak.ones_like(self.events.Electron.pt) * self.events.Electron.pt
@@ -332,7 +344,7 @@ class ElectronSS:
         r9 = self.flat_electrons.r9
         pt = self.flat_electrons.pt
         # compute scale factor
-        scale = self.cset["Scale"].evaluate(
+        scale = self.cset[self.year_mapping[self.year][0]].evaluate(
             "total_correction",
             gain,
             run,
@@ -363,7 +375,7 @@ class ElectronSS:
         r9 = self.flat_electrons.r9
         # rho does not correspond to the pileup rho energy density,
         # instead it is the standard deviation of the Gaussian used to draw the smearing
-        rho = self.cset["Smearing"].evaluate(
+        rho = self.cset[self.year_mapping[self.year][1]].evaluate(
             "rho",
             etasc,
             r9,
