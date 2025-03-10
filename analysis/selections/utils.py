@@ -47,6 +47,23 @@ def transverse_mass(lepton, met):
     )
 
 
+def closest(fsr, lepton, apply_dREt2=True, axis=1):
+    if apply_dREt2:
+        mval, (a, b) = fsr.metric_table(lepton, axis, return_combinations=True)
+    else:
+        mval, (a, b) = lepton.metric_table(fsr, axis, return_combinations=True)
+    mmin = ak.argmin(mval, axis=axis + 1, keepdims=True)
+    out = ak.firsts(b[mmin], axis=axis + 1)
+    dR = ak.firsts(mval[mmin], axis=axis + 1)
+    dREt2 = dR
+    mask = (dR < 0.5) & (dR > 0.001)
+    if apply_dREt2:
+        dREt2 = dREt2 / fsr.pt**2
+        mask = mask & (dREt2 < 0.012)
+    out = ak.mask(out, mask)
+    return out
+
+
 @numba.njit
 def unique_numba(arr):
     """Returns unique elements, inverse indices, and counts (Numba-compatible)"""
@@ -264,8 +281,10 @@ def add_p4_field(leptons, fsr_photons):
 
     # select leptons with and without matched fsr photons
     has_matched_fsr_photons = (
-        lepton_fsr_idx > -1
-    ) & (ak.num(leptons, axis=1) > 0) & (ak.num(fsr_photons, axis=1) > 0)
+        (lepton_fsr_idx > -1)
+        & (ak.num(leptons, axis=1) > 0)
+        & (ak.num(fsr_photons, axis=1) > 0)
+    )
     leptons_with_matched_fsrphotons = ak.pad_none(leptons[has_matched_fsr_photons], 1)
     leptons_without_matched_fsrphotons = ak.pad_none(
         leptons[~has_matched_fsr_photons], 1
@@ -273,8 +292,10 @@ def add_p4_field(leptons, fsr_photons):
 
     # select fsr photons with matched leptons
     has_matched_leptons = (
-        fsr_lepton_idx > -1
-    ) & (ak.num(leptons, axis=1) > 0) & (ak.num(fsr_photons, axis=1) > 0)
+        (fsr_lepton_idx > -1)
+        & (ak.num(leptons, axis=1) > 0)
+        & (ak.num(fsr_photons, axis=1) > 0)
+    )
     fsr_with_matched_leptons = ak.pad_none(fsr_photons[has_matched_leptons], 1)
 
     # add 'p4' field by adding matched fsr photon

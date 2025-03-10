@@ -5,10 +5,9 @@ from coffea.nanoevents.methods import candidate
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.working_points import working_points
 from analysis.selections import (
+    closest,
     delta_r_higher,
     delta_r_lower,
-    fsr_matching,
-    add_p4_field,
     select_dileptons,
     transverse_mass,
 )
@@ -83,128 +82,234 @@ class ObjectSelector:
     # ZZTo4L
     # --------------------------------------------------------------------------------
     def select_zzto4l_leptons(self):
-        """
-        # FSR matching takes numpy arrays as inputs
-        muon_offsets = np.concatenate(([0], np.cumsum(ak.num(self.objects["muons"], axis=1))))
-        muon_pt = np.array(ak.flatten(self.objects["muons"].pt), dtype=float)
-        muon_eta = np.array(ak.flatten(self.objects["muons"].eta), dtype=float)
-        muon_phi = np.array(ak.flatten(self.objects["muons"].phi), dtype=float)
-        muon_iso = np.array(ak.flatten(self.objects["muons"].pfRelIso03_all), dtype=float)
-        electron_offsets = np.concatenate(([0], np.cumsum(ak.num(self.objects["electrons"], axis=1))))
-        electron_eta = np.array(ak.flatten(self.objects["electrons"].eta), dtype=float)
-        electron_phi = np.array(ak.flatten(self.objects["electrons"].phi), dtype=float)
-        fsr_offsets = np.concatenate(([0], np.cumsum(ak.num(self.objects["fsr_photons"], axis=1))))
-        fsr_pt = np.array(ak.flatten(self.objects["fsr_photons"].pt), dtype=float)
-        fsr_eta = np.array(ak.flatten(self.objects["fsr_photons"].eta), dtype=float)
-        fsr_phi = np.array(ak.flatten(self.objects["fsr_photons"].phi), dtype=float)
-        # perform FSR matching
-        muFsrPhotonIdx, eleFsrPhotonIdx, fsrPhoton_myMuonIdx, fsrPhoton_myElectronIdx = fsr_matching(
-            fsr_offsets,
-            muon_offsets,
-            electron_offsets,
-            muon_pt,
-            muon_eta,
-            muon_phi,
-            muon_iso,
-            electron_eta,
-            electron_phi,
-            fsr_pt,
-            fsr_eta,
-            fsr_phi,
-        )
-        # add FSR/lepton ids
-        nmuon = ak.num(self.objects["muons"], axis=1)
-        nelectron = ak.num(self.objects["electrons"], axis=1)
-        nfsr = ak.num(self.objects["fsr_photons"], axis=1)
-        self.objects["muons"]["muFsrPhotonIdx"] = ak.unflatten(muFsrPhotonIdx, nmuon)
-        self.objects["electrons"]["eleFsrPhotonIdx"] = ak.unflatten(eleFsrPhotonIdx, nelectron)
-        self.objects["fsr_photons"]["MuonIdx"] = ak.unflatten(fsrPhoton_myMuonIdx, nfsr)
-        self.objects["fsr_photons"]["ElectronIdx"] = ak.unflatten(fsrPhoton_myElectronIdx, nfsr)
-        # apply iso cut on muons
-        self.objects["muons"]["pfRelIso03_all"] = ak.unflatten(muon_iso, nmuon)
-        self.objects["muons"] = self.objects["muons"][self.objects["muons"].pfRelIso03_all < 0.35]
-        # assign mass and charge fields to FSR to be able to compute 4-vector
-        self.objects["fsr_photons"]["mass"] = 0
-        self.objects["fsr_photons"]["charge"] = 0
-        # add 'p4' by adding matched FSR. Also add 'p4_orig' for QCD supression
-        self.objects["electrons"] = add_p4_field(self.objects["electrons"], self.objects["fsr_photons"])
-        self.objects["muons"] = add_p4_field(self.objects["muons"], self.objects["fsr_photons"])
-        """
-        self.objects["muons"] = self.objects["muons"][
-            self.objects["muons"].pfRelIso03_all < 0.35
-        ]
-        self.objects["muons"]["p4"] = ak.zip(
-            {
-                "pt": self.objects["muons"].pt,
-                "eta": self.objects["muons"].eta,
-                "phi": self.objects["muons"].phi,
-                "mass": self.objects["muons"].mass,
-                "charge": self.objects["muons"].charge,
-                "pdgId": self.objects["muons"].pdgId,
-            },
-            with_name="PtEtaPhiMCandidate",
-            behavior=candidate.behavior,
-        )
-        self.objects["muons"]["p4_orig"] = ak.zip(
-            {
-                "pt": self.objects["muons"].pt,
-                "eta": self.objects["muons"].eta,
-                "phi": self.objects["muons"].phi,
-                "mass": self.objects["muons"].mass,
-                "charge": self.objects["muons"].charge,
-                "pdgId": self.objects["muons"].pdgId,
-            },
-            with_name="PtEtaPhiMCandidate",
-            behavior=candidate.behavior,
-        )
-        self.objects["electrons"]["p4"] = ak.zip(
-            {
-                "pt": self.objects["electrons"].pt,
-                "eta": self.objects["electrons"].eta,
-                "phi": self.objects["electrons"].phi,
-                "mass": self.objects["electrons"].mass,
-                "charge": self.objects["electrons"].charge,
-                "pdgId": self.objects["electrons"].pdgId,
-            },
-            with_name="PtEtaPhiMCandidate",
-            behavior=candidate.behavior,
-        )
-        self.objects["electrons"]["p4_orig"] = ak.zip(
-            {
-                "pt": self.objects["electrons"].pt,
-                "eta": self.objects["electrons"].eta,
-                "phi": self.objects["electrons"].phi,
-                "mass": self.objects["electrons"].mass,
-                "charge": self.objects["electrons"].charge,
-                "pdgId": self.objects["electrons"].pdgId,
-            },
-            with_name="PtEtaPhiMCandidate",
-            behavior=candidate.behavior,
-        )
-        # concatenate muons and electrons
-        self.objects["leptons"] = ak.concatenate(
+        # get leptons before iso correction
+        helper_leptons = ak.concatenate(
             [self.objects["muons"], self.objects["electrons"]], axis=1
         )
-        self.objects["leptons"] = self.objects["leptons"][
-            ak.argsort(self.objects["leptons"].pt, axis=1)
+        helper_leptons = helper_leptons[
+            ak.argsort(helper_leptons.pt, axis=1, ascending=False)
         ]
-        self.objects["leptons"]["idx"] = ak.local_index(self.objects["leptons"], axis=1)
-
-        self.objects["leptons"] = ak.zip(
+        helper_leptons["idx"] = ak.local_index(helper_leptons, axis=1)
+        helper_leptons = ak.zip(
             {
-                "pt": self.objects["leptons"].pt,
-                "eta": self.objects["leptons"].eta,
-                "phi": self.objects["leptons"].phi,
-                "mass": self.objects["leptons"].mass,
-                "charge": self.objects["leptons"].charge,
-                "pdgId": self.objects["leptons"].pdgId,
-                "p4": self.objects["leptons"].p4,
-                "p4_orig": self.objects["leptons"].p4_orig,
+                "pt": helper_leptons.pt,
+                "eta": helper_leptons.eta,
+                "phi": helper_leptons.phi,
+                "mass": helper_leptons.mass,
+                "charge": helper_leptons.charge,
+                "pdgId": helper_leptons.pdgId,
+                "idx": helper_leptons.idx,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
+        # get matched FSR index
+        fsr_photons = self.objects["fsr_photons"]
+        fsr_photons["idx"] = ak.local_index(fsr_photons, axis=1)
+        fsr_leptons_closest = closest(fsr_photons, helper_leptons, apply_dREt2=True)
+        fsr_photons["lepton_idx"] = ak.fill_none(fsr_leptons_closest.idx, -1)
+        fsr_photons.lepton_idx = ak.pad_none(fsr_photons.lepton_idx, 1)
 
+        # get matched leptons index
+        closest_fsr = closest(fsr_photons, helper_leptons, apply_dREt2=False)
+        fsr_lepton_cartesian = ak.cartesian(
+            {"leptons": helper_leptons, "fsr": fsr_photons}, nested=True, axis=1
+        )
+        helper_lepton_fsr_idx = ak.where(
+            fsr_lepton_cartesian.fsr.lepton_idx == fsr_lepton_cartesian.leptons.idx,
+            closest_fsr.idx,
+            -1,
+        )
+        lepton_fsr_idx = ak.where(
+            ak.any(helper_lepton_fsr_idx > -1, axis=-1), closest_fsr.idx, -1
+        )
+        helper_leptons["fsr_idx"] = ak.fill_none(lepton_fsr_idx, -1)
+
+        # For each FSR photon that was selected, we exclude that photon from the isolation sum of all the leptons in the event
+        # This concerns the photons that are in the isolation cone and outside the isolation veto of said leptons dR < 0.4 AND dR > 0.01
+        selected_fsr_photons = fsr_photons[fsr_photons.lepton_idx > -1]
+        muons_matchedfsr_cartesian = ak.cartesian(
+            {"muon": self.objects["muons"], "fsr": selected_fsr_photons},
+            nested=True,
+            axis=1,
+        )
+        muons_matchedfsr_cartesian_dr = muons_matchedfsr_cartesian.muon.delta_r(
+            muons_matchedfsr_cartesian.fsr
+        )
+        muons_matchedfsr_cartesian_dr_valid = (muons_matchedfsr_cartesian_dr > 0.01) & (
+            muons_matchedfsr_cartesian_dr < 0.4
+        )
+        valid_matchedfsr_pt = ak.sum(
+            muons_matchedfsr_cartesian.fsr.mask[muons_matchedfsr_cartesian_dr_valid].pt,
+            axis=-1,
+        )
+        muon_corrected_iso = self.objects["muons"].pfRelIso03_all - (
+            valid_matchedfsr_pt / self.objects["muons"].pt
+        )
+        # update pfRelIso03_all field with corrected pfRelIso03_all
+        self.objects["muons"]["pfRelIso03_all"] = ak.where(
+            muon_corrected_iso > 0, muon_corrected_iso, 0.0
+        )
+        self.objects["electrons"]["pfRelIso03_all"] = ak.zeros_like(
+            self.objects["electrons"].pt
+        )
+        # concatenate muons and electrons with corrected iso
+        leptons = ak.concatenate(
+            [self.objects["muons"], self.objects["electrons"]], axis=1
+        )
+        leptons = leptons[ak.argsort(leptons.pt, axis=1, ascending=False)]
+        leptons = ak.zip(
+            {
+                "pt": leptons.pt,
+                "eta": leptons.eta,
+                "phi": leptons.phi,
+                "mass": leptons.mass,
+                "charge": leptons.charge,
+                "pdgId": leptons.pdgId,
+                "pfRelIso03_all": leptons.pfRelIso03_all,
+                "idx": helper_leptons.idx,
+                "fsr_idx": helper_leptons.fsr_idx,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+        # select leptons (muons) such that relIso < 0.35
+        leptons = leptons.mask[leptons.pfRelIso03_all < 0.35]
+
+        # remove excluded muons
+        leptons.fsr_idx = ak.fill_none(leptons.fsr_idx, -99)
+        leptons = leptons[leptons.fsr_idx >= -1]
+
+        # remove FSR lepton_idx associated with the excluded muons
+        index_still_present = ak.any(
+            (fsr_photons.lepton_idx[:, None] == ak.fill_none(leptons.idx, -1)), axis=1
+        )
+        fsr_photons = fsr_photons[index_still_present]
+
+        helper_leptons = ak.pad_none(leptons, 1)
+        helper_fsr = ak.pad_none(fsr_photons, 1)
+
+        # in some events, multiple photons are associated with the same lepton. For these events, choose the one that matches the leptons.idx
+        is_duplicate_lepton_fsr_idx = ~ak.fill_none(
+            ak.sum(helper_leptons.idx == helper_fsr.lepton_idx[:, None], axis=-1) > 1,
+            False,
+        )
+        duplicate_fsr_idx = ak.where(
+            is_duplicate_lepton_fsr_idx,
+            ak.full_like(ak.pad_none(helper_leptons.fsr_idx, 1), -1),
+            ak.pad_none(helper_leptons.fsr_idx, 1),
+        )
+
+        is_duplicate_lepton_fsr_idx_in_fsr_photons_idx = ak.fill_none(
+            ak.any(duplicate_fsr_idx[:, None] == helper_fsr.idx, axis=-1), False
+        )
+        duplicate_idx = ak.any(
+            ak.pad_none(fsr_photons, 1).lepton_idx.mask[
+                is_duplicate_lepton_fsr_idx_in_fsr_photons_idx
+            ][:, None]
+            == fsr_photons.lepton_idx,
+            axis=-1,
+        )
+        duplicate_idx_to_remove = ak.pad_none(duplicate_idx, 1) & ~ak.pad_none(
+            is_duplicate_lepton_fsr_idx_in_fsr_photons_idx, 1
+        )
+        fsr_lepton_idx_for_duplicates = ak.where(
+            duplicate_idx_to_remove, -1, ak.pad_none(helper_fsr, 1).lepton_idx
+        )
+
+        new_fsr_photons_lepton_idx = ak.where(
+            ak.any(is_duplicate_lepton_fsr_idx_in_fsr_photons_idx, axis=1),
+            ak.pad_none(fsr_lepton_idx_for_duplicates, 1),
+            ak.pad_none(helper_fsr, 1).lepton_idx,
+        )
+        fsr_photons.lepton_idx = new_fsr_photons_lepton_idx
+
+        # add p4 field for FSR photons and leptons
+        fsr_photons["mass"] = 0
+        fsr_photons["charge"] = 0
+        fsr_photons["p4"] = ak.zip(
+            {
+                "pt": fsr_photons.pt,
+                "eta": fsr_photons.eta,
+                "phi": fsr_photons.phi,
+                "mass": fsr_photons.mass,
+                "charge": fsr_photons.charge,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+        leptons["p4"] = ak.zip(
+            {
+                "pt": leptons.pt,
+                "eta": leptons.eta,
+                "phi": leptons.phi,
+                "mass": leptons.mass,
+                "charge": leptons.charge,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+        # select leptons with and without matched FSR photons
+        has_matched_fsr_photons = leptons.fsr_idx > -1
+        leptons_with_matched_fsrphotons = ak.pad_none(
+            leptons[has_matched_fsr_photons], 1
+        )
+        leptons_without_matched_fsrphotons = ak.pad_none(
+            leptons[~has_matched_fsr_photons], 1
+        )
+        # select FSR photons with matched leptons
+        has_matched_leptons = fsr_photons.lepton_idx > -1
+        fsr_with_matched_leptons = ak.pad_none(fsr_photons[has_matched_leptons], 1)
+        # add matched FSR photons and leptons
+        leptons_with_matched_fsrphotons["p4"] = (
+            leptons_with_matched_fsrphotons + fsr_with_matched_leptons
+        )
+        leptons_with_matched_fsrphotons.p4 = ak.zip(
+            {
+                "pt": leptons_with_matched_fsrphotons.p4.pt,
+                "eta": leptons_with_matched_fsrphotons.p4.eta,
+                "phi": leptons_with_matched_fsrphotons.p4.phi,
+                "mass": leptons_with_matched_fsrphotons.p4.mass,
+                "charge": leptons_with_matched_fsrphotons.p4.charge,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+        # keep original lepton p4 for QCD supression
+        leptons_with_matched_fsrphotons["p4_orig"] = ak.zip(
+            {
+                "pt": leptons_with_matched_fsrphotons.pt,
+                "eta": leptons_with_matched_fsrphotons.eta,
+                "phi": leptons_with_matched_fsrphotons.phi,
+                "mass": leptons_with_matched_fsrphotons.mass,
+                "charge": leptons_with_matched_fsrphotons.charge,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+        # concatenate leptons with and without matched FSR photons after FSR recovery
+        leptons_without_matched_fsrphotons["p4"] = ak.zip(
+            {
+                "pt": leptons_without_matched_fsrphotons.pt,
+                "eta": leptons_without_matched_fsrphotons.eta,
+                "phi": leptons_without_matched_fsrphotons.phi,
+                "mass": leptons_without_matched_fsrphotons.mass,
+                "charge": leptons_without_matched_fsrphotons.charge,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+        leptons_without_matched_fsrphotons["p4_orig"] = (
+            leptons_without_matched_fsrphotons.p4
+        )
+        leptons = ak.concatenate(
+            [leptons_with_matched_fsrphotons, leptons_without_matched_fsrphotons],
+            axis=1,
+        )
+        leptons = leptons[ak.argsort(leptons.pt, axis=1, ascending=False)]
+        self.objects["leptons"] = leptons
+
+        
     def select_zzto4l_ll_pairs(self):
         self.objects["ll_pairs"] = ak.combinations(
             self.objects["leptons"], 2, fields=["l1", "l2"]
@@ -213,6 +318,7 @@ class ObjectSelector:
             self.objects["ll_pairs"].l1.pt + self.objects["ll_pairs"].l2.pt
         )
 
+        
     def select_zzto4l_zzpairs(self):
         zz_pairs = ak.combinations(self.objects["ll_pairs"], 2, fields=["z1", "z2"])
         zz_pairs = ak.zip(
@@ -427,6 +533,7 @@ class ObjectSelector:
         # select best candidate from zz_pairs
         self.objects["zz_candidate"] = self.objects["zz_pairs"][best_candidate_mask]
 
+        
     # --------------------------------------------------------------------------------
     # HWW
     # --------------------------------------------------------------------------------
