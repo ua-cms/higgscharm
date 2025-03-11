@@ -47,21 +47,27 @@ def transverse_mass(lepton, met):
     )
 
 
-def closest(fsr, lepton, apply_dREt2=True, axis=1):
-    if apply_dREt2:
-        mval, (a, b) = fsr.metric_table(lepton, axis, return_combinations=True)
-    else:
-        mval, (a, b) = lepton.metric_table(fsr, axis, return_combinations=True)
+def get_closest_lepton(fsr, lepton, axis=1):
+    mval, (a, b) = fsr.metric_table(lepton, axis, return_combinations=True)
     mmin = ak.argmin(mval, axis=axis + 1, keepdims=True)
     out = ak.firsts(b[mmin], axis=axis + 1)
     dR = ak.firsts(mval[mmin], axis=axis + 1)
-    dREt2 = dR
-    mask = (dR < 0.5) & (dR > 0.001)
-    if apply_dREt2:
-        dREt2 = dREt2 / fsr.pt**2
-        mask = mask & (dREt2 < 0.012)
-    out = ak.mask(out, mask)
-    return out
+    dREt2 = dR / fsr.pt**2
+    mask = (dR < 0.5) & (dR > 0.001) & (dREt2 < 0.012)
+    return ak.mask(out, mask), dREt2
+
+
+def assign_lepton_fsr_idx(fsr_photons, leptons):
+    leptons["fsr_idx"] = ak.full_like(leptons.pt, -1)
+    # compare elements within each sublist using broadcasting
+    mask = ak.any(leptons.idx[:, :, None] == fsr_photons.lepton_idx[:, None, :], axis=2)
+    # identify the correct positions
+    idx_positions = ak.argmax(
+        leptons.idx[:, :, None] == fsr_photons.lepton_idx[:, None, :], axis=2
+    )
+    # create the updated fsr_idx for leptons
+    idx_updated = ak.where(mask, fsr_photons.idx[idx_positions], leptons.fsr_idx)
+    return ak.with_field(leptons, idx_updated, "fsr_idx")
 
 
 @numba.njit
