@@ -95,7 +95,6 @@ class ObjectSelector:
         is_relaxed_muon = is_loose_muon & (np.abs(self.objects["muons"].sip3d) < 4)
         is_tight_muon = (
             is_relaxed_muon
-            & (self.objects["muons"].pfRelIso03_all < 0.35)
             & (
                 ((self.objects["muons"].pt < 200) & self.objects["muons"].tightId)
                 | (
@@ -107,7 +106,6 @@ class ObjectSelector:
                 )
             )
         )
-
         muons = self.objects["muons"]
         muons["is_loose"] = is_loose_muon
         muons["is_relaxed"] = is_relaxed_muon
@@ -124,7 +122,6 @@ class ObjectSelector:
         is_tight_electron = is_relaxed_electron & (
             working_points.electron_id(self.events, "bdt")
         )
-
         electrons = self.objects["electrons"]
         electrons["is_loose"] = is_loose_electron
         electrons["is_relaxed"] = is_relaxed_electron
@@ -149,14 +146,16 @@ class ObjectSelector:
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
-        # some FSR photons could be matched to the same lepton. We choose the one with lowest dREt2
+        # select FSR photons
         fsr_photons = self.objects["fsr_photons"]
         fsr_photons["mass"] = 0
         fsr_photons["charge"] = 0
         fsr_photons["idx"] = ak.local_index(fsr_photons, axis=1)
+        # find closest lepton
         closest_lepton, dr_et2 = get_closest_lepton(fsr_photons, helper_leptons)
         fsr_photons["helper_idx"] = ak.local_index(closest_lepton, axis=1)
         fsr_photons["lepton_idx"] = ak.fill_none(closest_lepton.idx, -1)
+        # if the FSR photon is matched to multiple leptons, choose the one with lowest dREt2
         fsr_cartesian = ak.cartesian(
             {"fsr1": fsr_photons, "fsr2": fsr_photons}, nested=True, axis=1
         )
@@ -178,7 +177,7 @@ class ObjectSelector:
         # add fsr_idx field to leptons
         helper_leptons = assign_lepton_fsr_idx(fsr_photons, helper_leptons)
 
-        # For each FSR photon that was selected, we exclude that photon from the isolation sum of all the leptons in the event
+        # for each FSR photon that was selected, we exclude that photon from the isolation sum of all the leptons in the event
         # This concerns the photons that are in the isolation cone and outside the isolation veto of said leptons dR < 0.4 AND dR > 0.01
         selected_fsr_photons = fsr_photons[fsr_photons.lepton_idx > -1]
         muons_matchedfsr_cartesian = ak.cartesian(
@@ -223,17 +222,11 @@ class ObjectSelector:
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
-        # select leptons (muons) such that relIso < 0.35
-        leptons = leptons.mask[leptons.pfRelIso03_all < 0.35]
-
-        # remove lepton fsr_idx of excluded muons
-        leptons.fsr_idx = ak.fill_none(leptons.fsr_idx, -99)
-        leptons = leptons[leptons.fsr_idx >= -1]
-
-        # update lepton index
+        # select leptons (muons) such that relIso < 0.35 and update lepton index
+        leptons = leptons[leptons.pfRelIso03_all < 0.35]
         leptons["idx"] = ak.local_index(leptons, axis=1)
-
-        # assign -1 to FSR lepton_idx associated with the excluded muons
+        
+        # assign -1 to FSR lepton_idx associated with the excluded leptons
         index_still_present = ak.any(
             fsr_photons.idx == leptons.fsr_idx[:, None], axis=-1
         )
@@ -339,7 +332,6 @@ class ObjectSelector:
         loose_leptons_bestzl2_opposite_charge = ak.flatten(
             loose_leptons.charge != best_zcandidate.l2.charge[:, None], axis=-1
         )
-
         loose_leptons_bestzl1_cartesian = ak.cartesian(
             {"lepton": loose_leptons.p4, "zl1": best_zcandidate.l1.p4},
             nested=True,
@@ -353,7 +345,6 @@ class ObjectSelector:
             axis=-1,
         )
         loose_leptons_bestzl1_mass_mask = loose_leptons_bestzl1_mass > 4
-
         loose_leptons_bestzl2_cartesian = ak.cartesian(
             {"lepton": loose_leptons.p4, "zl2": best_zcandidate.l2.p4},
             nested=True,
@@ -367,7 +358,6 @@ class ObjectSelector:
             axis=-1,
         )
         loose_leptons_bestzl2_mass_mask = loose_leptons_bestzl2_mass > 4
-
         qcd_suppression_mask = (
             loose_leptons_bestzl1_opposite_charge & loose_leptons_bestzl1_mass_mask
         ) | (loose_leptons_bestzl2_opposite_charge & loose_leptons_bestzl2_mass_mask)
@@ -398,7 +388,7 @@ class ObjectSelector:
                 ),
             }
         )
-        # sort zz pairs by they proximity to Z mass
+        # sort ZZ candidates by they proximity to the Z mass
         zmass = 91.1876
         dist_from_z1_to_zmass = np.abs(zzcandidates.z1.p4.mass - zmass)
         dist_from_z2_to_zmass = np.abs(zzcandidates.z2.p4.mass - zmass)
