@@ -1,8 +1,7 @@
-import numpy as np
-from coffea import processor
-
 def dump_lumi(events, output):
     """add run and lumiblock to metadata"""
+    import numpy as np
+    from coffea import processor
     pairs = np.vstack((events.run.to_numpy(), events.luminosityBlock.to_numpy()))
     # remove replicas
     pairs = np.unique(np.transpose(pairs), axis=0)
