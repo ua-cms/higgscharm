@@ -83,51 +83,39 @@ class ObjectSelector:
     # ZZTo4L
     # --------------------------------------------------------------------------------
     def select_zzto4l_leptons(self):
-        # add loose, relaxed and tight selection masks to muons and electrons.
-        # tight leptons are used for SR and CRs. loose leptons are used for Z+X CR.
-        is_loose_muon = (
-            (self.objects["muons"].pt > 5)
-            & (np.abs(self.objects["muons"].eta) < 2.4)
-            & (np.abs(self.objects["muons"].dxy) < 0.5)
-            & (np.abs(self.objects["muons"].dz) < 1)
-            & (self.objects["muons"].isGlobal | self.objects["muons"].isTracker)
-        )
-        is_relaxed_muon = is_loose_muon & (np.abs(self.objects["muons"].sip3d) < 4)
-        is_tight_muon = (
-            is_relaxed_muon
-            & (
-                ((self.objects["muons"].pt < 200) & self.objects["muons"].tightId)
-                | (
-                    (self.objects["muons"].pt >= 200)
-                    & (
-                        (self.objects["muons"].tightId)
-                        | (self.objects["muons"].highPtId == 1)
-                    )
-                )
-            )
-        )
+        # add loose, relaxed and tight ids to muons
         muons = self.objects["muons"]
+        is_loose_muon = (
+            (muons.pt > 5)
+            & (np.abs(muons.eta) < 2.4)
+            & (np.abs(muons.dxy) < 0.5)
+            & (np.abs(muons.dz) < 1)
+            & (muons.isGlobal | (muons.isTracker & (muons.nStations > 0)))
+        )
+        is_relaxed_muon = is_loose_muon & (np.abs(muons.sip3d) < 4)
+        muon_id = muons.isPFcand | ((muons.highPtId > 0) & (muons.pt > 200))
+        is_tight_muon = is_relaxed_muon & muon_id
         muons["is_loose"] = is_loose_muon
         muons["is_relaxed"] = is_relaxed_muon
         muons["is_tight"] = is_tight_muon
 
-        is_loose_electron = (
-            (self.objects["electrons"].pt > 7)
-            & (np.abs(self.objects["electrons"].eta) < 2.5)
-            & (np.abs(self.objects["electrons"].dxy) < 0.5)
-            & (np.abs(self.objects["electrons"].dz) < 1)
-            & (delta_r_higher(self.objects["electrons"], self.objects["muons"], 0.05))
-        )
-        is_relaxed_electron = is_loose_electron & (self.objects["electrons"].sip3d < 4)
-        is_tight_electron = is_relaxed_electron & (
-            working_points.electron_id(self.events, "bdt")
-        )
+        # add loose, relaxed and tight ids to electrons
         electrons = self.objects["electrons"]
+        is_loose_electron = (
+            (electrons.pt > 7)
+            & (np.abs(electrons.eta) < 2.5)
+            & (np.abs(electrons.dxy) < 0.5)
+            & (np.abs(electrons.dz) < 1)
+            & (delta_r_higher(electrons, self.objects["muons"], 0.05))
+        )
+        is_relaxed_electron = is_loose_electron & (electrons.sip3d < 4)
+        electron_id = working_points.electron_id(self.events, "bdt")
+        is_tight_electron = is_relaxed_electron & electron_id
         electrons["is_loose"] = is_loose_electron
         electrons["is_relaxed"] = is_relaxed_electron
         electrons["is_tight"] = is_tight_electron
 
-        # get leptons before FSR recovery/iso correction
+        # leptons before FSR recovery/iso correction
         helper_leptons = ak.concatenate([muons, electrons], axis=1)
         helper_leptons["idx"] = ak.local_index(helper_leptons, axis=1)
         helper_leptons = ak.zip(
@@ -225,7 +213,7 @@ class ObjectSelector:
         # select leptons (muons) such that relIso < 0.35 and update lepton index
         leptons = leptons[leptons.pfRelIso03_all < 0.35]
         leptons["idx"] = ak.local_index(leptons, axis=1)
-        
+
         # assign -1 to FSR lepton_idx associated with the excluded leptons
         index_still_present = ak.any(
             fsr_photons.idx == leptons.fsr_idx[:, None], axis=-1
@@ -279,7 +267,6 @@ class ObjectSelector:
         )
         self.objects["leptons"] = leptons
 
-        
     def select_zzto4l_zcandidates(self):
         self.objects["zcandidates"] = ak.combinations(
             self.objects["leptons"], 2, fields=["l1", "l2"]
@@ -289,7 +276,6 @@ class ObjectSelector:
         )
         self.objects["zcandidates"]["pt"] = self.objects["zcandidates"].p4.pt
 
-        
     def select_zplusx_best_zcandidate(self):
         zmass = 91.1876
         self.objects["zcandidates"]["idx"] = ak.local_index(
@@ -303,7 +289,6 @@ class ObjectSelector:
         ]
         self.objects["best_zcandidate"] = best_zcandidate
 
-        
     def select_zplusx_loose_leptons(self):
         # select loose leptons
         loose_leptons = self.objects["leptons"][self.objects["leptons"].is_loose]
@@ -365,7 +350,6 @@ class ObjectSelector:
 
         self.objects["loose_leptons"] = loose_leptons
 
-        
     def select_zzto4l_zzcandidates(self):
         zzcandidates = ak.combinations(
             self.objects["zcandidates"], 2, fields=["z1", "z2"]
@@ -533,7 +517,6 @@ class ObjectSelector:
         )
         self.objects["zzcandidates"]["pt"] = self.objects["zzcandidates"].p4.pt
 
-        
     def select_zzto4l_best_zzcandidate(self):
         """
         selects best zz candidate as the one with Z1 closest in mass to nominal Z boson mass
