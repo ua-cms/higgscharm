@@ -83,13 +83,40 @@ class ObjectSelector:
     # ZZTo4L
     # --------------------------------------------------------------------------------
     def select_zzto4l_leptons(self):
-        # get leptons before iso correction
-        helper_leptons = ak.concatenate(
-            [self.objects["muons"], self.objects["electrons"]], axis=1
+        # add loose, relaxed and tight selection masks to muons and electrons.
+        # tight leptons are used for SR and CRs. loose leptons are used for Z+X CR. 
+        is_loose_muon = (
+            (self.objects["muons"].pt > 5)
+            & (np.abs(self.objects["muons"].eta) < 2.4)
+            & (np.abs(self.objects["muons"].dxy) < 0.5)
+            & (np.abs(self.objects["muons"].dz) < 1)
+            & (self.objects["muons"].isGlobal | self.objects["muons"].isTracker)
         )
-        helper_leptons = helper_leptons[
-            ak.argsort(helper_leptons.pt, axis=1, ascending=False)
-        ]
+        is_relaxed_muon = is_loose_muon & (np.abs(self.objects["muons"].sip3d) < 4)
+        is_tight_muon = is_relaxed_muon & (self.objects["muons"].pfRelIso03_all < 0.35) & (((self.objects["muons"].pt < 200) & self.objects["muons"].tightId) | ((self.objects["muons"].pt >= 200) & ((self.objects["muons"].tightId) | (self.objects["muons"].highPtId == 1))))
+
+        muons = self.objects["muons"]
+        muons["is_loose"] = is_loose_muon
+        muons["is_relaxed"] = is_relaxed_muon
+        muons["is_tight"] = is_tight_muon
+        
+        is_loose_electron = (
+            (self.objects["electrons"].pt > 7)
+            & (np.abs(self.objects["electrons"].eta) < 2.5)
+            & (np.abs(self.objects["electrons"].dxy) < 0.5)
+            & (np.abs(self.objects["electrons"].dz) < 1)
+            & (delta_r_higher(self.objects["electrons"], self.objects["muons"], 0.05)) 
+        )
+        is_relaxed_electron = is_loose_electron & (self.objects["electrons"].sip3d < 4)
+        is_tight_electron = is_relaxed_electron & (working_points.electron_id(self.events, "bdt"))
+
+        electrons = self.objects["electrons"]
+        electrons["is_loose"] = is_loose_electron
+        electrons["is_relaxed"] = is_relaxed_electron
+        electrons["is_tight"] = is_tight_electron
+        
+        # get leptons before FSR recovery/iso correction
+        helper_leptons = ak.concatenate([muons, electrons], axis=1)
         helper_leptons["idx"] = ak.local_index(helper_leptons, axis=1)
         helper_leptons = ak.zip(
             {
@@ -100,6 +127,9 @@ class ObjectSelector:
                 "charge": helper_leptons.charge,
                 "pdgId": helper_leptons.pdgId,
                 "idx": helper_leptons.idx,
+                "is_loose": helper_leptons.is_loose,
+                "is_relaxed": helper_leptons.is_relaxed,
+                "is_tight": helper_leptons.is_tight,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -135,7 +165,7 @@ class ObjectSelector:
         # This concerns the photons that are in the isolation cone and outside the isolation veto of said leptons dR < 0.4 AND dR > 0.01
         selected_fsr_photons = fsr_photons[fsr_photons.lepton_idx > -1]
         muons_matchedfsr_cartesian = ak.cartesian(
-            {"muon": self.objects["muons"], "fsr": selected_fsr_photons},
+            {"muon": muons, "fsr": selected_fsr_photons},
             nested=True,
             axis=1,
         )
@@ -149,19 +179,19 @@ class ObjectSelector:
             muons_matchedfsr_cartesian.fsr.mask[muons_matchedfsr_cartesian_dr_valid].pt,
             axis=-1,
         )
-        muon_corrected_iso = self.objects["muons"].pfRelIso03_all - (
-            valid_matchedfsr_pt / self.objects["muons"].pt
+        muon_corrected_iso = muons.pfRelIso03_all - (
+            valid_matchedfsr_pt / muons.pt
         )
         # update pfRelIso03_all field with corrected isolation
-        self.objects["muons"]["pfRelIso03_all"] = ak.where(
+        muons["pfRelIso03_all"] = ak.where(
             muon_corrected_iso > 0, muon_corrected_iso, 0.0
         )
-        self.objects["electrons"]["pfRelIso03_all"] = ak.zeros_like(
-            self.objects["electrons"].pt
+        electrons["pfRelIso03_all"] = ak.zeros_like(
+            electrons.pt
         )
         # concatenate muons and electrons with corrected iso
         leptons = ak.concatenate(
-            [self.objects["muons"], self.objects["electrons"]], axis=1
+            [muons, electrons], axis=1
         )
         leptons = leptons[ak.argsort(leptons.pt, axis=1, ascending=False)]
         leptons = ak.zip(
@@ -175,6 +205,9 @@ class ObjectSelector:
                 "pfRelIso03_all": leptons.pfRelIso03_all,
                 "idx": helper_leptons.idx,
                 "fsr_idx": helper_leptons.fsr_idx,
+                "is_loose": leptons.is_loose,
+                "is_relaxed": leptons.is_relaxed,
+                "is_tight": leptons.is_tight,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -277,54 +310,53 @@ class ObjectSelector:
             [leptons_with_matched_fsrphotons, leptons_without_matched_fsrphotons],
             axis=1,
         )
-        leptons = leptons[ak.argsort(leptons.pt, axis=1, ascending=False)]
         self.objects["leptons"] = leptons
 
-    def select_zzto4l_ll_pairs(self):
-        self.objects["ll_pairs"] = ak.combinations(
+    def select_zzto4l_zcandidates(self):
+        self.objects["zcandidates"] = ak.combinations(
             self.objects["leptons"], 2, fields=["l1", "l2"]
         )
-        self.objects["ll_pairs"].pt = (
-            self.objects["ll_pairs"].l1.pt + self.objects["ll_pairs"].l2.pt
-        )
+        self.objects["zcandidates"]["p4"] = self.objects["zcandidates"].l1 + self.objects["zcandidates"].l2
+        self.objects["zcandidates"]["pt"] = self.objects["zcandidates"].p4.pt
+        
 
-    def select_zzto4l_zzpairs(self):
-        zz_pairs = ak.combinations(self.objects["ll_pairs"], 2, fields=["z1", "z2"])
-        zz_pairs = ak.zip(
+    def select_zzto4l_zzcandidates(self):
+        zzcandidates = ak.combinations(self.objects["zcandidates"], 2, fields=["z1", "z2"])
+        zzcandidates = ak.zip(
             {
                 "z1": ak.zip(
                     {
-                        "l1": zz_pairs.z1.l1,
-                        "l2": zz_pairs.z1.l2,
-                        "p4": zz_pairs.z1.l1 + zz_pairs.z1.l2,
-                        "p4_orig": zz_pairs.z1.l1.p4_orig + zz_pairs.z1.l2.p4_orig,
+                        "l1": zzcandidates.z1.l1,
+                        "l2": zzcandidates.z1.l2,
+                        "p4": zzcandidates.z1.l1 + zzcandidates.z1.l2,
+                        "p4_orig": zzcandidates.z1.l1.p4_orig + zzcandidates.z1.l2.p4_orig,
                     }
                 ),
                 "z2": ak.zip(
                     {
-                        "l1": zz_pairs.z2.l1,
-                        "l2": zz_pairs.z2.l2,
-                        "p4": zz_pairs.z2.l1 + zz_pairs.z2.l2,
-                        "p4_orig": zz_pairs.z2.l1.p4_orig + zz_pairs.z2.l2.p4_orig,
+                        "l1": zzcandidates.z2.l1,
+                        "l2": zzcandidates.z2.l2,
+                        "p4": zzcandidates.z2.l1 + zzcandidates.z2.l2,
+                        "p4_orig": zzcandidates.z2.l1.p4_orig + zzcandidates.z2.l2.p4_orig,
                     }
                 ),
             }
         )
         # sort zz pairs by they proximity to Z mass
         zmass = 91.1876
-        dist_from_z1_to_zmass = np.abs(zz_pairs.z1.p4.mass - zmass)
-        dist_from_z2_to_zmass = np.abs(zz_pairs.z2.p4.mass - zmass)
+        dist_from_z1_to_zmass = np.abs(zzcandidates.z1.p4.mass - zmass)
+        dist_from_z2_to_zmass = np.abs(zzcandidates.z2.p4.mass - zmass)
         z1 = ak.where(
             dist_from_z1_to_zmass > dist_from_z2_to_zmass,
-            zz_pairs.z2,
-            zz_pairs.z1,
+            zzcandidates.z2,
+            zzcandidates.z1,
         )
         z2 = ak.where(
             dist_from_z1_to_zmass < dist_from_z2_to_zmass,
-            zz_pairs.z2,
-            zz_pairs.z1,
+            zzcandidates.z2,
+            zzcandidates.z1,
         )
-        zz_pairs = ak.zip(
+        zzcandidates = ak.zip(
             {
                 "z1": ak.zip(
                     {
@@ -346,117 +378,117 @@ class ObjectSelector:
         )
         # ghost removal: ∆R(η, φ) > 0.02 between each of the four leptons
         ghost_removal_mask = (
-            (zz_pairs.z1.l1.delta_r(zz_pairs.z1.l2) > 0.02)
-            & (zz_pairs.z1.l1.delta_r(zz_pairs.z2.l1) > 0.02)
-            & (zz_pairs.z1.l1.delta_r(zz_pairs.z2.l2) > 0.02)
-            & (zz_pairs.z1.l2.delta_r(zz_pairs.z2.l1) > 0.02)
-            & (zz_pairs.z1.l2.delta_r(zz_pairs.z2.l2) > 0.02)
-            & (zz_pairs.z2.l1.delta_r(zz_pairs.z2.l2) > 0.02)
+            (zzcandidates.z1.l1.delta_r(zzcandidates.z1.l2) > 0.02)
+            & (zzcandidates.z1.l1.delta_r(zzcandidates.z2.l1) > 0.02)
+            & (zzcandidates.z1.l1.delta_r(zzcandidates.z2.l2) > 0.02)
+            & (zzcandidates.z1.l2.delta_r(zzcandidates.z2.l1) > 0.02)
+            & (zzcandidates.z1.l2.delta_r(zzcandidates.z2.l2) > 0.02)
+            & (zzcandidates.z2.l1.delta_r(zzcandidates.z2.l2) > 0.02)
         )
         # Lepton pT: two of the four selected leptons should pass pT,i > 20 GeV and pT,j > 10
         lepton_pt_mask = (
             (
-                ak.any(zz_pairs.z1.l1.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z1.l2.pt > 10, axis=-1)
+                ak.any(zzcandidates.z1.l1.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z1.l2.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z1.l1.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z2.l1.pt > 10, axis=-1)
+                ak.any(zzcandidates.z1.l1.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z2.l1.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z1.l1.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z2.l2.pt > 10, axis=-1)
+                ak.any(zzcandidates.z1.l1.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z2.l2.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z1.l2.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z1.l1.pt > 10, axis=-1)
+                ak.any(zzcandidates.z1.l2.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z1.l1.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z1.l2.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z2.l1.pt > 10, axis=-1)
+                ak.any(zzcandidates.z1.l2.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z2.l1.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z1.l2.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z2.l2.pt > 10, axis=-1)
+                ak.any(zzcandidates.z1.l2.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z2.l2.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z2.l1.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z1.l1.pt > 10, axis=-1)
+                ak.any(zzcandidates.z2.l1.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z1.l1.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z2.l1.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z1.l2.pt > 10, axis=-1)
+                ak.any(zzcandidates.z2.l1.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z1.l2.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z2.l1.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z2.l2.pt > 10, axis=-1)
+                ak.any(zzcandidates.z2.l1.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z2.l2.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z2.l2.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z1.l1.pt > 10, axis=-1)
+                ak.any(zzcandidates.z2.l2.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z1.l1.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z2.l2.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z1.l2.pt > 10, axis=-1)
+                ak.any(zzcandidates.z2.l2.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z1.l2.pt > 10, axis=-1)
             )
             | (
-                ak.any(zz_pairs.z2.l2.pt > 20, axis=-1)
-                & ak.any(zz_pairs.z2.l1.pt > 10, axis=-1)
+                ak.any(zzcandidates.z2.l2.pt > 20, axis=-1)
+                & ak.any(zzcandidates.z2.l1.pt > 10, axis=-1)
             )
         )
         # QCD suppression: all four opposite-sign pairs that can be built with the four leptons (regardless of lepton flavor) must satisfy m > 4 GeV
         qcd_condition_mask = (
-            (zz_pairs.z1.p4_orig.mass > 4)
-            & (zz_pairs.z2.p4_orig.mass > 4)
+            (zzcandidates.z1.p4_orig.mass > 4)
+            & (zzcandidates.z2.p4_orig.mass > 4)
             & (
-                (zz_pairs.z1.l1.charge + zz_pairs.z2.l1.charge != 0)
+                (zzcandidates.z1.l1.charge + zzcandidates.z2.l1.charge != 0)
                 | (
-                    (zz_pairs.z1.l1.charge + zz_pairs.z2.l1.charge == 0)
-                    & ((zz_pairs.z1.l1.p4_orig + zz_pairs.z2.l1.p4_orig).mass > 4)
+                    (zzcandidates.z1.l1.charge + zzcandidates.z2.l1.charge == 0)
+                    & ((zzcandidates.z1.l1.p4_orig + zzcandidates.z2.l1.p4_orig).mass > 4)
                 )
             )
             & (
-                (zz_pairs.z1.l1.charge + zz_pairs.z2.l2.charge != 0)
+                (zzcandidates.z1.l1.charge + zzcandidates.z2.l2.charge != 0)
                 | (
-                    (zz_pairs.z1.l1.charge + zz_pairs.z2.l2.charge == 0)
-                    & ((zz_pairs.z1.l1.p4_orig + zz_pairs.z2.l2.p4_orig).mass > 4)
+                    (zzcandidates.z1.l1.charge + zzcandidates.z2.l2.charge == 0)
+                    & ((zzcandidates.z1.l1.p4_orig + zzcandidates.z2.l2.p4_orig).mass > 4)
                 )
             )
             & (
-                (zz_pairs.z1.l2.charge + zz_pairs.z2.l1.charge != 0)
+                (zzcandidates.z1.l2.charge + zzcandidates.z2.l1.charge != 0)
                 | (
-                    (zz_pairs.z1.l2.charge + zz_pairs.z2.l1.charge == 0)
-                    & ((zz_pairs.z1.l2.p4_orig + zz_pairs.z2.l1.p4_orig).mass > 4)
+                    (zzcandidates.z1.l2.charge + zzcandidates.z2.l1.charge == 0)
+                    & ((zzcandidates.z1.l2.p4_orig + zzcandidates.z2.l1.p4_orig).mass > 4)
                 )
             )
             & (
-                (zz_pairs.z1.l2.charge + zz_pairs.z2.l2.charge != 0)
+                (zzcandidates.z1.l2.charge + zzcandidates.z2.l2.charge != 0)
                 | (
-                    (zz_pairs.z1.l2.charge + zz_pairs.z2.l2.charge == 0)
-                    & ((zz_pairs.z1.l2.p4_orig + zz_pairs.z2.l2.p4_orig).mass > 4)
+                    (zzcandidates.z1.l2.charge + zzcandidates.z2.l2.charge == 0)
+                    & ((zzcandidates.z1.l2.p4_orig + zzcandidates.z2.l2.p4_orig).mass > 4)
                 )
             )
         )
         # Z1 mass > 40 GeV
-        mass_mask = zz_pairs.z1.p4.mass > 40
+        mass_mask = zzcandidates.z1.p4.mass > 40
         mask = ghost_removal_mask & lepton_pt_mask & qcd_condition_mask & mass_mask
-        zz_pairs = zz_pairs[ak.fill_none(mask, False)]
+        zzcandidates = zzcandidates[ak.fill_none(mask, False)]
 
         # get alternative pairing Z candidates:
         # select same flavor zz pairs
-        sf_pairs = np.abs(zz_pairs.z1.l1.pdgId) == np.abs(zz_pairs.z2.l1.pdgId)
-        zz_pairs_sf = zz_pairs.mask[sf_pairs]
+        sf_pairs = np.abs(zzcandidates.z1.l1.pdgId) == np.abs(zzcandidates.z2.l1.pdgId)
+        zzcandidates_sf = zzcandidates.mask[sf_pairs]
         # get initial alternative pairs
-        ops = zz_pairs_sf.z1.l1.pdgId == -zz_pairs_sf.z2.l1.pdgId
+        ops = zzcandidates_sf.z1.l1.pdgId == -zzcandidates_sf.z2.l1.pdgId
         za0 = ak.where(
             ops,
-            zz_pairs_sf.z1.l1 + zz_pairs_sf.z2.l1,
-            zz_pairs_sf.z1.l1 + zz_pairs_sf.z2.l2,
+            zzcandidates_sf.z1.l1 + zzcandidates_sf.z2.l1,
+            zzcandidates_sf.z1.l1 + zzcandidates_sf.z2.l2,
         )
         zb0 = ak.where(
             ops,
-            zz_pairs_sf.z1.l2 + zz_pairs_sf.z2.l2,
-            zz_pairs_sf.z1.l2 + zz_pairs_sf.z2.l1,
+            zzcandidates_sf.z1.l2 + zzcandidates_sf.z2.l2,
+            zzcandidates_sf.z1.l2 + zzcandidates_sf.z2.l1,
         )
         # get final alternative pairs selecting Za as the one closest to the Z mass
         zmass = 91.1876
@@ -473,34 +505,34 @@ class ObjectSelector:
             zb0,
         )
         smart_cut = ~(
-            (np.abs(za.mass - zmass) < np.abs(zz_pairs.z1.p4.mass - zmass))
+            (np.abs(za.mass - zmass) < np.abs(zzcandidates.z1.p4.mass - zmass))
             & (zb.mass < 12)
         )
         smart_cut = ak.fill_none(smart_cut, True)
 
-        self.objects["zz_pairs"] = zz_pairs[smart_cut]
-        self.objects["zz_pairs"].pt = (
-            self.objects["zz_pairs"].z1.p4.pt + self.objects["zz_pairs"].z2.p4.pt
-        )
+        self.objects["zzcandidates"] = zzcandidates[smart_cut]
+        self.objects["zzcandidates"]["p4"] = self.objects["zzcandidates"].z1.p4 + self.objects["zzcandidates"].z2.p4
+        self.objects["zzcandidates"]["pt"] = self.objects["zzcandidates"].p4.pt
 
-    def select_zzto4l_zzcandidate(self):
+        
+    def select_zzto4l_best_zzcandidate(self):
         """
         selects best zz candidate as the one with Z1 closest in mass to nominal Z boson mass
         and Z2 from the candidates whose lepton give higher pT sum
         """
         # get mask of Z1's closest to Z
         zmass = 91.1876
-        z1_dist_to_z = np.abs(self.objects["zz_pairs"].z1.p4.mass - zmass)
+        z1_dist_to_z = np.abs(self.objects["zzcandidates"].z1.p4.mass - zmass)
         min_z1_dist_to_z = ak.min(z1_dist_to_z, axis=1)
         closest_z1_mask = z1_dist_to_z == min_z1_dist_to_z
         # get mask of Z2's with higher pT sum
         z2_pt_sum = (
-            self.objects["zz_pairs"].z2.l1.pt + self.objects["zz_pairs"].z2.l2.pt
+            self.objects["zzcandidates"].z2.l1.pt + self.objects["zzcandidates"].z2.l2.pt
         )
         max_z2_pt_sum = ak.max(z2_pt_sum[closest_z1_mask], axis=1)
         best_candidate_mask = (z2_pt_sum == max_z2_pt_sum) & closest_z1_mask
-        # select best candidate from zz_pairs
-        self.objects["zz_candidate"] = self.objects["zz_pairs"][best_candidate_mask]
+        # select best candidate from zzcandidates
+        self.objects["best_zzcandidate"] = self.objects["zzcandidates"][best_candidate_mask]
 
     # --------------------------------------------------------------------------------
     # HWW
@@ -524,28 +556,28 @@ class ObjectSelector:
             behavior=candidate.behavior,
         )
 
-    def select_hww_ll_pairs(self):
-        self.objects["ll_pairs"] = ak.combinations(
+    def select_hww_zcandidates(self):
+        self.objects["zcandidates"] = ak.combinations(
             self.objects["leptons"], 2, fields=["l1", "l2"]
         )
-        self.objects["ll_pairs"].pt = (
-            self.objects["ll_pairs"].l1.pt + self.objects["ll_pairs"].l2.pt
+        self.objects["zcandidates"].pt = (
+            self.objects["zcandidates"].l1.pt + self.objects["zcandidates"].l2.pt
         )
 
     def select_hww_mll(self):
         self.objects["mll"] = transverse_mass(
-            self.objects["ll_pairs"].l1 + self.objects["ll_pairs"].l2,
+            self.objects["zcandidates"].l1 + self.objects["zcandidates"].l2,
             self.objects["met"],
         )
 
     def select_hww_ml1(self):
         self.objects["ml1"] = transverse_mass(
-            self.objects["ll_pairs"].l1, self.objects["met"]
+            self.objects["zcandidates"].l1, self.objects["met"]
         )
 
     def select_hww_ml2(self):
         self.objects["ml2"] = transverse_mass(
-            self.objects["ll_pairs"].l2, self.objects["met"]
+            self.objects["zcandidates"].l2, self.objects["met"]
         )
 
     def select_candidate_cjet(self):
