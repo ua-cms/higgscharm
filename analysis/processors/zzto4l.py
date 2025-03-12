@@ -6,6 +6,7 @@ from coffea.nanoevents import PFNanoAODSchema
 from coffea.lumi_tools import LumiData, LumiList
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
+from analysis.utils import dump_lumi
 from analysis.configs import ProcessorConfigBuilder
 from analysis.histograms import HistBuilder, fill_histogram
 from analysis.corrections.muon import MuonWeights
@@ -54,6 +55,7 @@ class ZZTo4LProcessor(processor.ProcessorABC):
         nevents = len(events)
         output["metadata"] = {}
         output["metadata"].update({"raw_initial_nevents": nevents})
+            
 
         # --------------------------------------------------------------
         # Object corrections
@@ -125,7 +127,8 @@ class ZZTo4LProcessor(processor.ProcessorABC):
             )
             lumi = lumi_data.get_lumi(lumi_list)
             # save luminosity to metadata
-            output["metadata"].update({"lumi": lumi})
+            output["metadata"].update({"full_lumi": lumi})
+            dump_lumi(events[lumi_mask], output)
         # --------------------------------------------------------------
         # Object selection
         # --------------------------------------------------------------
