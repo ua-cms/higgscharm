@@ -5,27 +5,31 @@ import importlib.resources
 from analysis.filesets.utils import get_dataset_key
 
 
-def get_hltpaths_from_flag(flag):
+def get_hltpaths_from_flag(flag, year):
+    if year.startswith("2022"):
+        year_key = 2022
+    elif year.startswith("2023"):
+        year_key = 2023
     with importlib.resources.open_text(f"analysis.selections", f"trigger_flags.yaml") as file:
-        hlt_paths = yaml.safe_load(file)[flag]
-    return hlt_paths
+        hlt_paths = yaml.safe_load(file)
+    return hlt_paths[year_key][flag]
 
 
-def trigger_from_flag(events, flag):
-    hlt_paths = get_hltpaths_from_flag(flag)
+def trigger_from_flag(events, flag, year):
+    hlt_paths = get_hltpaths_from_flag(flag, year)
     trigger_mask = np.zeros(len(events), dtype="bool")
     for hlt_path in hlt_paths:
         trigger_mask = trigger_mask | events.HLT[hlt_path]
     return trigger_mask
 
 
-def zzto4l_trigger(events, hlt_paths, dataset):
+def zzto4l_trigger(events, hlt_paths, dataset, year):
     nevents = len(events)
     dataset_key = get_dataset_key(dataset)
     # compute all trigger masks based on the flags in hlt_paths
     trigger_flags = {}
     for flag in hlt_paths:
-        trigger_flags[flag] = trigger_from_flag(events, flag)
+        trigger_flags[flag] = trigger_from_flag(events, flag, year)
 
     if hasattr(events, "genWeight"):
         # compute the combined OR of all flags (for MC datasets)

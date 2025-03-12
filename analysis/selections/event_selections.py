@@ -15,8 +15,8 @@ def get_lumi_mask(events, goldenjson):
         lumi_mask = lumi_info(events.run, events.luminosityBlock)
     return lumi_mask == 1
 
-def get_zzto4l_trigger_mask(events, hlt_paths, dataset_key):
-    return zzto4l_trigger(events, hlt_paths, dataset_key)
+def get_zzto4l_trigger_mask(events, hlt_paths, dataset_key, year):
+    return zzto4l_trigger(events, hlt_paths, dataset_key, year)
 
 def get_trigger_mask(events, hlt_paths, dataset_key):
     return trigger_mask(events, hlt_paths, dataset_key)
