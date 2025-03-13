@@ -9,8 +9,10 @@ from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.utils import dump_lumi
 from analysis.configs import ProcessorConfigBuilder
 from analysis.histograms import HistBuilder, fill_histogram
-from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
+from analysis.corrections.nnlops import add_nnlops_weight
+from analysis.corrections.lhepdf import add_lhepdf_weight
+from analysis.corrections.partonshower import add_partonshower_weight
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.electron import ElectronWeights, ElectronSS
 from analysis.selections import (
@@ -99,6 +101,22 @@ class ZZTo4LProcessor(processor.ProcessorABC):
                 events=events,
                 year=self.year,
                 variation="nominal",
+                weights_container=weights_container,
+            )
+            # add NNLOPS weights for ggH
+            if dataset.startswith("GluGluH"):
+                add_nnlops_weight(
+                    events=events,
+                    weights_container=weights_container,
+                )
+            # add parton shower variations
+            add_partonshower_weight(
+                events=events,
+                weights_container=weights_container,
+            )
+            # add LHEPDF variations
+            add_lhepdf_weight(
+                events=events,
                 weights_container=weights_container,
             )
             # add electron reco weights
