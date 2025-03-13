@@ -106,7 +106,7 @@ class ObjectSelector:
             & (np.abs(electrons.eta) < 2.5)
             & (np.abs(electrons.dxy) < 0.5)
             & (np.abs(electrons.dz) < 1)
-            & (delta_r_higher(electrons, self.objects["muons"], 0.05))
+            & (delta_r_higher(electrons, muons, 0.05))
         )
         is_relaxed_electron = is_loose_electron & (electrons.sip3d < 4)
         electron_id = working_points.electron_id(self.events, "bdt")
@@ -226,9 +226,7 @@ class ObjectSelector:
         leptons_with_matched_fsrphotons = ak.pad_none(
             leptons[has_matched_fsr_photons], 1
         )
-        leptons_without_matched_fsrphotons = ak.pad_none(
-            leptons[~has_matched_fsr_photons], 1
-        )
+        leptons_without_matched_fsrphotons = leptons[~has_matched_fsr_photons]
         # select FSR photons with matched leptons
         has_matched_leptons = fsr_photons.lepton_idx > -1
         fsr_with_matched_leptons = ak.pad_none(fsr_photons[has_matched_leptons], 1)
@@ -261,9 +259,15 @@ class ObjectSelector:
             behavior=candidate.behavior,
         )
         # concatenate leptons with and without matched FSR photons after FSR recovery
-        leptons = ak.concatenate(
-            [leptons_with_matched_fsrphotons, leptons_without_matched_fsrphotons],
-            axis=1,
+        leptons = ak.where(
+            # concatenate only events with matched FSR photons
+            # to avoid including None values from 'leptons_with_matched_fsrphotons'
+            ak.sum(leptons.fsr_idx > -1, axis=1) == 0,
+            leptons_without_matched_fsrphotons,
+            ak.concatenate(
+                [leptons_with_matched_fsrphotons, leptons_without_matched_fsrphotons],
+                axis=1,
+            ),
         )
         self.objects["leptons"] = leptons
 
@@ -440,29 +444,35 @@ class ObjectSelector:
         # QCD suppression: all four opposite-sign pairs that can be built with the four leptons (regardless of lepton flavor) must satisfy m > 4 GeV
         # FSR photons are not used since a QCD-induced low mass dilepton (eg. Jpsi) may have photons nearby (e.g. from π0).
         qcd_suppression_mask = (
-            (
-                (zzcandidates.z1.l1.charge != zzcandidates.z1.l2.charge)
-                & ((zzcandidates.z1.l1 + zzcandidates.z1.l2).mass > 4)
+            ((zzcandidates.z1.l1 + zzcandidates.z1.l2).mass > 4)
+            & ((zzcandidates.z2.l1 + zzcandidates.z2.l2).mass > 4)
+            & (
+                (zzcandidates.z1.l1.charge + zzcandidates.z2.l1.charge != 0)
+                | (
+                    (zzcandidates.z1.l1.charge + zzcandidates.z2.l1.charge == 0)
+                    & ((zzcandidates.z1.l1 + zzcandidates.z2.l1).mass > 4)
+                )
             )
-            | (
-                (zzcandidates.z1.l1.charge != zzcandidates.z2.l1.charge)
-                & ((zzcandidates.z1.l1 + zzcandidates.z2.l1).mass > 4)
+            & (
+                (zzcandidates.z1.l1.charge + zzcandidates.z2.l2.charge != 0)
+                | (
+                    (zzcandidates.z1.l1.charge + zzcandidates.z2.l2.charge == 0)
+                    & ((zzcandidates.z1.l1 + zzcandidates.z2.l2).mass > 4)
+                )
             )
-            | (
-                (zzcandidates.z1.l1.charge != zzcandidates.z2.l2.charge)
-                & ((zzcandidates.z1.l1 + zzcandidates.z2.l2).mass > 4)
+            & (
+                (zzcandidates.z1.l2.charge + zzcandidates.z2.l1.charge != 0)
+                | (
+                    (zzcandidates.z1.l2.charge + zzcandidates.z2.l1.charge == 0)
+                    & ((zzcandidates.z1.l2 + zzcandidates.z2.l1).mass > 4)
+                )
             )
-            | (
-                (zzcandidates.z1.l2.charge != zzcandidates.z2.l1.charge)
-                & ((zzcandidates.z1.l2 + zzcandidates.z2.l1).mass > 4)
-            )
-            | (
-                (zzcandidates.z1.l2.charge != zzcandidates.z2.l2.charge)
-                & ((zzcandidates.z1.l2 + zzcandidates.z2.l2).mass > 4)
-            )
-            | (
-                (zzcandidates.z2.l1.charge != zzcandidates.z2.l2.charge)
-                & ((zzcandidates.z2.l1 + zzcandidates.z2.l2).mass > 4)
+            & (
+                (zzcandidates.z1.l2.charge + zzcandidates.z2.l2.charge != 0)
+                | (
+                    (zzcandidates.z1.l2.charge + zzcandidates.z2.l2.charge == 0)
+                    & ((zzcandidates.z1.l2 + zzcandidates.z2.l2).mass > 4)
+                )
             )
         )
         # select good ZZ candidates
