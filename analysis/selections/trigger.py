@@ -10,7 +10,9 @@ def get_hltpaths_from_flag(flag, year):
         year_key = 2022
     elif year.startswith("2023"):
         year_key = 2023
-    with importlib.resources.open_text(f"analysis.selections", f"trigger_flags.yaml") as file:
+    with importlib.resources.open_text(
+        f"analysis.selections", f"trigger_flags.yaml"
+    ) as file:
         hlt_paths = yaml.safe_load(file)
     return hlt_paths[year_key][flag]
 
@@ -37,7 +39,7 @@ def zzto4l_trigger(events, hlt_paths, dataset, year):
         for flag in trigger_flags:
             mc_trigger_mask = mc_trigger_mask | trigger_flags[flag]
         return mc_trigger_mask
-    
+
     trigger_flags["TriEle"] = np.zeros(nevents, dtype="bool")
 
     # ensure each event is taken only from a single PD
@@ -90,13 +92,13 @@ def zzto4l_trigger(events, hlt_paths, dataset, year):
     return pd_trigger_mask
 
 
-def trigger_mask(events, hlt_paths, dataset):
+def trigger_mask(events, hlt_paths, dataset, year):
     dataset_key = get_dataset_key(dataset)
     # compute all trigger masks based on the flags in hlt_paths
     trigger_flags = {}
     for dataset_flags in hlt_paths.values():
         for flag in dataset_flags:
-            trigger_flags[flag] = trigger_from_flag(events, flag)
+            trigger_flags[flag] = trigger_from_flag(events, flag, year)
 
     # compute the combined OR of all flags (for background)
     all_combined_mask = np.zeros(len(events), dtype="bool")
