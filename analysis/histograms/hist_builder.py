@@ -11,6 +11,9 @@ class HistBuilder:
             "Regular": hist.axis.Regular,
             "Variable": hist.axis.Variable,
         }
+        self.cat_axis = hist.axis.StrCategory(
+            name="category", categories=self.histogram_config.categories
+        )
 
     def build_histogram(self):
         if self.histogram_config.stack:
@@ -25,7 +28,8 @@ class HistBuilder:
         histograms = {}
         for axis in self.histogram_config.axes:
             axes = [self.build_axis(axis)]
-            axes.append(self.get_category_axis())
+            if len(histogram_config.categories) > 1:
+                axes.append(self.cat_axis)
             if self.histogram_config.add_syst_axis:
                 axes.append(self.get_syst_axis())
             if self.histogram_config.add_weight:
@@ -34,9 +38,11 @@ class HistBuilder:
         return histograms
 
     def build_stacked_histogram(self, axes_names):
-        axes = [self.get_category_axis()]
+        axes = []
         for axis in axes_names:
             axes.append(self.build_axis(axis))
+        if len(self.histogram_config.categories) > 1:
+            axes.append(self.cat_axis)
         if self.histogram_config.add_syst_axis:
             axes.append(self.get_syst_axis())
         if self.histogram_config.add_weight:
@@ -51,7 +57,3 @@ class HistBuilder:
 
     def get_syst_axis(self):
         return hist.axis.StrCategory(name="variation", categories=[], growth=True)
-
-    def get_category_axis(self):
-        categories = list(self.processor_config.event_selection["categories"].keys())
-        return hist.axis.StrCategory(name="category", categories=categories)
