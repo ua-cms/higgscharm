@@ -71,7 +71,7 @@ event_selection:
     atleast_one_goodvertex: events.PV.npvsGood > 0
     met_25: events.PuppiMET.pt < 25
     one_zcandidate: ak.num(objects['best_zcandidates']) == 1
-    one_loose_lepton: ak.num(objects['loose_leptons']) == 1
+    three_loose_leptons: ak.num(objects['loose_leptons']) == 3
   categories:
     base:
       - trigger
@@ -79,7 +79,7 @@ event_selection:
       - atleast_one_goodvertex
       - met_25
       - one_zcandidate
-      - one_loose_lepton
+      - three_loose_leptons
 histogram_config:
   axes:
     loose_lepton_pt:
@@ -101,12 +101,20 @@ histogram_config:
       categories:
         - 11
         - 13
-      label: $\ell$ flavor
+      label: $|\text{pdgId}(\ell)|$
       expression: np.abs(objects['loose_leptons'].pdgId)
+    loose_lepton_pass:
+      type: Regular
+      bins: 2
+      start: 0
+      stop: 2
+      label: $\ell$ pass 
+      expression: objects['loose_leptons'].pass_selection
   layout:
     loose_lepton:
       - loose_lepton_pt
       - loose_lepton_eta
       - loose_lepton_pdgid
+      - loose_lepton_pass
   add_syst_axis: false
   add_weight: false
