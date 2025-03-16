@@ -83,10 +83,15 @@ event_selection:
 histogram_config:
   axes:
     loose_lepton_pt:
-      type: Regular
-      bins: 50
-      start: 5
-      stop: 80
+      type: Variable
+      edges:
+        - 5
+        - 10
+        - 20
+        - 30
+        - 40
+        - 50
+        - 80
       label: $p_T(\ell)$ [GeV]
       expression: objects['loose_leptons'].pt
     loose_lepton_eta:
