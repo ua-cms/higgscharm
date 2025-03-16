@@ -43,4 +43,6 @@ class ProcessorConfigBuilder:
         return event_selection
 
     def parse_histogram_config(self):
-        return HistogramConfig(**self.config["histogram_config"])
+        hist_config = HistogramConfig(**self.config["histogram_config"])
+        hist_config.categories = list(self.parse_event_selection()["categories"].keys())
+        return hist_config
