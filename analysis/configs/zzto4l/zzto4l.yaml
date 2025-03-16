@@ -1,53 +1,93 @@
-goldenjson: analysis/data/Cert_Collisions2023_366442_370790_Golden.txt
-lumidata: analysis/data/lumi2023.csv
-hlt_paths:
-  - SingleMu
-  - DiMu
-  - TriMu
-  - SingleEle
-  - DiEle
-  - MuEle
 object_selection:
   muons:
     field: events.Muon
-    cuts: null
+    add_cut:
+      is_loose:
+        - events.Muon.pt > 5
+        - np.abs(events.Muon.eta) < 2.4
+        - np.abs(events.Muon.dxy) < 0.5
+        - np.abs(events.Muon.dz) < 1
+        - events.Muon.isGlobal | (events.Muon.isTracker & (events.Muon.nStations > 0))
+      is_relaxed:
+        - objects['muons'].is_loose
+        - np.abs(events.Muon.sip3d) < 4
+      is_tight:
+        - objects['muons'].is_loose
+        - objects['muons'].is_relaxed
+        - events.Muon.isPFcand | ((events.Muon.highPtId > 0) & (events.Muon.pt > 200))
   electrons:
     field: events.Electron
-    cuts: null
+    add_cut: 
+      is_loose:
+        - events.Electron.pt > 7
+        - np.abs(events.Electron.eta) < 2.5
+        - np.abs(events.Electron.dxy) < 0.5
+        - np.abs(events.Electron.dz) < 1
+      is_relaxed:
+        - objects['electrons'].is_loose
+        - events.Electron.sip3d < 4
+      is_tight:
+        - objects['electrons'].is_loose
+        - objects['electrons'].is_relaxed
+        - working_points.electron_id(events, 'bdt')
+    cuts:
+      - delta_r_higher(events.Electron, objects['muons'], 0.05)
   fsr_photons:
     field: events.FsrPhoton
     cuts:
-      pt: events.FsrPhoton.pt > 2
-      abseta: np.abs(events.FsrPhoton.eta) < 2.4
-      iso: events.FsrPhoton.relIso03 < 1.8
+      - events.FsrPhoton.pt > 2
+      - np.abs(events.FsrPhoton.eta) < 2.4
+      - events.FsrPhoton.relIso03 < 1.8
   leptons:
     field: select_zzto4l_leptons
-    cuts: null
-  jets:
-    field: events.Jet
-    cuts:
-      min_pt: events.Jet.pt > 20
-      abseta: np.abs(events.Jet.eta) < 2.5
-      jet_id: tightlepveto
-      jet_lepton_dr: delta_r_higher(events.Jet, objects['leptons'], 0.4)
   zcandidates:
-    field: select_zzto4l_zcandidates
-    cuts:
-      tigt_leptons: objects['zcandidates'].l1.is_tight & objects['zcandidates'].l2.is_tight
-      opposite_charge_same_flavor: (objects['zcandidates'].l1.pdgId + objects['zcandidates'].l2.pdgId) == 0
-      mass_range: (objects['zcandidates'].p4.mass > 12) & (objects['zcandidates'].p4.mass < 120)
+    field: select_zzto4l_zcandidates 
+    add_cut:
+      is_ossf:
+        - objects['zcandidates'].l1.pdgId == -objects['zcandidates'].l2.pdgId
+      is_ss:
+        - objects['zcandidates'].l1.pdgId == objects['zcandidates'].l2.pdgId
+      is_sr:
+        - objects['zcandidates'].is_ossf
+        - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 2
+      is_sr:
+        - objects['zcandidates'].is_ossf
+        - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 1
+      is_2fcr:
+        - objects['zcandidates'].is_ossf
+        - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 0
+      is_sscr:
+        - objects['zcandidates'].is_ss
+        - objects['zcandidates'].l1.is_relaxed
+        - objects['zcandidates'].l2.is_relaxed
+    cuts: 
+      - objects['zcandidates'].is_sr
+      - (objects['zcandidates'].p4.mass > 12) & (objects['zcandidates'].p4.mass < 120)
   zzcandidates:
     field: select_zzto4l_zzcandidates
     cuts:
-      mass: (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70
+      -  (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70
   best_zzcandidate:
     field: select_zzto4l_best_zzcandidate
-    cuts: null
+  jets:
+    field: events.Jet
+    cuts:
+      - events.Jet.pt > 20
+      - np.abs(events.Jet.eta) < 2.5
+      - working_points.jet_id(events, 'tightlepveto')
+      - delta_r_higher(events.Jet, objects['leptons'], 0.4)
 event_selection:
+  hlt_paths:
+    - SingleMu
+    - DiMu
+    - TriMu
+    - SingleEle
+    - DiEle
+    - MuEle
   selections:
     trigger: get_zzto4l_trigger_mask(events, hlt_paths, dataset, year)
+    lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
-    lumimask: get_lumi_mask(events, goldenjson)
     atleast_one_zz: ak.num(objects['zzcandidates']) > 0
   categories:
     base:
@@ -56,8 +96,6 @@ event_selection:
       - trigger
       - atleast_one_zz
 histogram_config:
-  add_syst_axis: true
-  add_weight: true
   axes:
     z1_lepton1_pt:
       type: Regular
@@ -335,3 +373,5 @@ histogram_config:
       - subleadingjet_flavour
       - subleadingjet_cvsb
       - subleadingjet_cvsl
+  add_syst_axis: true
+  add_weight: true

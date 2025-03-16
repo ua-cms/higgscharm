@@ -1,65 +1,57 @@
-goldenjson: analysis/data/Cert_Collisions2022_355100_362760_Golden.txt
-lumidata: analysis/data/lumi2022.csv
-hlt_paths:
-  MuonEG:
-    - MuEle
-  Muon:
-    - SingleMu
-  EGamma:
-    - SingleEle
 object_selection:
   muons:
     field: events.Muon
     cuts:
-      pt: events.Muon.pt > 15
-      abseta: np.abs(events.Muon.eta) < 2.4
-      muon_iso: tight
-      muon_id: tight
+      - events.Muon.pt > 15
+      - np.abs(events.Muon.eta) < 2.4
+      - working_points.muon_iso(events, 'tight')
+      - working_points.muon_id(events, 'tight')
   electrons:
     field: events.Electron
     cuts:
-      pt: events.Electron.pt > 15
-      abseta: np.abs(events.Electron.eta) < 2.5
-      electron_id: tight
-      electron_iso: tight
-      electron_muon_dr: delta_r_higher(events.Electron, objects['muons'], 0.4)
+      - events.Electron.pt > 15
+      - np.abs(events.Electron.eta) < 2.5
+      - working_points.electron_id(events, 'tight')
+      - working_points.electron_iso(events, 'tight')
+      - delta_r_higher(events.Electron, objects['muons'], 0.4)
   leptons:
     field: select_hww_leptons
-    cuts: null
   ll_pairs:
     field: select_hww_ll_pairs
     cuts:
-      pt: (objects["ll_pairs"].l1 + objects["ll_pairs"].l2).pt > 30
-      charge: (objects["ll_pairs"].l1.charge + objects["ll_pairs"].l2.charge) == 0 
-      mass: (objects["ll_pairs"].l1 + objects["ll_pairs"].l2).mass > 12
+      - (objects["ll_pairs"].l1 + objects["ll_pairs"].l2).pt > 30
+      - (objects["ll_pairs"].l1.charge + objects["ll_pairs"].l2.charge) == 0 
+      - (objects["ll_pairs"].l1 + objects["ll_pairs"].l2).mass > 12
   cjets:
     field: events.Jet
     cuts:
-      min_pt: events.Jet.pt > 20
-      abseta: np.abs(events.Jet.eta) < 2.4
-      jet_id: tightlepveto
-      jet_particlenet_c: medium
-      jet_muon_dr: delta_r_higher(events.Jet, objects['leptons'], 0.4)
+      - events.Jet.pt > 20
+      - np.abs(events.Jet.eta) < 2.4
+      - working_points.jet_id(events, 'tightlepveto')
+      - working_points.jet_particlenet_c(events, 'medium')
+      - delta_r_higher(events.Jet, objects['leptons'], 0.4)
   candidate_jet:
     field: select_candidate_cjet
-    cuts: null
   met:
     field: events.PuppiMET
-    cuts: null
   mll:
     field: select_hww_mll
-    cuts: null
   ml1:
     field: select_hww_ml1
-    cuts: null
   ml2: 
     field: select_hww_ml2
-    cuts: null
 event_selection:
+  hlt_paths:
+    MuonEG:
+      - MuEle
+    Muon:
+      - SingleMu
+    EGamma:
+      - SingleEle
   selections:
-    trigger: get_trigger_mask(events, hlt_paths, dataset)
+    trigger: get_trigger_mask(events, hlt_paths, dataset, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
-    lumimask: get_lumi_mask(events, goldenjson)
+    lumimask: get_lumi_mask(events, year)
     met_filters: get_metfilters_mask(events, year)
     met_45: objects['met'].pt > 45
     one_electron: ak.num(objects['electrons']) == 1
@@ -80,8 +72,6 @@ event_selection:
       - one_electron
       - one_muon
 histogram_config:
-  add_syst_axis: true
-  add_weight: true
   axes:
     met_pt:
       type: Variable
@@ -339,3 +329,5 @@ histogram_config:
       - jet_phi
     jet_multiplicity:
       - jet_multiplicity
+  add_syst_axis: true
+  add_weight: true
