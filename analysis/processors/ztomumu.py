@@ -6,6 +6,7 @@ from coffea.nanoevents import PFNanoAODSchema
 from coffea.lumi_tools import LumiData, LumiList
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
+from analysis.utils import dump_lumi
 from analysis.configs import ProcessorConfigBuilder
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.electron import ElectronSS
@@ -26,19 +27,18 @@ class ZToMuMuProcessor(processor.ProcessorABC):
     def __init__(self, year: str):
         self.year = year
 
-        config_builder = ProcessorConfigBuilder(processor="ztomumu", year=year)
+        config_builder = ProcessorConfigBuilder(processor="ztomumu", year="2022" if year.startswith("2022") else "2023")
         self.processor_config = config_builder.build_processor_config()
         self.histogram_config = self.processor_config.histogram_config
         self.histograms = HistBuilder(self.processor_config).build_histogram()
 
     def process(self, events):
-        dataset = events.metadata["dataset"]
-        # get golden json, triggers, selections and histograms
         year = self.year
-        goldenjson = self.processor_config.goldenjson
-        hlt_paths = self.processor_config.hlt_paths
+        dataset = events.metadata["dataset"]
+        
         object_selections = self.processor_config.object_selection
         event_selection = self.processor_config.event_selection
+        hlt_paths = event_selection["hlt_paths"]
         histograms = deepcopy(self.histograms)
 
         # check if dataset is MC or Data
@@ -122,16 +122,15 @@ class ZToMuMuProcessor(processor.ProcessorABC):
         sumw = ak.sum(weights_container.weight())
         output["metadata"].update({"sumw": sumw})
 
-        # save integrated luminosity (/pb) to metadata
+        # --------------------------------------------------------------
+        # Luminosity
+        # --------------------------------------------------------------
         if not is_mc:
+            # get luminosity mask for lumi calibration
             lumi_mask = eval(event_selection["selections"]["lumimask"])
-            lumi_data = LumiData(self.processor_config.lumidata)
-            lumi_list = LumiList(
-                events[lumi_mask].run, events[lumi_mask].luminosityBlock
-            )
-            lumi = lumi_data.get_lumi(lumi_list)
-            # save luminosity to metadata
-            output["metadata"].update({"lumi": lumi})
+            # save integrated luminosity (/pb) to metadata
+            dump_lumi(events[lumi_mask], output)
+            
         # --------------------------------------------------------------
         # Object selection
         # --------------------------------------------------------------
