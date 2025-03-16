@@ -1,0 +1,112 @@
+object_selection:
+  muons:
+    field: events.Muon
+    add_cut:
+      is_loose:
+        - events.Muon.pt > 5
+        - np.abs(events.Muon.eta) < 2.4
+        - np.abs(events.Muon.dxy) < 0.5
+        - np.abs(events.Muon.dz) < 1
+        - events.Muon.isGlobal | (events.Muon.isTracker & (events.Muon.nStations > 0))
+      is_relaxed:
+        - objects['muons'].is_loose
+        - np.abs(events.Muon.sip3d) < 4
+      is_tight:
+        - objects['muons'].is_loose
+        - objects['muons'].is_relaxed
+        - events.Muon.isPFcand | ((events.Muon.highPtId > 0) & (events.Muon.pt > 200))
+  electrons:
+    field: events.Electron
+    add_cut: 
+      is_loose:
+        - events.Electron.pt > 7
+        - np.abs(events.Electron.eta) < 2.5
+        - np.abs(events.Electron.dxy) < 0.5
+        - np.abs(events.Electron.dz) < 1
+      is_relaxed:
+        - objects['electrons'].is_loose
+        - events.Electron.sip3d < 4
+      is_tight:
+        - objects['electrons'].is_loose
+        - objects['electrons'].is_relaxed
+        - working_points.electron_id(events, 'bdt')
+    cuts:
+      - delta_r_higher(events.Electron, objects['muons'], 0.05)
+  fsr_photons:
+    field: events.FsrPhoton
+    cuts:
+      - events.FsrPhoton.pt > 2
+      - np.abs(events.FsrPhoton.eta) < 2.4
+      - events.FsrPhoton.relIso03 < 1.8
+  leptons:
+    field: select_zzto4l_leptons
+  zcandidates:
+    field: select_zzto4l_zcandidates 
+    add_cut:
+      is_ossf:
+        - objects['zcandidates'].l1.pdgId == -objects['zcandidates'].l2.pdgId
+      is_sr:
+        - objects['zcandidates'].is_ossf
+        - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 2
+    cuts: 
+      - objects['zcandidates'].is_sr
+      - (objects['zcandidates'].p4.mass > 12) & (objects['zcandidates'].p4.mass < 120)
+  best_zcandidates:
+    field: select_zplusl_best_zcandidate
+    cuts:
+      - np.abs(objects['best_zcandidates'].p4.mass - 91.1876) < 7
+  loose_leptons:
+    field: select_zplusl_loose_leptons
+event_selection:
+  hlt_paths:
+    - SingleMu
+    - DiMu
+    - TriMu
+    - SingleEle
+    - DiEle
+    - MuEle
+  selections:
+    trigger: get_zzto4l_trigger_mask(events, hlt_paths, dataset, year)
+    lumimask: get_lumi_mask(events, year)
+    atleast_one_goodvertex: events.PV.npvsGood > 0
+    met_25: events.PuppiMET.pt < 25
+    one_zcandidate: ak.num(objects['zcandidates']) == 1
+    one_loose_lepton: ak.num(objects['loose_leptons']) == 1
+  categories:
+    base:
+      - atleast_one_goodvertex
+      - lumimask
+      - trigger
+      - met_25
+      - one_zcandidate
+      - one_loose_lepton
+histogram_config:
+  axes:
+    loose_lepton_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 80
+      label: $p_T(\ell)$ [GeV]
+      expression: objects['loose_leptons'].pt
+    loose_lepton_eta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 2.5
+      label: $|\eta(\ell)|$
+      expression: np.abs(objects['loose_leptons'].eta)
+    loose_lepton_pdgid:
+      type: IntCategory
+      categories:
+        - 11
+        - 13
+      label: $\ell$ flavor
+      expression: np.abs(objects['loose_leptons'].pdgId)
+  layout:
+    loose_lepton:
+      - loose_lepton_pt
+      - loose_lepton_eta
+      - loose_lepton_pdgid
+  add_syst_axis: false
+  add_weight: false

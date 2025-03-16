@@ -8,15 +8,16 @@ from analysis.processors.hww import HWWProcessor
 from analysis.processors.ztoee import ZToEEProcessor
 from analysis.processors.ztomumu import ZToMuMuProcessor
 from analysis.processors.zzto4l import ZZTo4LProcessor
+from analysis.processors.zplusl import ZPlusLProcessor
 
 
 def main(args):
-    # execute processor
     processors = {
         "ztomumu": ZToMuMuProcessor(year=args.year),
         "ztoee": ZToEEProcessor(year=args.year),
         "zzto4l": ZZTo4LProcessor(year=args.year),
         "hww": HWWProcessor(year=args.year),
+        "zplusl": ZPlusLProcessor(year=args.year),
     }
     out = processor.run_uproot_job(
         args.partition_fileset,
@@ -38,7 +39,7 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        choices=["ztomumu", "ztoee", "zzto4l", "hww"],
+        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl"],
         help="processor to be used",
     )
     parser.add_argument(

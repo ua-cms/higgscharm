@@ -41,7 +41,7 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        choices=["ztomumu", "ztoee", "zzto4l", "hww"],
+        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl"],
         help="processor to be used",
     )
     parser.add_argument(
