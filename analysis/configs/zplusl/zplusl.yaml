@@ -70,13 +70,13 @@ event_selection:
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     met_25: events.PuppiMET.pt < 25
-    one_zcandidate: ak.num(objects['zcandidates']) == 1
+    one_zcandidate: ak.num(objects['best_zcandidates']) == 1
     one_loose_lepton: ak.num(objects['loose_leptons']) == 1
   categories:
     base:
-      - atleast_one_goodvertex
-      - lumimask
       - trigger
+      - lumimask
+      - atleast_one_goodvertex
       - met_25
       - one_zcandidate
       - one_loose_lepton
