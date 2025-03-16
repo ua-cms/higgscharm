@@ -251,40 +251,33 @@ class ObjectSelector:
         self.objects["best_zcandidates"] = best_zcand
 
     def select_zplusl_loose_leptons(self):
-        # select loose leptons
+        # select loose leptons and best Z candidate
         loose_leptons = self.objects["leptons"][self.objects["leptons"].is_loose]
+        self.objects["loose_leptons"] = loose_leptons
+        best_zcands = self.objects["best_zcandidates"]
+
         # select loose leptons whose idx are different to best Z candidate lepton's idx
-        loose_leptons_bestzl1_idx = (
-            loose_leptons.idx != self.objects["best_zcandidates"].l1.idx[:, None]
-        )
-        loose_leptons_bestzl2_idx = (
-            loose_leptons.idx != self.objects["best_zcandidates"].l2.idx[:, None]
-        )
+        loose_leptons_bestzl1_idx = loose_leptons.idx != best_zcands.l1.idx[:, None]
+        loose_leptons_bestzl2_idx = loose_leptons.idx != best_zcands.l2.idx[:, None]
         loose_leptons_bestz_idx_mask = ak.flatten(
             loose_leptons_bestzl1_idx & loose_leptons_bestzl2_idx, axis=-1
         )
         # ghost removal: ∆R(η, φ) > 0.02 between each of the leptons (to protect against split tracks)
-        loose_leptons_bestzl1_dr = loose_leptons.metric_table(
-            self.objects["best_zcandidates"].l1
-        )
-        loose_leptons_bestzl2_dr = loose_leptons.metric_table(
-            self.objects["best_zcandidates"].l2
-        )
+        loose_leptons_bestzl1_dr = loose_leptons.metric_table(best_zcands.l1)
+        loose_leptons_bestzl2_dr = loose_leptons.metric_table(best_zcands.l2)
         loose_leptons_bestz_dr_mask = ak.flatten(
             (loose_leptons_bestzl1_dr > 0.02) & (loose_leptons_bestzl2_dr > 0.02),
             axis=-1,
         )
         # QCD suppression cut: invariant mass of loose lepton and the opposite sign tight lepton from the best Z candidate should satisfy m2l > 4 GeV
         loose_leptons_bestzl1_opposite_charge = ak.flatten(
-            loose_leptons.charge != self.objects["best_zcandidates"].l1.charge[:, None],
-            axis=-1,
+            loose_leptons.charge != best_zcands.l1.charge[:, None], axis=-1
         )
         loose_leptons_bestzl2_opposite_charge = ak.flatten(
-            loose_leptons.charge != self.objects["best_zcandidates"].l2.charge[:, None],
-            axis=-1,
+            loose_leptons.charge != best_zcands.l2.charge[:, None], axis=-1
         )
         loose_leptons_bestzl1_cartesian = ak.cartesian(
-            {"lepton": loose_leptons.p4, "zl1": self.objects["best_zcandidates"].l1.p4},
+            {"lepton": loose_leptons.p4, "zl1": best_zcands.l1.p4},
             nested=True,
             axis=1,
         )
@@ -297,7 +290,7 @@ class ObjectSelector:
         )
         loose_leptons_bestzl1_mass_mask = loose_leptons_bestzl1_mass > 4
         loose_leptons_bestzl2_cartesian = ak.cartesian(
-            {"lepton": loose_leptons.p4, "zl2": self.objects["best_zcandidates"].l2.p4},
+            {"lepton": loose_leptons.p4, "zl2": best_zcands.l2.p4},
             nested=True,
             axis=1,
         )
@@ -323,7 +316,7 @@ class ObjectSelector:
             pass_selection,
             ak.full_like(loose_leptons.pt, False, dtype=bool),
         )
-        self.objects["loose_leptons"] = loose_leptons
+
         self.objects["loose_leptons"]["pass_selection"] = pass_selection
 
     def select_zzto4l_zzcandidates(self):
