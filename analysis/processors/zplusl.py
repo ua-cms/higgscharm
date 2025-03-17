@@ -8,7 +8,7 @@ from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.utils import dump_lumi
 from analysis.configs import ProcessorConfigBuilder
-from analysis.histograms import HistBuilder, fill_histogram
+from analysis.histograms import HistBuilder, fill_histograms
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
 from analysis.corrections.lhepdf import add_lhepdf_weight
@@ -91,7 +91,46 @@ class ZPlusLProcessor(processor.ProcessorABC):
         # --------------------------------------------------------------
         # initialize weights container
         weights_container = Weights(None, storeIndividual=True)
-        weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
+        if is_mc:
+            # add genweights
+            weights_container.add("genweight", events.genWeight)
+            # add pileup weights
+            add_pileup_weight(
+                events=events,
+                year=self.year,
+                variation="nominal",
+                weights_container=weights_container,
+            )
+            # add NNLOPS weights for ggH
+            if dataset.startswith("GluGluH"):
+                add_nnlops_weight(
+                    events=events,
+                    weights_container=weights_container,
+                )
+            # add parton shower variations
+            add_partonshower_weight(
+                events=events,
+                weights_container=weights_container,
+            )
+            # add LHEPDF variations
+            add_lhepdf_weight(
+                events=events,
+                weights_container=weights_container,
+            )
+            # add electron reco weights
+            electron_weights = ElectronWeights(
+                events=events,
+                year=self.year,
+                weights=weights_container,
+                variation="nominal",
+            )
+            electron_weights.add_reco_weights("RecoBelow20")
+            electron_weights.add_reco_weights("Reco20to75")
+            electron_weights.add_reco_weights("RecoAbove75")
+        else:
+            weights_container.add("genweight", ak.ones_like(events.PV.npvsGood))
+            
+        # save nevents (sum of weights) before selections
         sumw = ak.sum(weights_container.weight())
         output["metadata"].update({"sumw": sumw})
 
@@ -119,7 +158,9 @@ class ZPlusLProcessor(processor.ProcessorABC):
         for selection, mask in event_selection["selections"].items():
             selection_manager.add(selection, eval(mask))
 
-        # run over each category
+        # --------------------------------------------------------------
+        # cutflow computation and histogram filling
+        # --------------------------------------------------------------
         categories = event_selection["categories"]
         for category, category_cuts in categories.items():
             # get selection mask by category
@@ -142,45 +183,22 @@ class ZPlusLProcessor(processor.ProcessorABC):
                     "raw_final_nevents": nevents_after,
                 }
             )
-            # --------------------------------------------------------------
-            # Histogram filling
-            # --------------------------------------------------------------
+            # get analysis variables and fill histograms
             if nevents_after > 0:
-                # get analysis variables
                 variables_map = {}
                 for variable, axis in self.histogram_config.axes.items():
                     variables_map[variable] = eval(axis.expression)[category_mask]
-                # fill histograms
-                if is_mc:
-                    # get event weight systematic variations for MC samples
-                    variations = ["nominal"] + list(weights_container.variations)
-                    for variation in variations:
-                        if variation == "nominal":
-                            region_weight = weights_container.weight()[category_mask]
-                        else:
-                            region_weight = weights_container.weight(
-                                modifier=variation
-                            )[category_mask]
-                        fill_histogram(
-                            histograms=histograms,
-                            histogram_config=self.histogram_config,
-                            variables_map=variables_map,
-                            weights=region_weight,
-                            variation=variation,
-                            category=category,
-                            flow=True,
-                        )
-                else:
-                    region_weight = weights_container.weight()[category_mask]
-                    fill_histogram(
-                        histograms=histograms,
-                        histogram_config=self.histogram_config,
-                        variables_map=variables_map,
-                        weights=region_weight,
-                        variation="nominal",
-                        category=category,
-                        flow=True,
-                    )
+                fill_histograms(
+                    histogram_config=self.histogram_config,
+                    weights_container=weights_container,
+                    category_mask=category_mask,
+                    variables_map=variables_map,
+                    histograms=histograms,
+                    variation="nominal",
+                    category=category,
+                    is_mc=is_mc,
+                    flow=True,
+                )
         # add histograms to output dictionary
         output["histograms"] = histograms
         return output
