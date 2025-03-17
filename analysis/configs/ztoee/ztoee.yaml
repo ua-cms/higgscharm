@@ -54,6 +54,21 @@ event_selection:
       - muon_veto
       - two_electrons
       - one_z
+corrections:
+  objects:
+    - jets
+    - electrons
+  event_weights:
+    genWeight: true
+    pileupWeight: true
+    partonshowerWeight: true
+    lhepdfWeight: true
+    lhescaleWeight: true
+    nnlopsWeight: false
+    electron:
+      - id: wp80iso
+      - reco: true
+      - trigger: true
 histogram_config:
   axes:
     dielectron_mass:

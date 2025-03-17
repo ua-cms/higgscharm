@@ -95,6 +95,21 @@ event_selection:
       - lumimask
       - trigger
       - atleast_one_zz
+corrections:
+  objects:
+    - jets
+    - electrons
+  event_weights:
+    genWeight: true
+    pileupWeight: true
+    partonshowerWeight: true
+    lhepdfWeight: true
+    lhescaleWeight: true
+    nnlopsWeight: true
+    electron:
+      - id: false
+      - reco: true
+      - trigger: false
 histogram_config:
   axes:
     z1_lepton1_pt:

@@ -70,16 +70,42 @@ event_selection:
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     met_25: events.PuppiMET.pt < 25
-    one_zcandidate: ak.num(objects['best_zcandidates']) == 1
     three_loose_leptons: ak.num(objects['loose_leptons']) == 3
+    one_zcandidate: ak.num(objects['best_zcandidates']) == 1
+    ele_flavor: ak.any(np.abs(objects['loose_leptons'].flavor) == 11, axis=1)
+    mu_flavor: ak.any(np.abs(objects['loose_leptons'].flavor) == 13, axis=1)
   categories:
-    base:
+    electron:
       - trigger
       - lumimask
       - atleast_one_goodvertex
       - met_25
+      - ele_flavor
       - one_zcandidate
       - three_loose_leptons
+    muon:
+      - trigger
+      - lumimask
+      - atleast_one_goodvertex
+      - met_25
+      - mu_flavor
+      - one_zcandidate
+      - three_loose_leptons
+corrections:
+  objects:
+    - jets
+    - electrons
+  event_weights:
+    genWeight: true
+    pileupWeight: true
+    partonshowerWeight: true
+    lhepdfWeight: true
+    lhescaleWeight: true
+    nnlopsWeight: true
+    electron:
+      - id: false
+      - reco: true
+      - trigger: false
 histogram_config:
   axes:
     loose_lepton_pt:
@@ -101,13 +127,6 @@ histogram_config:
       stop: 2.5
       label: $|\eta(\ell)|$
       expression: np.abs(objects['loose_leptons'].eta)
-    loose_lepton_pdgid:
-      type: IntCategory
-      categories:
-        - 11
-        - 13
-      label: $|\text{pdgId}(\ell)|$
-      expression: np.abs(objects['loose_leptons'].pdgId)
     loose_lepton_pass:
       type: Regular
       bins: 2
@@ -115,11 +134,75 @@ histogram_config:
       stop: 2
       label: $\ell$ pass 
       expression: objects['loose_leptons'].pass_selection
+    z_lepton1_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_1^{Z})$ [GeV]
+      expression: objects['best_zcandidates'].l1.p4.pt
+    z_lepton1_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_1^{Z})$
+      expression: objects['best_zcandidates'].l1.p4.eta
+    z_lepton1_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi((\ell_1^{Z}))$
+      expression: objects['best_zcandidates'].l1.p4.phi
+    z_lepton2_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_2^{Z})$ [GeV]
+      expression: objects['best_zcandidates'].l2.p4.pt
+    z_lepton2_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_2^{Z})$
+      expression: objects['best_zcandidates'].l2.p4.eta
+    z_lepton2_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi((\ell_2^{Z}))$
+      expression: objects['best_zcandidates'].l2.p4.phi
+    z_pt:
+      type: Regular
+      bins: 100
+      start: 0
+      stop: 500
+      label: $p_T(Z)$ [GeV]
+      expression: objects['best_zcandidates'].p4.pt
+    z_mass:
+      type: Regular
+      bins: 54
+      start: 12
+      stop: 120
+      label: $m(Z)$ [GeV]
+      expression: objects['best_zcandidates'].p4.mass
   layout:
     loose_lepton:
       - loose_lepton_pt
       - loose_lepton_eta
-      - loose_lepton_pdgid
       - loose_lepton_pass
-  add_syst_axis: false
-  add_weight: false
+    zcand:
+      - z_mass
+      - z_pt
+    zcand_l1:
+      - z_lepton1_pt
+      - z_lepton2_eta
+    zcand_l2:
+      - z_lepton2_pt
+      - z_lepton2_eta
+  add_syst_axis: true
+  add_weight: true
