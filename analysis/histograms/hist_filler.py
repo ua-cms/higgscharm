@@ -92,3 +92,42 @@ def fill_histogram(
                     }
                 )
             histograms[key].fill(**fill_args)
+
+
+def fill_histograms(
+    histograms,
+    histogram_config,
+    variables_map,
+    category,
+    variation,
+    flow,
+    is_mc,
+    weights_container,
+):
+    if is_mc:
+        variations = ["nominal"] + list(weights_container.variations)
+        for variation in variations:
+            if variation == "nominal":
+                region_weight = weights_container.weight()
+            else:
+                region_weight = weights_container.weight(modifier=variation)
+            fill_histogram(
+                histograms=histograms,
+                histogram_config=histogram_config,
+                variables_map=variables_map,
+                weights=region_weight,
+                variation=variation,
+                category=category,
+                flow=True,
+            )
+    else:
+        region_weight = weights_container.weight()
+        fill_histogram(
+            histograms=histograms,
+            histogram_config=histogram_config,
+            variables_map=variables_map,
+            weights=region_weight,
+            variation="nominal",
+            category=category,
+            flow=True,
+        )
