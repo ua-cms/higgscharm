@@ -4,25 +4,14 @@ from coffea import processor
 from coffea.util import save
 from coffea.nanoevents import NanoAODSchema
 from analysis.utils import write_root
-from analysis.processors.hww import HWWProcessor
-from analysis.processors.ztoee import ZToEEProcessor
-from analysis.processors.ztomumu import ZToMuMuProcessor
-from analysis.processors.zzto4l import ZZTo4LProcessor
-from analysis.processors.zplusl import ZPlusLProcessor
+from analysis.processors.base import BaseProcessor
 
 
 def main(args):
-    processors = {
-        "ztomumu": ZToMuMuProcessor(year=args.year),
-        "ztoee": ZToEEProcessor(year=args.year),
-        "zzto4l": ZZTo4LProcessor(year=args.year),
-        "hww": HWWProcessor(year=args.year),
-        "zplusl": ZPlusLProcessor(year=args.year),
-    }
     out = processor.run_uproot_job(
         args.partition_fileset,
         treename="Events",
-        processor_instance=processors[args.processor],
+        processor_instance=BaseProcessor(processor=args.processor, year=args.year),
         executor=processor.futures_executor,
         executor_args={"schema": NanoAODSchema, "workers": 4},
     )
