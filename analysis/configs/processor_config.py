@@ -1,11 +1,13 @@
 import yaml
 
+
 class ProcessorConfig:
     """
     Attributes:
     -----------
         object_selection:
         event_selection:
+        corrections_config:
         histogram_config:
     """
 
@@ -13,10 +15,12 @@ class ProcessorConfig:
         self,
         object_selection,
         event_selection,
+        corrections_config,
         histogram_config,
     ):
         self.object_selection = object_selection
         self.event_selection = event_selection
+        self.corrections_config = corrections_config
         self.histogram_config = histogram_config
 
     def to_dict(self):
@@ -24,6 +28,7 @@ class ProcessorConfig:
         return {
             "object_selection": self.object_selection,
             "event_selection": self.event_selection,
+            "corrections_config": self.corrections_config,
             "histogram_config": self.histogram_config.to_dict(),
         }
 

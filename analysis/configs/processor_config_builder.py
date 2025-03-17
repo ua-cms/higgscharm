@@ -16,6 +16,7 @@ class ProcessorConfigBuilder:
         return ProcessorConfig(
             object_selection=self.parse_object_selection(),
             event_selection=self.parse_event_selection(),
+            corrections_config=self.parse_corrections_config(),
             histogram_config=self.parse_histogram_config(),
         )
 
@@ -46,3 +47,17 @@ class ProcessorConfigBuilder:
         hist_config = HistogramConfig(**self.config["histogram_config"])
         hist_config.categories = list(self.parse_event_selection()["categories"].keys())
         return hist_config
+
+    def parse_corrections_config(self):
+        corrections = {}
+        corrections["objects"] = self.config["corrections"]["objects"]
+        corrections["event_weights"] = {}
+        for name, vals in self.config["corrections"]["event_weights"].items():
+            if isinstance(vals, bool):
+                corrections["event_weights"][name] = vals
+            elif isinstance(vals, list):
+                corrections["event_weights"][name] = {}
+                for val in vals:
+                    for corr, wp in val.items():
+                        corrections["event_weights"][name][corr] = wp
+        return corrections
