@@ -10,7 +10,6 @@ from analysis.corrections.utils import get_pog_json, unflat_sf
 from analysis.selections.event_selections import get_trigger_mask
 
 
-
 class MuonWeights:
     """
     Muon weights class
@@ -18,7 +17,7 @@ class MuonWeights:
     Parameters:
     -----------
         events:
-            events collection
+            pruned events
         weights:
             Weights container
         year:
@@ -39,40 +38,31 @@ class MuonWeights:
         events: ak.Array,
         weights: Type[Weights],
         year: str,
-        id_wp: str,
-        iso_wp: str,
         variation: str = "nominal",
     ) -> None:
         self.events = events
-        self.muons = events.Muon
+        self.muons = events.selected_muons
         self.weights = weights
         self.year = year
         self.variation = variation
-        self.id_wp = id_wp
-        self.iso_wp = iso_wp
 
         self.flat_muons = ak.flatten(self.muons)
         self.muons_counts = ak.num(self.muons)
-
-        self.muon_id_mask = ak.flatten(working_points.muon_id(events=events, wp=id_wp))
-        self.muon_iso_mask = ak.flatten(
-            working_points.muon_iso(events=events, wp=iso_wp)
-        )
 
         # get muon correction set
         self.cset = correctionlib.CorrectionSet.from_file(
             get_pog_json(json_name="muon", year=year)
         )
 
-    def add_id_weights(self):
+    def add_id_weights(self, id_wp):
         """
         add muon ID weights to weights container
         """
-        nominal_weights = self.get_id_weights(variation="nominal")
+        nominal_weights = self.get_id_weights(id_wp, variation="nominal")
         if self.variation == "nominal":
             # get 'up' and 'down' weights
-            up_weights = self.get_id_weights(variation="systup")
-            down_weights = self.get_id_weights(variation="systdown")
+            up_weights = self.get_id_weights(id_wp, variation="systup")
+            down_weights = self.get_id_weights(id_wp, variation="systdown")
             # add scale factors to weights container
             self.weights.add(
                 name=f"muon_id",
@@ -86,16 +76,16 @@ class MuonWeights:
                 weight=nominal_weights,
             )
 
-    def add_iso_weights(self):
+    def add_iso_weights(self, id_wp, iso_wp):
         """
         add muon iso weights to weights container
         """
         # get nominal scale factors
-        nominal_weights = self.get_iso_weights(variation="nominal")
+        nominal_weights = self.get_iso_weights(id_wp, iso_wp, variation="nominal")
         if self.variation == "nominal":
             # get 'up' and 'down' weights
-            up_weights = self.get_iso_weights(variation="systup")
-            down_weights = self.get_iso_weights(variation="systdown")
+            up_weights = self.get_iso_weights(id_wp, iso_wp, variation="systup")
+            down_weights = self.get_iso_weights(id_wp, iso_wp, variation="systdown")
             # add nominal, up and down weights to weights container
             self.weights.add(
                 name=f"muon_iso",
@@ -110,21 +100,33 @@ class MuonWeights:
                 weight=nominal_weights,
             )
 
-    def add_trigger_weights(self, hlt_paths, dataset):
+    def add_trigger_weights(self, id_wp, iso_wp, hlt_paths, dataset):
         """
         add muon iso weights to weights container
         """
         # get nominal scale factors
         nominal_weights = self.get_hlt_weights(
-            variation="nominal", hlt_paths=hlt_paths, dataset=dataset
+            id_wp=id_wp,
+            iso_wp=iso_wp,
+            variation="nominal",
+            hlt_paths=hlt_paths,
+            dataset=dataset,
         )
         if self.variation == "nominal":
             # get 'up' and 'down' weights
             up_weights = self.get_hlt_weights(
-                variation="systup", hlt_paths=hlt_paths, dataset=dataset
+                id_wp=id_wp,
+                iso_wp=iso_wp,
+                variation="systup",
+                hlt_paths=hlt_paths,
+                dataset=dataset,
             )
             down_weights = self.get_hlt_weights(
-                variation="systdown", hlt_paths=hlt_paths, dataset=dataset
+                id_wp=id_wp,
+                iso_wp=iso_wp,
+                variation="systdown",
+                hlt_paths=hlt_paths,
+                dataset=dataset,
             )
             # add nominal, up and down weights to weights container
             self.weights.add(
@@ -140,7 +142,7 @@ class MuonWeights:
                 weight=nominal_weights,
             )
 
-    def get_id_weights(self, variation):
+    def get_id_weights(self, id_wp, variation):
         """
         Compute muon ID weights
 
@@ -157,7 +159,7 @@ class MuonWeights:
         # get muons that pass the id wp, and within SF binning
         muon_pt_mask = self.flat_muons.pt > 15.0
         muon_eta_mask = np.abs(self.flat_muons.eta) < 2.399
-        in_muon_mask = muon_pt_mask & muon_eta_mask & self.muon_id_mask
+        in_muon_mask = muon_pt_mask & muon_eta_mask
         in_muons = self.flat_muons.mask[in_muon_mask]
 
         # get muons pT and abseta (replace None values with some 'in-limit' value)
@@ -165,7 +167,7 @@ class MuonWeights:
         muon_eta = np.abs(ak.fill_none(in_muons.eta, 0.0))
 
         weights = unflat_sf(
-            self.cset[id_corrections[self.id_wp]].evaluate(
+            self.cset[id_corrections[id_wp]].evaluate(
                 muon_eta,
                 muon_pt,
                 variation,
@@ -175,7 +177,7 @@ class MuonWeights:
         )
         return weights
 
-    def get_iso_weights(self, variation):
+    def get_iso_weights(self, id_wp, iso_wp, variation):
         """
         Compute muon iso weights
 
@@ -204,9 +206,7 @@ class MuonWeights:
         # get 'in-limits' muons
         muon_pt_mask = self.flat_muons.pt > 15
         muon_eta_mask = np.abs(self.flat_muons.eta) < 2.399
-        in_muon_mask = (
-            muon_pt_mask & muon_eta_mask & self.muon_id_mask & self.muon_iso_mask
-        )
+        in_muon_mask = muon_pt_mask & muon_eta_mask
         in_muons = self.flat_muons.mask[in_muon_mask]
 
         # get muons pT and abseta (replace None values with some 'in-limit' value)
@@ -214,7 +214,7 @@ class MuonWeights:
         muon_eta = np.abs(ak.fill_none(in_muons.eta, 0.0))
 
         weights = unflat_sf(
-            self.cset[iso_corrections[self.iso_wp][self.id_wp]].evaluate(
+            self.cset[iso_corrections[iso_wp][id_wp]].evaluate(
                 muon_eta,
                 muon_pt,
                 variation,
@@ -224,7 +224,7 @@ class MuonWeights:
         )
         return weights
 
-    def get_hlt_weights(self, variation, hlt_paths, dataset):
+    def get_hlt_weights(self, id_wp, iso_wp, hlt_paths, variation, dataset):
         """
         Compute muon HLT weights
 
@@ -236,28 +236,29 @@ class MuonWeights:
         """
         muon_pt_mask = self.flat_muons.pt > 26.0
         muon_eta_mask = np.abs(self.flat_muons.eta) < 2.4
-        # get trigger masks
-        trigger = get_trigger_mask(self.events, hlt_paths, dataset)
+        # get trigger match mask
         trigger_match = trigger_match_mask(
-            events=self.events, leptons=self.muons, hlt_paths=hlt_paths
+            events=self.events, leptons=self.muons, hlt_paths=hlt_paths, year=self.year
         )
-        trigger_mask = (
-            ak.flatten(ak.ones_like(self.muons.pt) * trigger) > 0
-        ) & ak.flatten(trigger_match)
+        trigger_mask = ak.flatten(trigger_match)
         # get muons passing ID and Iso wps, trigger, and within SF binning
-        in_muons_mask = (
-            muon_pt_mask
-            & muon_eta_mask
-            & self.muon_id_mask
-            & self.muon_iso_mask
-            & trigger_mask
-        )
+        in_muons_mask = muon_pt_mask & muon_eta_mask & trigger_mask
         in_muons = self.flat_muons.mask[in_muons_mask]
         # get muons pT and abseta (replace None values with some 'in-limit' value)
         muon_pt = ak.fill_none(in_muons.pt, 26)
         muon_eta = ak.fill_none(np.abs(in_muons.eta), 0)
+        hlt_path_id_map = {
+            ("tight", "tight"): "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
+            ("medium", "medium"): "NUM_IsoMu24_DEN_CutBasedIdMedium_and_PFIsoMedium",
+        }
+        assert (
+            id_wp,
+            iso_wp,
+        ) in hlt_path_id_map, (
+            f"There's no HLT correction for (ID, ISO) wps pair {(id_wp, iso_wp)}"
+        )
         weights = unflat_sf(
-            self.cset["NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"].evaluate(
+            self.cset[hlt_path_id_map[(id_wp, iso_wp)]].evaluate(
                 muon_eta,
                 muon_pt,
                 variation,

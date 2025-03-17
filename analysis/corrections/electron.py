@@ -38,13 +38,13 @@ class ElectronWeights:
         variation: str,
     ) -> None:
         self.events = events
-        self.electrons = events.Electron
+        self.electrons = events.selected_electrons
         self.weights = weights
         self.year = year
         self.variation = variation
 
-        self.flat_electrons = ak.flatten(events.Electron)
-        self.electrons_counts = ak.num(events.Electron)
+        self.flat_electrons = ak.flatten(self.electrons)
+        self.electrons_counts = ak.num(self.electrons)
 
         # set id working points map
         self.id_map = {
@@ -159,21 +159,20 @@ class ElectronWeights:
         )
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = self.flat_electrons.pt > 10.0
-        electron_id_mask = ak.flatten(working_points.electron_id(self.events, id_wp))
-        in_electron_mask = electron_pt_mask & electron_id_mask
+        in_electron_mask = electron_pt_mask
         in_electrons = self.flat_electrons.mask[in_electron_mask]
 
         # get electrons pT and abseta (replace None values with some 'in-limit' value)
         electron_pt = ak.fill_none(in_electrons.pt, 15.0)
         electron_eta = ak.fill_none(in_electrons.eta, 0)
         electron_phi = ak.fill_none(in_electrons.phi, 0)
-        
+
         cset_args = [
             self.year_map[self.year],
             variation,
             self.id_map[id_wp],
             electron_eta,
-            electron_pt
+            electron_pt,
         ]
         if self.year.startswith("2023"):
             cset_args += [electron_phi]
@@ -223,7 +222,7 @@ class ElectronWeights:
             variation,
             reco_range,
             electron_eta,
-            electron_pt
+            electron_pt,
         ]
         if self.year.startswith("2023"):
             cset_args += [electron_phi]
@@ -247,14 +246,11 @@ class ElectronWeights:
         cset = correctionlib.CorrectionSet.from_file(
             get_pog_json(json_name="electron_hlt", year=self.year)
         )
-        # get trigger masks
-        trigger = get_trigger_mask(self.events, hlt_paths, dataset)
+        # get trigger match masks
         trigger_match = trigger_match_mask(
             events=self.events, leptons=self.electrons, hlt_paths=hlt_paths
         )
-        trigger_mask = (
-            ak.flatten(ak.ones_like(self.electrons.pt) * trigger) > 0
-        ) & ak.flatten(trigger_match)
+        trigger_mask = ak.flatten(trigger_match)
 
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = self.flat_electrons.pt > 25.0
@@ -317,7 +313,7 @@ class ElectronSS:
             "2022preEE": ["Scale", "Smearing"],
             "2022postEE": ["Scale", "Smearing"],
             "2023preBPix": ["2023PromptC_ScaleJSON", "2023PromptC_SmearingJSON"],
-            "2023postBPix": ["2023PromptD_ScaleJSON", "2023PromptD_SmearingJSON"]
+            "2023postBPix": ["2023PromptD_ScaleJSON", "2023PromptD_SmearingJSON"],
         }
         # define Electron pt_raw field (needed for MET recalculation)
         self.events["Electron", "pt_raw"] = (
