@@ -1,3 +1,4 @@
+import awkward as ak
 from coffea.analysis_tools import Weights
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
