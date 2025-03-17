@@ -3,6 +3,7 @@ import argparse
 
 
 MC_DATASETS = {
+    "semilep_ttbar": ["TTto2L2Nu"],
     "ttbar": ["TTto2L2Nu", "TTto4Q", "TTtoLNu2Q"],
     "singletop": [
         "TWminusto2L2Nu",
@@ -15,7 +16,9 @@ MC_DATASETS = {
         "TBbarQ",
     ],
     "diboson": ["WW", "WZ", "ZZ"],
-    "dyjets": ["DYto2L_2Jets_50", "DYto2L_2Jets_10to50"],
+    "dyjets_50": ["DYto2L_2Jets_50"]
+    "dyjets_10to50": ["DYto2L_2Jets_10to50"],
+    "dyjets": ["DYto2L_2Jets_50", "DYto2L_2Jets_10to50"]
     "higgs": [
         "bbH_Hto2Zto4L",
         "GluGluHtoZZto4L",
@@ -98,7 +101,7 @@ DATASETS = {
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
     "zplusl": {
-        "mc": [],
+        "mc": ["higgs", "ggtozz", "qqtozz", "ew", "dyjets_50", "semilep_ttbar"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
 }
