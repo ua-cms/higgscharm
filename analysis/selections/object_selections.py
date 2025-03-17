@@ -22,6 +22,7 @@ class ObjectSelector:
     def select_objects(self, events):
         self.objects = {}
         self.events = events
+
         for obj_name, obj_config in self.object_selection_config.items():
             # check if object is defined from events or user defined function
             if "events" in obj_config["field"]:
@@ -45,8 +46,9 @@ class ObjectSelector:
         return self.objects
 
     def get_selection_mask(self, events, obj_name, cuts):
-        # bring objects to local scope
+        # bring objects and year to local scope
         objects = self.objects
+        year = self.year
         # initialize selection mask
         selection_mask = ak.ones_like(self.objects[obj_name].pt, dtype=bool)
         # iterate over all cuts
@@ -306,18 +308,40 @@ class ObjectSelector:
             loose_leptons_bestzl1_opposite_charge & loose_leptons_bestzl1_mass_mask
         ) | (loose_leptons_bestzl2_opposite_charge & loose_leptons_bestzl2_mass_mask)
 
+        # check that loose lepton pass relaxed id
+        is_relaxed = loose_leptons.is_relaxed == ak.ones_like(
+            best_zcands.l1.idx[:, None], dtype=bool
+        )
+        is_relaxed = ak.flatten(is_relaxed, axis=-1)
+
+        # get full pass selection mask
         pass_selection = (
             loose_leptons_bestz_idx_mask
             & loose_leptons_bestz_dr_mask
             & qcd_suppression_mask
+            & is_relaxed
         )
         pass_selection = ak.where(
             ak.num(pass_selection) > 0,
             pass_selection,
             ak.full_like(loose_leptons.pt, False, dtype=bool),
         )
-
         self.objects["loose_leptons"]["pass_selection"] = pass_selection
+
+        # define flavor of additional loose leptons not included in the Z candidate
+        loose_lepton_flavor = ak.flatten(
+            ak.ones_like(best_zcands.l1.idx[:, None]) * np.abs(loose_leptons.pdgId),
+            axis=-1,
+        )
+        loose_lepton_flavor = ak.where(
+            loose_leptons_bestz_idx_mask, loose_lepton_flavor, -1
+        )
+        loose_lepton_flavor = ak.where(
+            ak.num(best_zcands) > 0,
+            loose_lepton_flavor,
+            ak.full_like(loose_leptons.pdgId, -1),
+        )
+        self.objects["loose_leptons"]["flavor"] = loose_lepton_flavor
 
     def select_zzto4l_zzcandidates(self):
         zzcandidates = ak.combinations(
