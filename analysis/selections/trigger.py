@@ -175,11 +175,11 @@ def trigger_match(leptons, trigobjs, hlt_path):
     return trig_matched_locs
 
 
-def trigger_match_mask(events, leptons, hlt_paths):
+def trigger_match_mask(events, leptons, hlt_paths, year):
     trigger_match_mask = np.zeros(len(events), dtype="bool")
     for dataset_flags in hlt_paths.values():
         for flag in dataset_flags:
-            for hlt_path in get_hltpaths_from_flag(flag):
+            for hlt_path in get_hltpaths_from_flag(flag, year):
                 trig_obj_mask = trigger_match(
                     leptons=leptons,
                     trigobjs=events.TrigObj,
