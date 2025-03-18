@@ -253,17 +253,24 @@ class ObjectSelector:
         self.objects["best_zcandidates"] = best_zcand
 
     def select_zplusl_loose_leptons(self):
-        # select loose leptons and best Z candidate
-        loose_leptons = self.objects["leptons"][self.objects["leptons"].is_loose]
-        self.objects["loose_leptons"] = loose_leptons
+        # select best Z candidates and loose leptons
         best_zcands = self.objects["best_zcandidates"]
-
-        # select loose leptons whose idx are different to best Z candidate lepton's idx
+        # select loose leptons (whose idx are different to best Z candidate lepton's idx)
+        loose_leptons = self.objects["leptons"]
+        loose_leptons = loose_leptons[loose_leptons.is_loose]
         loose_leptons_bestzl1_idx = loose_leptons.idx != best_zcands.l1.idx[:, None]
         loose_leptons_bestzl2_idx = loose_leptons.idx != best_zcands.l2.idx[:, None]
         loose_leptons_bestz_idx_mask = ak.flatten(
             loose_leptons_bestzl1_idx & loose_leptons_bestzl2_idx, axis=-1
         )
+        loose_leptons = loose_leptons[loose_leptons_bestz_idx_mask]
+        self.objects["loose_leptons"] = loose_leptons
+
+        # check that loose lepton pass relaxed id
+        is_relaxed = loose_leptons.is_relaxed == ak.ones_like(
+            best_zcands.l1.idx[:, None], dtype=bool
+        )
+        is_relaxed = ak.flatten(is_relaxed, axis=-1)
         # ghost removal: ∆R(η, φ) > 0.02 between each of the leptons (to protect against split tracks)
         loose_leptons_bestzl1_dr = loose_leptons.metric_table(best_zcands.l1)
         loose_leptons_bestzl2_dr = loose_leptons.metric_table(best_zcands.l2)
@@ -308,40 +315,9 @@ class ObjectSelector:
             loose_leptons_bestzl1_opposite_charge & loose_leptons_bestzl1_mass_mask
         ) | (loose_leptons_bestzl2_opposite_charge & loose_leptons_bestzl2_mass_mask)
 
-        # check that loose lepton pass relaxed id
-        is_relaxed = loose_leptons.is_relaxed == ak.ones_like(
-            best_zcands.l1.idx[:, None], dtype=bool
-        )
-        is_relaxed = ak.flatten(is_relaxed, axis=-1)
-
         # get full pass selection mask
-        pass_selection = (
-            loose_leptons_bestz_idx_mask
-            & loose_leptons_bestz_dr_mask
-            & qcd_suppression_mask
-            & is_relaxed
-        )
-        pass_selection = ak.where(
-            ak.num(pass_selection) > 0,
-            pass_selection,
-            ak.full_like(loose_leptons.pt, False, dtype=bool),
-        )
+        pass_selection = is_relaxed & loose_leptons_bestz_dr_mask & qcd_suppression_mask
         self.objects["loose_leptons"]["pass_selection"] = pass_selection
-
-        # define flavor of additional loose leptons not included in the Z candidate
-        loose_lepton_flavor = ak.flatten(
-            ak.ones_like(best_zcands.l1.idx[:, None]) * np.abs(loose_leptons.pdgId),
-            axis=-1,
-        )
-        loose_lepton_flavor = ak.where(
-            loose_leptons_bestz_idx_mask, loose_lepton_flavor, -1
-        )
-        loose_lepton_flavor = ak.where(
-            ak.num(best_zcands) > 0,
-            loose_lepton_flavor,
-            ak.full_like(loose_leptons.pdgId, -1),
-        )
-        self.objects["loose_leptons"]["flavor"] = loose_lepton_flavor
 
     def select_zzto4l_zzcandidates(self):
         zzcandidates = ak.combinations(

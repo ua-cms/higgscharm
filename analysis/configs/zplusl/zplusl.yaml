@@ -57,6 +57,9 @@ object_selection:
     field: select_zplusl_best_zcandidate
   loose_leptons:
     field: select_zplusl_loose_leptons
+    add_cut:
+      is_barrel:
+        - ak.where(np.abs(objects['loose_leptons'].pdgId) == 11, np.abs(objects['loose_leptons'].eta) < 1.479, np.abs(objects['loose_leptons'].eta) < 1.2)
 event_selection:
   hlt_paths:
     - SingleMu
@@ -71,10 +74,10 @@ event_selection:
     atleast_one_goodvertex: events.PV.npvsGood > 0
     met_filters: get_metfilters_mask(events, year)
     met_25: events.PuppiMET.pt < 25
-    three_loose_leptons: ak.num(objects['loose_leptons']) == 3
+    one_loose_lepton: ak.num(objects['loose_leptons']) == 1
     atleast_one_zcandidate: ak.num(objects['zcandidates']) >= 1
-    ele_flavor: ak.any(np.abs(objects['loose_leptons'].flavor) == 11, axis=1)
-    mu_flavor: ak.any(np.abs(objects['loose_leptons'].flavor) == 13, axis=1)
+    ele_flavor: ak.all(np.abs(objects['loose_leptons'].pdgId) == 11, axis=1)
+    mu_flavor: ak.all(np.abs(objects['loose_leptons'].pdgId) == 13, axis=1)
   categories:
     electron:
       - trigger
@@ -84,7 +87,7 @@ event_selection:
       - met_25
       - ele_flavor
       - atleast_one_zcandidate
-      - three_loose_leptons
+      - one_loose_lepton
     muon:
       - trigger
       - lumimask
@@ -93,7 +96,7 @@ event_selection:
       - met_25
       - mu_flavor
       - atleast_one_zcandidate
-      - three_loose_leptons
+      - one_loose_lepton
 corrections:
   objects:
     - jets
@@ -130,7 +133,14 @@ histogram_config:
       stop: 2.5
       label: $|\eta(\ell)|$
       expression: np.abs(objects['loose_leptons'].eta)
-    loose_lepton_pass:
+    is_barrel_lepton:
+      type: Regular
+      bins: 2
+      start: 0
+      stop: 2
+      label: is barrel $\ell$
+      expression: objects['loose_leptons'].is_barrel
+    is_passing_lepton:
       type: Regular
       bins: 2
       start: 0
@@ -197,7 +207,8 @@ histogram_config:
     loose_lepton:
       - loose_lepton_pt
       - loose_lepton_eta
-      - loose_lepton_pass
+      - is_passing_lepton
+      - is_barrel_lepton
     zcand:
       - z_mass
       - z_pt
