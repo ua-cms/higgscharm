@@ -94,38 +94,38 @@ class BaseProcessor(processor.ProcessorABC):
         for category, category_cuts in categories.items():
             # get selection mask by category
             category_mask = selection_manager.all(*category_cuts)
-            # get pruned events
-            pruned_ev = events[category_mask]
-            # add each selected object to 'pruned_ev' as a new field
-            for obj in objects:
-                pruned_ev[f"selected_{obj}"] = objects[obj][category_mask]
-            # get weights container
-            weights_container = weight_manager(
-                pruned_ev=pruned_ev,
-                year=year,
-                dataset=dataset,
-                processor_config=self.processor_config,
-            )
-            # save cutflow to metadata
-            output["metadata"][category] = {"cutflow": {"initial": len(events)}}
-            selections = []
-            for cut_name in category_cuts:
-                selections.append(cut_name)
-                current_selection = selection_manager.all(*selections)
-                output["metadata"][category]["cutflow"][cut_name] = ak.sum(
-                    current_selection
-                )
-            # save number of events after selection to metadata
             nevents_after = ak.sum(category_mask)
-            weighted_final_nevents = ak.sum(weights_container.weight())
-            output["metadata"][category].update(
-                {
-                    "weighted_final_nevents": weighted_final_nevents,
-                    "raw_final_nevents": nevents_after,
-                }
-            )
-            # get analysis variables and fill histograms
             if nevents_after > 0:
+                # get pruned events
+                pruned_ev = events[category_mask]
+                # add each selected object to 'pruned_ev' as a new field
+                for obj in objects:
+                    pruned_ev[f"selected_{obj}"] = objects[obj][category_mask]
+                # get weights container
+                weights_container = weight_manager(
+                    pruned_ev=pruned_ev,
+                    year=year,
+                    dataset=dataset,
+                    processor_config=self.processor_config,
+                )
+                # save cutflow to metadata
+                output["metadata"][category] = {"cutflow": {"initial": len(events)}}
+                selections = []
+                for cut_name in category_cuts:
+                    selections.append(cut_name)
+                    current_selection = selection_manager.all(*selections)
+                    output["metadata"][category]["cutflow"][cut_name] = ak.sum(
+                        current_selection
+                    )
+                # save number of events after selection to metadata
+                weighted_final_nevents = ak.sum(weights_container.weight())
+                output["metadata"][category].update(
+                    {
+                        "weighted_final_nevents": weighted_final_nevents,
+                        "raw_final_nevents": nevents_after,
+                    }
+                )
+                # get analysis variables and fill histograms
                 variables_map = {}
                 for variable, axis in self.histogram_config.axes.items():
                     variables_map[variable] = eval(axis.expression)[category_mask]
