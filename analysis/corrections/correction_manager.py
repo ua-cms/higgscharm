@@ -1,4 +1,4 @@
-import awkward as ak
+import numpy as np
 from coffea.analysis_tools import Weights
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
@@ -56,6 +56,7 @@ def weight_manager(pruned_ev, year, dataset, processor_config, variation="nomina
     weights_config = processor_config.corrections_config["event_weights"]
     # initialize weights container
     weights_container = Weights(len(pruned_ev), storeIndividual=True)
+    # add weights
     if hasattr(pruned_ev, "genWeight"):
         if weights_config["genWeight"]:
             weights_container.add("genweight", pruned_ev.genWeight)
@@ -142,5 +143,5 @@ def weight_manager(pruned_ev, year, dataset, processor_config, variation="nomina
                             hlt_paths=processor_config.event_selection["hlt_paths"],
                         )
     else:
-        weights_container.add("weight", ak.ones_like(pruned_ev.PV.npvsGood))
+        weights_container.add("weight", np.ones(len(pruned_ev)))
     return weights_container
