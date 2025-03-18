@@ -52,10 +52,9 @@ object_selection:
       - objects['zcandidates'].is_sr
       - (objects['zcandidates'].p4.mass > 12) & (objects['zcandidates'].p4.mass < 120)
       - ((objects['zcandidates'].l1.p4.pt > 10) & (objects['zcandidates'].l1.p4.pt > 20)) | ((objects['zcandidates'].l1.p4.pt > 20) & (objects['zcandidates'].l1.p4.pt > 10))
+      - np.abs(objects['zcandidates'].p4.mass - 91.1876) < 7
   best_zcandidates:
     field: select_zplusl_best_zcandidate
-    cuts:
-      - np.abs(objects['best_zcandidates'].p4.mass - 91.1876) < 7
   loose_leptons:
     field: select_zplusl_loose_leptons
 event_selection:
@@ -70,9 +69,10 @@ event_selection:
     trigger: get_zzto4l_trigger_mask(events, hlt_paths, dataset, year)
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
+    met_filters: get_metfilters_mask(events, year)
     met_25: events.PuppiMET.pt < 25
     three_loose_leptons: ak.num(objects['loose_leptons']) == 3
-    one_zcandidate: ak.num(objects['best_zcandidates']) == 1
+    atleast_one_zcandidate: ak.num(objects['zcandidates']) >= 1
     ele_flavor: ak.any(np.abs(objects['loose_leptons'].flavor) == 11, axis=1)
     mu_flavor: ak.any(np.abs(objects['loose_leptons'].flavor) == 13, axis=1)
   categories:
@@ -80,17 +80,19 @@ event_selection:
       - trigger
       - lumimask
       - atleast_one_goodvertex
+      - met_filters
       - met_25
       - ele_flavor
-      - one_zcandidate
+      - atleast_one_zcandidate
       - three_loose_leptons
     muon:
       - trigger
       - lumimask
       - atleast_one_goodvertex
+      - met_filters
       - met_25
       - mu_flavor
-      - one_zcandidate
+      - atleast_one_zcandidate
       - three_loose_leptons
 corrections:
   objects:
