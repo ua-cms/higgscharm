@@ -360,7 +360,7 @@ class ElectronSS:
                 corrected_flat_electrons_pt, self.electrons_counts
             )
             # propagate electron pT corrections to MET
-            update_met(events=self.events, lepton="Electron")
+            update_met(events=self.events, other_obj="Electron", met_obj="PuppiMET")
         else:
             # uncertainties: TO DO (https://cms-talk.web.cern.ch/t/pnoton-energy-corrections-in-nanoaod-v11/34327/2)
             pass
@@ -390,7 +390,7 @@ class ElectronSS:
                 corrected_flat_electrons_pt, self.electrons_counts
             )
             # propagate electron pT corrections to MET
-            update_met(events=self.events, lepton="Electron")
+            update_met(events=self.events, other_obj="Electron", met_obj="PuppiMET")
         else:
             # uncertainties: TO DO
             pass
