@@ -50,16 +50,15 @@ object_selection:
         - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 2
     cuts: 
       - objects['zcandidates'].is_sr
-      - (objects['zcandidates'].p4.mass > 12) & (objects['zcandidates'].p4.mass < 120)
-      - ((objects['zcandidates'].l1.p4.pt > 10) & (objects['zcandidates'].l1.p4.pt > 20)) | ((objects['zcandidates'].l1.p4.pt > 20) & (objects['zcandidates'].l1.p4.pt > 10))
       - np.abs(objects['zcandidates'].p4.mass - 91.1876) < 7
+      - ((objects['zcandidates'].l1.p4.pt > 10) & (objects['zcandidates'].l1.p4.pt > 20)) | ((objects['zcandidates'].l1.p4.pt > 20) & (objects['zcandidates'].l1.p4.pt > 10))
   best_zcandidates:
     field: select_zplusl_best_zcandidate
-  loose_leptons:
-    field: select_zplusl_loose_leptons
+  other_relaxed_leptons:
+    field: select_zplusl_other_relaxed_leptons
     add_cut:
       is_barrel:
-        - ak.where(np.abs(objects['loose_leptons'].pdgId) == 11, np.abs(objects['loose_leptons'].eta) < 1.479, np.abs(objects['loose_leptons'].eta) < 1.2)
+        - ak.where(np.abs(objects['other_relaxed_leptons'].pdgId) == 11, np.abs(objects['other_relaxed_leptons'].eta) < 1.479, np.abs(objects['other_relaxed_leptons'].eta) < 1.2)
 event_selection:
   hlt_paths:
     - SingleMu
@@ -74,10 +73,10 @@ event_selection:
     atleast_one_goodvertex: events.PV.npvsGood > 0
     met_filters: get_metfilters_mask(events, year)
     met_25: events.PuppiMET.pt < 25
-    one_loose_lepton: ak.num(objects['loose_leptons']) == 1
+    one_relaxed_lepton: ak.num(objects['other_relaxed_leptons']) == 1
     atleast_one_zcandidate: ak.num(objects['zcandidates']) >= 1
-    ele_flavor: ak.all(np.abs(objects['loose_leptons'].pdgId) == 11, axis=1)
-    mu_flavor: ak.all(np.abs(objects['loose_leptons'].pdgId) == 13, axis=1)
+    ele_flavor: ak.all(np.abs(objects['other_relaxed_leptons'].pdgId) == 11, axis=1)
+    mu_flavor: ak.all(np.abs(objects['other_relaxed_leptons'].pdgId) == 13, axis=1)
   categories:
     electron:
       - trigger
@@ -87,7 +86,7 @@ event_selection:
       - met_25
       - ele_flavor
       - atleast_one_zcandidate
-      - one_loose_lepton
+      - one_relaxed_lepton
     muon:
       - trigger
       - lumimask
@@ -96,7 +95,7 @@ event_selection:
       - met_25
       - mu_flavor
       - atleast_one_zcandidate
-      - one_loose_lepton
+      - one_relaxed_lepton
 corrections:
   objects:
     - jets
@@ -125,28 +124,28 @@ histogram_config:
         - 50
         - 80
       label: $p_T(\ell)$ [GeV]
-      expression: objects['loose_leptons'].pt
+      expression: objects['other_relaxed_leptons'].pt
     loose_lepton_eta:
       type: Regular
       bins: 50
       start: 0
       stop: 2.5
       label: $|\eta(\ell)|$
-      expression: np.abs(objects['loose_leptons'].eta)
+      expression: np.abs(objects['other_relaxed_leptons'].eta)
     is_barrel_lepton:
       type: Regular
       bins: 2
       start: 0
       stop: 2
       label: is barrel $\ell$
-      expression: objects['loose_leptons'].is_barrel
+      expression: objects['other_relaxed_leptons'].is_barrel
     is_passing_lepton:
       type: Regular
       bins: 2
       start: 0
       stop: 2
       label: $\ell$ pass 
-      expression: objects['loose_leptons'].pass_selection
+      expression: objects['other_relaxed_leptons'].pass_selection
     z_lepton1_pt:
       type: Regular
       bins: 50
