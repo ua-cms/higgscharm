@@ -10,6 +10,10 @@ from analysis.selections import (
     transverse_mass,
     get_closest_lepton,
     assign_lepton_fsr_idx,
+    fourlepcand,
+    make_cand,
+    select_best_zllcandidate,
+    get_flavor,
 )
 
 
@@ -29,7 +33,7 @@ class ObjectSelector:
                 self.objects[obj_name] = eval(obj_config["field"])
             else:
                 selection_function = getattr(self, obj_config["field"])
-                selection_function()
+                selection_function(obj_name)
             if "add_cut" in obj_config:
                 for field_to_add in obj_config["add_cut"]:
                     selection_mask = self.get_selection_mask(
@@ -60,20 +64,20 @@ class ObjectSelector:
     # --------------------------------------------------------------------------------
     # ZToLL
     # --------------------------------------------------------------------------------
-    def select_dimuons(self):
+    def select_dimuons(self, obj_name):
         if "muons" not in self.objects:
             raise ValueError(f"'muons' object has not been defined!")
-        self.objects["dimuons"] = select_dileptons(self.objects, "muons")
+        self.objects[obj_name] = select_dileptons(self.objects, "muons")
 
-    def select_dielectrons(self):
+    def select_dielectrons(self, obj_name):
         if "electrons" not in self.objects:
             raise ValueError(f"'electrons' object has not been defined!")
-        self.objects["dielectrons"] = select_dileptons(self.objects, "electrons")
+        self.objects[obj_name] = select_dileptons(self.objects, "electrons")
 
     # --------------------------------------------------------------------------------
-    # ZZTo4L
+    # ZZTo4L (Z+L, ZLL)
     # --------------------------------------------------------------------------------
-    def select_zzto4l_leptons(self):
+    def select_zzto4l_leptons(self, obj_name):
         muons = self.objects["muons"]
         electrons = self.objects["electrons"]
         # leptons before FSR recovery/iso correction
@@ -230,18 +234,25 @@ class ObjectSelector:
                 axis=1,
             ),
         )
-        self.objects["leptons"] = leptons
+        self.objects[obj_name] = leptons
 
-    def select_zzto4l_zcandidates(self):
+    def select_zcandidates(self, obj_name):
         """selects Z candidates for SR and all CRS"""
-        # get lepton pairs
+        # get Z candidates
         zcand = ak.combinations(self.objects["leptons"], 2, fields=["l1", "l2"])
-        self.objects["zcandidates"] = zcand
-        self.objects["zcandidates"]["p4"] = zcand.l1.p4 + zcand.l2.p4
-        self.objects["zcandidates"]["pt"] = self.objects["zcandidates"].p4.pt
-        self.objects["zcandidates"]["idx"] = ak.local_index(zcand, axis=1)
+        # check that Z candidates leptons pass the loose id
+        zcand = zcand[zcand.l1.is_loose & zcand.l2.is_loose]
+        # add Z candidate flavor, p4, pT and idx fields
+        flav_2e = (np.abs(zcand.l1.pdgId) == 11) & (np.abs(zcand.l2.pdgId) == 11)
+        flav_2mu = (np.abs(zcand.l1.pdgId) == 13) & (np.abs(zcand.l2.pdgId) == 13)
+        zcand["flavor"] = ak.where(flav_2e, 211, ak.where(flav_2mu, 213, -1))
+        zcand["p4"] = zcand.l1.p4 + zcand.l2.p4
+        zcand["pt"] = zcand.p4.pt
+        zcand["idx"] = ak.local_index(zcand, axis=1)
+        # add the Z candidates to objects
+        self.objects[obj_name] = zcand
 
-    def select_zplusl_best_zcandidate(self):
+    def select_best_zcandidate(self, obj_name):
         """selects best Z candidate as the one closest to the nominal Z mass"""
         zmass = 91.1876
         best_zcand_idx = ak.argmin(
@@ -250,27 +261,28 @@ class ObjectSelector:
         best_zcand = self.objects["zcandidates"][
             best_zcand_idx == self.objects["zcandidates"].idx
         ]
-        self.objects["best_zcandidates"] = best_zcand
+        self.objects[obj_name] = best_zcand
 
-    def select_zplusl_loose_leptons(self):
-        # select best Z candidates and loose leptons
+    def select_other_loose_leptons(self, obj_name):
+        """
+        selects additional loose leptons in the Z+L CR. Adds the mask 'pass_selection' to additional loose leptons that pass the analysis selection
+        """
+        # select best Z candidates
         best_zcands = self.objects["best_zcandidates"]
         # select loose leptons (whose idx are different to best Z candidate lepton's idx)
-        loose_leptons = self.objects["leptons"]
-        loose_leptons = loose_leptons[loose_leptons.is_loose]
+        loose_leptons = self.objects["leptons"][self.objects["leptons"].is_loose]
         loose_leptons_bestzl1_idx = loose_leptons.idx != best_zcands.l1.idx[:, None]
         loose_leptons_bestzl2_idx = loose_leptons.idx != best_zcands.l2.idx[:, None]
         loose_leptons_bestz_idx_mask = ak.flatten(
             loose_leptons_bestzl1_idx & loose_leptons_bestzl2_idx, axis=-1
         )
         loose_leptons = loose_leptons[loose_leptons_bestz_idx_mask]
-        self.objects["loose_leptons"] = loose_leptons
 
-        # check that loose lepton pass relaxed id
-        is_relaxed = loose_leptons.is_relaxed == ak.ones_like(
+        # add the 'pass_selection' attribute to 'loose_leptons'. It flags loose leptons passing the analysis selection
+        is_tight = loose_leptons.is_tight == ak.ones_like(
             best_zcands.l1.idx[:, None], dtype=bool
         )
-        is_relaxed = ak.flatten(is_relaxed, axis=-1)
+        is_tight = ak.flatten(is_tight, axis=-1)
         # ghost removal: ∆R(η, φ) > 0.02 between each of the leptons (to protect against split tracks)
         loose_leptons_bestzl1_dr = loose_leptons.metric_table(best_zcands.l1)
         loose_leptons_bestzl2_dr = loose_leptons.metric_table(best_zcands.l2)
@@ -316,203 +328,71 @@ class ObjectSelector:
         ) | (loose_leptons_bestzl2_opposite_charge & loose_leptons_bestzl2_mass_mask)
 
         # get full pass selection mask
-        pass_selection = is_relaxed & loose_leptons_bestz_dr_mask & qcd_suppression_mask
-        self.objects["loose_leptons"]["pass_selection"] = pass_selection
+        pass_selection = is_tight & loose_leptons_bestz_dr_mask & qcd_suppression_mask
+        loose_leptons["pass_selection"] = pass_selection
 
-    def select_zzto4l_zzcandidates(self):
-        zzcandidates = ak.combinations(
-            self.objects["zcandidates"], 2, fields=["z1", "z2"]
-        )
-        zzcandidates = ak.zip(
-            {
-                "z1": ak.zip(
-                    {
-                        "l1": zzcandidates.z1.l1,
-                        "l2": zzcandidates.z1.l2,
-                        "p4": zzcandidates.z1.l1.p4 + zzcandidates.z1.l2.p4,
-                    }
-                ),
-                "z2": ak.zip(
-                    {
-                        "l1": zzcandidates.z2.l1,
-                        "l2": zzcandidates.z2.l2,
-                        "p4": zzcandidates.z2.l1.p4 + zzcandidates.z2.l2.p4,
-                    }
-                ),
-            }
-        )
-        # sort ZZ candidates by they proximity to the Z mass
-        zmass = 91.1876
-        dist_from_z1_to_zmass = np.abs(zzcandidates.z1.p4.mass - zmass)
-        dist_from_z2_to_zmass = np.abs(zzcandidates.z2.p4.mass - zmass)
-        z1 = ak.where(
-            dist_from_z1_to_zmass > dist_from_z2_to_zmass,
-            zzcandidates.z2,
-            zzcandidates.z1,
-        )
-        z2 = ak.where(
-            dist_from_z1_to_zmass < dist_from_z2_to_zmass,
-            zzcandidates.z2,
-            zzcandidates.z1,
-        )
-        zzcandidates = ak.zip(
-            {
-                "z1": ak.zip(
-                    {
-                        "l1": z1.l1,
-                        "l2": z1.l2,
-                        "p4": z1.p4,
-                    }
-                ),
-                "z2": ak.zip(
-                    {
-                        "l1": z2.l1,
-                        "l2": z2.l2,
-                        "p4": z2.p4,
-                    }
-                ),
-            }
-        )
-        # chech that Z1 mass > 40 GeV
-        z1_mass_g40_mask = zzcandidates.z1.p4.mass > 40
-        # check that the Zs are mutually exclusive (not sharing the same lepton)
-        share_same_lepton_mask = (
-            (zzcandidates.z1.l1.idx == zzcandidates.z2.l1.idx)
-            | (zzcandidates.z1.l2.idx == zzcandidates.z2.l2.idx)
-            | (zzcandidates.z1.l2.idx == zzcandidates.z2.l1.idx)
-            | (zzcandidates.z1.l2.idx == zzcandidates.z2.l2.idx)
-        )
-        # ghost removal: ∆R(η, φ) > 0.02 between each of the four leptons (to protect against split tracks)
-        ghost_removal_mask = (
-            (zzcandidates.z1.l1.delta_r(zzcandidates.z1.l2) > 0.02)
-            & (zzcandidates.z1.l1.delta_r(zzcandidates.z2.l1) > 0.02)
-            & (zzcandidates.z1.l1.delta_r(zzcandidates.z2.l2) > 0.02)
-            & (zzcandidates.z1.l2.delta_r(zzcandidates.z2.l1) > 0.02)
-            & (zzcandidates.z1.l2.delta_r(zzcandidates.z2.l2) > 0.02)
-            & (zzcandidates.z2.l1.delta_r(zzcandidates.z2.l2) > 0.02)
-        )
-        # trigger acceptance: two of the four selected leptons should pass pT,i > 20 GeV and pT,j > 10 (FSR photons are used)
-        trigger_acceptance_mask = (
-            ((zzcandidates.z1.l1.p4.pt > 20) & (zzcandidates.z1.l2.p4.pt > 10))
-            | ((zzcandidates.z1.l1.p4.pt > 20) & (zzcandidates.z2.l1.p4.pt > 10))
-            | ((zzcandidates.z1.l1.p4.pt > 20) & (zzcandidates.z2.l2.p4.pt > 10))
-            | ((zzcandidates.z1.l2.p4.pt > 20) & (zzcandidates.z1.l1.p4.pt > 10))
-            | ((zzcandidates.z1.l2.p4.pt > 20) & (zzcandidates.z2.l1.p4.pt > 10))
-            | ((zzcandidates.z1.l2.p4.pt > 20) & (zzcandidates.z2.l2.p4.pt > 10))
-            | ((zzcandidates.z2.l1.p4.pt > 20) & (zzcandidates.z1.l1.p4.pt > 10))
-            | ((zzcandidates.z2.l1.p4.pt > 20) & (zzcandidates.z1.l2.p4.pt > 10))
-            | ((zzcandidates.z2.l1.p4.pt > 20) & (zzcandidates.z2.l2.p4.pt > 10))
-            | ((zzcandidates.z2.l2.p4.pt > 20) & (zzcandidates.z1.l1.p4.pt > 10))
-            | ((zzcandidates.z2.l2.p4.pt > 20) & (zzcandidates.z1.l2.p4.pt > 10))
-            | ((zzcandidates.z2.l2.p4.pt > 20) & (zzcandidates.z2.l1.p4.pt > 10))
-        )
-        # QCD suppression: all four opposite-sign pairs that can be built with the four leptons (regardless of lepton flavor) must satisfy m > 4 GeV
-        # FSR photons are not used since a QCD-induced low mass dilepton (eg. Jpsi) may have photons nearby (e.g. from π0).
-        qcd_suppression_mask = (
-            ((zzcandidates.z1.l1 + zzcandidates.z1.l2).mass > 4)
-            & ((zzcandidates.z2.l1 + zzcandidates.z2.l2).mass > 4)
-            & (
-                (zzcandidates.z1.l1.charge + zzcandidates.z2.l1.charge != 0)
-                | (
-                    (zzcandidates.z1.l1.charge + zzcandidates.z2.l1.charge == 0)
-                    & ((zzcandidates.z1.l1 + zzcandidates.z2.l1).mass > 4)
-                )
-            )
-            & (
-                (zzcandidates.z1.l1.charge + zzcandidates.z2.l2.charge != 0)
-                | (
-                    (zzcandidates.z1.l1.charge + zzcandidates.z2.l2.charge == 0)
-                    & ((zzcandidates.z1.l1 + zzcandidates.z2.l2).mass > 4)
-                )
-            )
-            & (
-                (zzcandidates.z1.l2.charge + zzcandidates.z2.l1.charge != 0)
-                | (
-                    (zzcandidates.z1.l2.charge + zzcandidates.z2.l1.charge == 0)
-                    & ((zzcandidates.z1.l2 + zzcandidates.z2.l1).mass > 4)
-                )
-            )
-            & (
-                (zzcandidates.z1.l2.charge + zzcandidates.z2.l2.charge != 0)
-                | (
-                    (zzcandidates.z1.l2.charge + zzcandidates.z2.l2.charge == 0)
-                    & ((zzcandidates.z1.l2 + zzcandidates.z2.l2).mass > 4)
-                )
-            )
-        )
-        # select good ZZ candidates
-        full_mask = (
-            z1_mass_g40_mask
-            & ~share_same_lepton_mask
-            & ghost_removal_mask
-            & trigger_acceptance_mask
-            & qcd_suppression_mask
-        )
-        zzcandidates = zzcandidates[ak.fill_none(full_mask, False)]
+        # add loose leptons to objects
+        self.objects[obj_name] = loose_leptons
 
-        # get alternative pairing for same-sign candidates (FSR photons are used)
-        # select same flavor pairs
-        sf_pairs = np.abs(zzcandidates.z1.l1.pdgId) == np.abs(zzcandidates.z2.l1.pdgId)
-        zzcandidates_sf = zzcandidates.mask[sf_pairs]
-        # get initial alternative pairs
-        ops = zzcandidates_sf.z1.l1.pdgId == -zzcandidates_sf.z2.l1.pdgId
-        za0 = ak.where(
-            ops,
-            zzcandidates_sf.z1.l1.p4 + zzcandidates_sf.z2.l1.p4,
-            zzcandidates_sf.z1.l1.p4 + zzcandidates_sf.z2.l2.p4,
-        )
-        zb0 = ak.where(
-            ops,
-            zzcandidates_sf.z1.l2.p4 + zzcandidates_sf.z2.l2.p4,
-            zzcandidates_sf.z1.l2.p4 + zzcandidates_sf.z2.l1.p4,
-        )
-        # get final alternative pairs selecting Za as the one closest to the Z mass
-        zmass = 91.1876
-        dist_from_za_to_zmass = np.abs(za0.mass - zmass)
-        dist_from_zb_to_zmass = np.abs(zb0.mass - zmass)
-        za = ak.where(
-            dist_from_zb_to_zmass > dist_from_za_to_zmass,
-            za0,
-            zb0,
-        )
-        zb = ak.where(
-            dist_from_zb_to_zmass < dist_from_za_to_zmass,
-            za0,
-            zb0,
-        )
-        smart_cut = ~(
-            (np.abs(za.mass - zmass) < np.abs(zzcandidates.z1.p4.mass - zmass))
-            & (zb.mass < 12)
-        )
-        smart_cut = ak.fill_none(smart_cut, True)
+    def select_zzcandidates(self, obj_name):
+        """selects ZZ candidates for SR and CRs"""
+        zzcand = ak.combinations(self.objects["zcandidates"], 2, fields=["z1", "z2"])
+        zzcand = fourlepcand(zzcand.z1, zzcand.z2)
+        zzcand = zzcand[zzcand.z1.is_sr & zzcand.z2.is_sr]
+        zzcand = make_cand(zzcand, sort_by_mass=True)
+        # add flavor, p4 and pT fields to ZZ candidates
+        zzcand["flavor"] = get_flavor(zzcand, mix=True)
+        zzcand["p4"] = zzcand.z1.p4 + zzcand.z2.p4
+        zzcand["pt"] = zzcand.p4.pt
+        # add ZZ candidate to objects
+        self.objects[obj_name] = zzcand
 
-        self.objects["zzcandidates"] = zzcandidates[smart_cut]
-        self.objects["zzcandidates"]["p4"] = (
-            self.objects["zzcandidates"].z1.p4 + self.objects["zzcandidates"].z2.p4
+    def select_zllcandidates(self, obj_name):
+        """selects Zll candidates for CRs"""
+        zllcand = ak.cartesian(
+            {"z1": self.objects["zcandidates"], "z2": self.objects["zcandidates"]}
         )
-        self.objects["zzcandidates"]["pt"] = self.objects["zzcandidates"].p4.pt
+        zllcand = fourlepcand(zllcand.z1, zllcand.z2)
+        zllcand = zllcand[
+            zllcand.z1.is_sr
+            & (zllcand.z2.is_1fcr | zllcand.z2.is_2fcr | zllcand.z2.is_sscr)
+        ]
+        zllcand = make_cand(zllcand, sort_by_mass=False)
+        # add flavor, p4 and pT fields to ZLL candidates
+        zllcand["flavor"] = get_flavor(zllcand, mix=False)
+        zllcand["p4"] = zllcand.z1.p4 + zllcand.z2.p4
+        zllcand["pt"] = zllcand.p4.pt
+        # add ZLL candidate to objects
+        self.objects[obj_name] = zllcand
 
-    def select_zzto4l_best_zzcandidate(self):
+    def select_best_zzcandidate(self, obj_name):
         """
-        selects best zz candidate as the one with Z1 closest in mass to nominal Z boson mass
+        selects best ZZ candidate as the one with Z1 closest in mass to nominal Z boson mass
         and Z2 from the candidates whose lepton give higher pT sum
         """
         # get mask of Z1's closest to Z
         zmass = 91.1876
-        z1_dist_to_z = np.abs(self.objects["zzcandidates"].z1.p4.mass - zmass)
+        cand = self.objects["zzcandidates"]
+        z1_dist_to_z = np.abs(cand.z1.p4.mass - zmass)
         min_z1_dist_to_z = ak.min(z1_dist_to_z, axis=1)
         closest_z1_mask = z1_dist_to_z == min_z1_dist_to_z
         # get mask of Z2's with higher pT sum
-        z2_pt_sum = (
-            self.objects["zzcandidates"].z2.l1.p4.pt
-            + self.objects["zzcandidates"].z2.l2.p4.pt
-        )
+        z2_pt_sum = cand.z2.l1.p4.pt + cand.z2.l2.p4.pt
         max_z2_pt_sum = ak.max(z2_pt_sum[closest_z1_mask], axis=1)
         best_candidate_mask = (z2_pt_sum == max_z2_pt_sum) & closest_z1_mask
-        # select best candidate from zzcandidates
-        self.objects["best_zzcandidate"] = self.objects["zzcandidates"][
-            best_candidate_mask
-        ]
+        self.objects[obj_name] = cand[best_candidate_mask]
+
+    def select_best_1fcr_zllcandidate(self, obj_name):
+        cand = self.objects["zllcandidates"]
+        self.objects[obj_name] = select_best_zllcandidate(cand, "is_1fcr")
+
+    def select_best_2fcr_zllcandidate(self, obj_name):
+        cand = self.objects["zllcandidates"]
+        self.objects[obj_name] = select_best_zllcandidate(cand, "is_2fcr")
+
+    def select_best_sscr_zllcandidate(self, obj_name):
+        cand = self.objects["zllcandidates"]
+        self.objects[obj_name] = select_best_zllcandidate(cand, "is_sscr")
 
     # --------------------------------------------------------------------------------
     # HWW

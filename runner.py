@@ -37,7 +37,9 @@ MC_DATASETS = {
         "GluGlutoContinto2Zto4Tau",
     ],
     "qqtozz": ["ZZto4L"],
-    "ew": ["ZZZ", "WZZ", "WWZ", "TTWW", "TTZZ", "TTZ", "WZto3LNu"],
+    "wz": ["WZto3LNu"],
+    "triboson": ["ZZZ", "WZZ", "WWZ"],
+    "tt_bosons": ["TTWW", "TTZZ", "TTZ"],
 }
 PD_DATASETS = {
     "Muon": {
@@ -92,18 +94,22 @@ PD_DATASETS = {
 DATASETS = {
     "ztoee": {"mc": ["dyjets", "ttbar", "singletop", "diboson"], "data": ["EGamma"]},
     "ztomumu": {"mc": ["dyjets", "ttbar", "singletop", "diboson"], "data": ["Muon"]},
-    "zzto4l": {
-        "mc": ["higgs", "ggtozz", "qqtozz", "ew"],
-        "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
-    },
     "hww": {
         "mc": ["ttbar", "singletop", "diboson"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
-    "zplusl": {
-        "mc": ["higgs", "ggtozz", "qqtozz", "ew", "dyjets_50", "semilep_ttbar"],
+    "zzto4l": {
+        "mc": ["higgs", "ggtozz", "qqtozz", "triboson", "wz", "tt_bosons"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
+    "zplusl": {
+        "mc": ["higgs", "triboson", "wz", "tt_bosons", "dyjets_50", "semilep_ttbar"],
+        "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
+    },
+    "zplusll": {
+        "mc": ["higgs", "triboson", "wz", "tt_bosons", "dyjets_50", "semilep_ttbar"],
+        "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
+    }
 }
 
 
@@ -132,7 +138,7 @@ if __name__ == "__main__":
         "--processor",
         dest="processor",
         type=str,
-        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl"],
+        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl", "zplusll"],
         help="processor to be used",
     )
     parser.add_argument(
