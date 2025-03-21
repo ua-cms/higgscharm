@@ -41,34 +41,21 @@ object_selection:
   leptons:
     field: select_zzto4l_leptons
   zcandidates:
-    field: select_zzto4l_zcandidates 
+    field: select_zcandidates 
     add_cut:
       is_ossf:
         - objects['zcandidates'].l1.pdgId == -objects['zcandidates'].l2.pdgId
-      is_ss:
-        - objects['zcandidates'].l1.pdgId == objects['zcandidates'].l2.pdgId
       is_sr:
         - objects['zcandidates'].is_ossf
         - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 2
-      is_sr:
-        - objects['zcandidates'].is_ossf
-        - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 1
-      is_2fcr:
-        - objects['zcandidates'].is_ossf
-        - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 0
-      is_sscr:
-        - objects['zcandidates'].is_ss
-        - objects['zcandidates'].l1.is_relaxed
-        - objects['zcandidates'].l2.is_relaxed
     cuts: 
-      - objects['zcandidates'].is_sr
       - (objects['zcandidates'].p4.mass > 12) & (objects['zcandidates'].p4.mass < 120)
   zzcandidates:
-    field: select_zzto4l_zzcandidates
+    field: select_zzcandidates
     cuts:
-      -  (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70
+      - (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70
   best_zzcandidate:
-    field: select_zzto4l_best_zzcandidate
+    field: select_best_zzcandidate
   jets:
     field: events.Jet
     cuts:
@@ -88,12 +75,12 @@ event_selection:
     trigger: get_zzto4l_trigger_mask(events, hlt_paths, dataset, year)
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
-    atleast_one_zz: ak.num(objects['zzcandidates']) > 0
+    atleast_one_zz: ak.num(objects['zzcandidates']) >= 1
   categories:
     base:
-      - atleast_one_goodvertex
-      - lumimask
       - trigger
+      - lumimask
+      - atleast_one_goodvertex
       - atleast_one_zz
 corrections:
   objects:
@@ -248,14 +235,11 @@ histogram_config:
     zz_flavor:
       type: IntCategory
       categories:
-        - 44
-        - 48
-        - 52
+        - 411
+        - 413
+        - 211213
       label: ZZflavor
-      expression: np.abs(objects['best_zzcandidate'].z1.l1.pdgId) +
-        np.abs(objects['best_zzcandidate'].z1.l2.pdgId) +
-        np.abs(objects['best_zzcandidate'].z2.l1.pdgId) +
-        np.abs(objects['best_zzcandidate'].z2.l2.pdgId)
+      expression: objects['best_zzcandidate'].flavor
     jet_pt:
       type: Regular
       bins: 50
