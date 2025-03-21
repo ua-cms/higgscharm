@@ -53,9 +53,9 @@ object_selection:
       - np.abs(objects['zcandidates'].p4.mass - 91.1876) < 7
       - ((objects['zcandidates'].l1.p4.pt > 10) & (objects['zcandidates'].l1.p4.pt > 20)) | ((objects['zcandidates'].l1.p4.pt > 20) & (objects['zcandidates'].l1.p4.pt > 10))
   best_zcandidates:
-    field: select_zplusl_best_zcandidate
+    field: select_best_zcandidate
   other_loose_leptons:
-    field: select_zplusl_other_loose_leptons
+    field: select_other_loose_leptons
     add_cut:
       is_barrel:
         - ak.where(np.abs(objects['other_loose_leptons'].pdgId) == 11, np.abs(objects['other_loose_leptons'].eta) < 1.479, np.abs(objects['other_loose_leptons'].eta) < 1.2)
