@@ -150,9 +150,9 @@ histogram_config:
       expression: objects['zllcandidates'].z2.p4.pt
     zll_mass:
       type: Regular
-      bins: 66
-      start: 70
-      stop: 400
+      bins: 35
+      start: 60
+      stop: 700
       label: $m(Z\ell\ell)$ [GeV]
       expression: objects['zllcandidates'].p4.mass
     zll_pt:
@@ -206,9 +206,9 @@ histogram_config:
       expression: objects['best_zllcandidate_1fcr'].z2.p4.pt
     zll_mass_1fcr:
       type: Regular
-      bins: 66
-      start: 70
-      stop: 400
+      bins: 35
+      start: 60
+      stop: 700
       label: $m(Z\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_1fcr'].p4.mass
     zll_pt_1fcr:
@@ -262,9 +262,9 @@ histogram_config:
       expression: objects['best_zllcandidate_2fcr'].z2.p4.pt
     zll_mass_2fcr:
       type: Regular
-      bins: 66
-      start: 70
-      stop: 400
+      bins: 35
+      start: 60
+      stop: 700
       label: $m(Z\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_2fcr'].p4.mass
     zll_pt_2fcr:
@@ -318,9 +318,9 @@ histogram_config:
       expression: objects['best_zllcandidate_sscr'].z2.p4.pt
     zll_mass_sscr:
       type: Regular
-      bins: 66
-      start: 70
-      stop: 400
+      bins: 35
+      start: 60
+      stop: 700
       label: $m(Z\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_sscr'].p4.mass
     zll_pt_sscr:

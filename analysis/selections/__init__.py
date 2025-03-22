@@ -7,7 +7,7 @@ from analysis.selections.utils import (
     assign_lepton_fsr_idx,
     fourlepcand,
     make_cand,
-    select_best_zllcandidate,
+    select_best_zzcandidate,
 )
 from analysis.selections.object_selections import ObjectSelector
 import analysis.selections.event_selections as event_selections

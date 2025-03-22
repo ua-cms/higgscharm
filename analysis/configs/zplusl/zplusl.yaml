@@ -41,7 +41,7 @@ object_selection:
   leptons:
     field: select_zzto4l_leptons
   zcandidates:
-    field: select_zzto4l_zcandidates 
+    field: select_zcandidates 
     add_cut:
       is_ossf:
         - objects['zcandidates'].l1.pdgId == -objects['zcandidates'].l2.pdgId

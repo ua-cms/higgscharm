@@ -78,7 +78,6 @@ def build_zcand(z):
         "idx": z.idx,
         "is_ossf": z.is_ossf,
         "is_sr": z.is_sr,
-        "flavor": z.flavor,
     }
     if hasattr(z, "is_ss"):
         z_fields.update({"is_ss": z.is_ss})
@@ -101,12 +100,26 @@ def fourlepcand(z1, z2):
     )
 
 
-def make_cand(zcand, sort_by_mass=True):
+def make_cand(zcand, kind, sort_by_mass=True):
     """build ZZ or ZLL candidates in a Higgs phase space"""
-    if sort_by_mass:
+    if kind == "zz":
         cand = ak.combinations(zcand, 2, fields=["z1", "z2"])
         cand = fourlepcand(cand.z1, cand.z2)
-        # sort ZZ candidates by they proximity to the Z mass
+    elif kind == "zll":
+        cand = ak.cartesian({"z1": zcand, "z2": zcand})
+        cand = fourlepcand(cand.z1, cand.z2)
+
+    # check that the Zs are mutually exclusive (not sharing the same lepton)
+    share_same_lepton_mask = (
+        (cand.z1.l1.idx == cand.z2.l1.idx)
+        | (cand.z1.l2.idx == cand.z2.l2.idx)
+        | (cand.z1.l2.idx == cand.z2.l1.idx)
+        | (cand.z1.l2.idx == cand.z2.l2.idx)
+    )
+    cand = cand[~share_same_lepton_mask]
+
+    if sort_by_mass:
+        # sort ZZ(ZLL) candidates by they proximity to the Z mass
         zmass = 91.1876
         dist_from_z1_to_zmass = np.abs(cand.z1.p4.mass - zmass)
         dist_from_z2_to_zmass = np.abs(cand.z2.p4.mass - zmass)
@@ -121,21 +134,10 @@ def make_cand(zcand, sort_by_mass=True):
             cand.z1,
         )
         cand = fourlepcand(z1, z2)
-    else:
-        cand = ak.cartesian(
-            {"z1": zcand, "z2": zcand}
-        )
-        cand = fourlepcand(cand.z1, cand.z2)
-    
+
     # chech that Z1 mass > 40 GeV
     z1_mass_g40_mask = cand.z1.p4.mass > 40
-    # check that the Zs are mutually exclusive (not sharing the same lepton)
-    share_same_lepton_mask = (
-        (cand.z1.l1.idx == cand.z2.l1.idx)
-        | (cand.z1.l2.idx == cand.z2.l2.idx)
-        | (cand.z1.l2.idx == cand.z2.l1.idx)
-        | (cand.z1.l2.idx == cand.z2.l2.idx)
-    )
+
     # ghost removal: ∆R(η, φ) > 0.02 between each of the four leptons (to protect against split tracks)
     ghost_removal_mask = (
         (cand.z1.l1.delta_r(cand.z1.l2) > 0.02)
@@ -197,7 +199,6 @@ def make_cand(zcand, sort_by_mass=True):
     # select good ZZ candidates
     full_mask = (
         z1_mass_g40_mask
-        & ~share_same_lepton_mask
         & ghost_removal_mask
         & trigger_acceptance_mask
         & qcd_suppression_mask
@@ -235,34 +236,39 @@ def make_cand(zcand, sort_by_mass=True):
         zb0,
     )
     smart_cut = ~(
-        (np.abs(za.mass - zmass) < np.abs(cand.z1.p4.mass - zmass))
-        & (zb.mass < 12)
+        (np.abs(za.mass - zmass) < np.abs(cand.z1.p4.mass - zmass)) & (zb.mass < 12)
     )
     smart_cut = ak.fill_none(smart_cut, True)
     cand = cand[smart_cut]
+
+    # add p4 and pT fields to ZLL candidates
+    cand["p4"] = cand.z1.p4 + cand.z2.p4
+    cand["pt"] = cand.p4.pt
     return cand
 
 
-def select_best_zllcandidate(cand, cr):
+def select_best_zzcandidate(cand, cr=False):
     """
-    selects best ZLL candidate as the one with Z1 closest in mass to nominal Z boson mass
+    selects best ZZ or ZLL candidate as the one with Z1 closest in mass to nominal Z boson mass
     and Z2 from the candidates whose lepton give higher pT sum
 
-    cand: Zll candidate
-    cr: Control Region
+    cand: ZZ or Zll candidate
+    cr: Control Region. 'False' for ZZ and 'is_1fcr', 'is_2fcr' or 'is_sscr' for Zll
     """
-    # select candidates of some CR
-    cand = cand[cand.z2[cr]]
+    if cr:
+        selected_cand = cand[cand.z2[cr]]
+    else:
+        selected_cand = cand
     # get mask of Z1's closest to Z
     zmass = 91.1876
-    z1_dist_to_z = np.abs(cand.z1.p4.mass - zmass)
+    z1_dist_to_z = np.abs(selected_cand.z1.p4.mass - zmass)
     min_z1_dist_to_z = ak.min(z1_dist_to_z, axis=1)
     closest_z1_mask = z1_dist_to_z == min_z1_dist_to_z
     # get mask of Z2's with higher pT sum
-    z2_pt_sum = cand.z2.l1.p4.pt + cand.z2.l2.p4.pt
+    z2_pt_sum = selected_cand.z2.l1.p4.pt + selected_cand.z2.l2.p4.pt
     max_z2_pt_sum = ak.max(z2_pt_sum[closest_z1_mask], axis=1)
     best_candidate_mask = (z2_pt_sum == max_z2_pt_sum) & closest_z1_mask
-    return cand[best_candidate_mask]
+    return selected_cand[best_candidate_mask]
 
 
 @numba.njit

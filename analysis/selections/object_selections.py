@@ -12,7 +12,7 @@ from analysis.selections import (
     assign_lepton_fsr_idx,
     fourlepcand,
     make_cand,
-    select_best_zllcandidate,
+    select_best_zzcandidate,
 )
 
 
@@ -241,10 +241,7 @@ class ObjectSelector:
         zcand = ak.combinations(self.objects["leptons"], 2, fields=["l1", "l2"])
         # check that Z candidates leptons pass the loose id
         zcand = zcand[zcand.l1.is_loose & zcand.l2.is_loose]
-        # add Z candidate flavor, p4, pT and idx fields
-        flav_2e = (np.abs(zcand.l1.pdgId) == 11) & (np.abs(zcand.l2.pdgId) == 11)
-        flav_2mu = (np.abs(zcand.l1.pdgId) == 13) & (np.abs(zcand.l2.pdgId) == 13)
-        zcand["flavor"] = ak.where(flav_2e, 211, ak.where(flav_2mu, 213, -1))
+        # add Z candidate, p4, pT and idx fields
         zcand["p4"] = zcand.l1.p4 + zcand.l2.p4
         zcand["pt"] = zcand.p4.pt
         zcand["idx"] = ak.local_index(zcand, axis=1)
@@ -332,56 +329,40 @@ class ObjectSelector:
 
         # add loose leptons to objects
         self.objects[obj_name] = loose_leptons
-        
 
     def select_zzcandidates(self, obj_name):
         """selects ZZ candidates for SR and CRs"""
-        zzcand = make_cand(self.objects["zcandidates"], sort_by_mass=True)
-        # add p4 and pT fields to ZLL candidates
-        zzcand["p4"] = zzcand.z1.p4 + zzcand.z2.p4
-        zzcand["pt"] = zzcand.p4.pt
-        # add ZZ candidate to objects
-        self.objects[obj_name] = zzcand
+        self.objects[obj_name] = make_cand(
+            self.objects["zcandidates"], kind="zz", sort_by_mass=True
+        )
 
-        
     def select_zllcandidates(self, obj_name):
         """selects Zll candidates for CRs"""
-        zllcand = make_cand(self.objects["zcandidates"], sort_by_mass=False)
-        # add p4 and pT fields to ZLL candidates
-        zllcand["p4"] = zllcand.z1.p4 + zllcand.z2.p4
-        zllcand["pt"] = zllcand.p4.pt
-        # add ZLL candidate to objects
-        self.objects[obj_name] = zllcand
+        self.objects[obj_name] = make_cand(
+            self.objects["zcandidates"], kind="zll", sort_by_mass=False
+        )
 
-        
     def select_best_zzcandidate(self, obj_name):
-        """
-        selects best ZZ candidate as the one with Z1 closest in mass to nominal Z boson mass
-        and Z2 from the candidates whose lepton give higher pT sum
-        """
-        # get mask of Z1's closest to Z
-        zmass = 91.1876
-        cand = self.objects["zzcandidates"]
-        z1_dist_to_z = np.abs(cand.z1.p4.mass - zmass)
-        min_z1_dist_to_z = ak.min(z1_dist_to_z, axis=1)
-        closest_z1_mask = z1_dist_to_z == min_z1_dist_to_z
-        # get mask of Z2's with higher pT sum
-        z2_pt_sum = cand.z2.l1.p4.pt + cand.z2.l2.p4.pt
-        max_z2_pt_sum = ak.max(z2_pt_sum[closest_z1_mask], axis=1)
-        best_candidate_mask = (z2_pt_sum == max_z2_pt_sum) & closest_z1_mask
-        self.objects[obj_name] = cand[best_candidate_mask]
+        """selects best ZZ candidates for SR"""
+        self.objects[obj_name] = select_best_zzcandidate(self.objects["zzcandidates"])
 
     def select_best_1fcr_zllcandidate(self, obj_name):
-        cand = self.objects["zllcandidates"]
-        self.objects[obj_name] = select_best_zllcandidate(cand, "is_1fcr")
+        """selects best Zll candidates for 3P1F CR"""
+        self.objects[obj_name] = select_best_zzcandidate(
+            self.objects["zllcandidates"], "is_1fcr"
+        )
 
     def select_best_2fcr_zllcandidate(self, obj_name):
-        cand = self.objects["zllcandidates"]
-        self.objects[obj_name] = select_best_zllcandidate(cand, "is_2fcr")
+        """selects best Zll candidates for 2P2F CR"""
+        self.objects[obj_name] = select_best_zzcandidate(
+            self.objects["zllcandidates"], "is_2fcr"
+        )
 
     def select_best_sscr_zllcandidate(self, obj_name):
-        cand = self.objects["zllcandidates"]
-        self.objects[obj_name] = select_best_zllcandidate(cand, "is_sscr")
+        """selects best Zll candidates for SS CR"""
+        self.objects[obj_name] = select_best_zzcandidate(
+            self.objects["zllcandidates"], "is_sscr"
+        )
 
     # --------------------------------------------------------------------------------
     # HWW
