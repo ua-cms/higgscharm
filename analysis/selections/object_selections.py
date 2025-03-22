@@ -13,7 +13,6 @@ from analysis.selections import (
     fourlepcand,
     make_cand,
     select_best_zllcandidate,
-    get_flavor,
 )
 
 
@@ -333,38 +332,28 @@ class ObjectSelector:
 
         # add loose leptons to objects
         self.objects[obj_name] = loose_leptons
+        
 
     def select_zzcandidates(self, obj_name):
         """selects ZZ candidates for SR and CRs"""
-        zzcand = ak.combinations(self.objects["zcandidates"], 2, fields=["z1", "z2"])
-        zzcand = fourlepcand(zzcand.z1, zzcand.z2)
-        zzcand = zzcand[zzcand.z1.is_sr & zzcand.z2.is_sr]
-        zzcand = make_cand(zzcand, sort_by_mass=True)
-        # add flavor, p4 and pT fields to ZZ candidates
-        zzcand["flavor"] = get_flavor(zzcand, mix=True)
+        zzcand = make_cand(self.objects["zcandidates"], sort_by_mass=True)
+        # add p4 and pT fields to ZLL candidates
         zzcand["p4"] = zzcand.z1.p4 + zzcand.z2.p4
         zzcand["pt"] = zzcand.p4.pt
         # add ZZ candidate to objects
         self.objects[obj_name] = zzcand
 
+        
     def select_zllcandidates(self, obj_name):
         """selects Zll candidates for CRs"""
-        zllcand = ak.cartesian(
-            {"z1": self.objects["zcandidates"], "z2": self.objects["zcandidates"]}
-        )
-        zllcand = fourlepcand(zllcand.z1, zllcand.z2)
-        zllcand = zllcand[
-            zllcand.z1.is_sr
-            & (zllcand.z2.is_1fcr | zllcand.z2.is_2fcr | zllcand.z2.is_sscr)
-        ]
-        zllcand = make_cand(zllcand, sort_by_mass=False)
-        # add flavor, p4 and pT fields to ZLL candidates
-        zllcand["flavor"] = get_flavor(zllcand, mix=False)
+        zllcand = make_cand(self.objects["zcandidates"], sort_by_mass=False)
+        # add p4 and pT fields to ZLL candidates
         zllcand["p4"] = zllcand.z1.p4 + zllcand.z2.p4
         zllcand["pt"] = zllcand.p4.pt
         # add ZLL candidate to objects
         self.objects[obj_name] = zllcand
 
+        
     def select_best_zzcandidate(self, obj_name):
         """
         selects best ZZ candidate as the one with Z1 closest in mass to nominal Z boson mass

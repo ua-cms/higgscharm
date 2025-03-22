@@ -70,40 +70,6 @@ def assign_lepton_fsr_idx(fsr_photons, leptons):
     return ak.with_field(leptons, idx_updated, "fsr_idx")
 
 
-def get_flavor(cand, mix=True):
-    """
-    returns 'flavor' field for ZZ or ZLL candidates
-
-    cand: ZZ or ZLL candidate
-    mix: if True, 2e2mu and 2mu2e will be mixed into one single category 2e2mu
-    """
-    flav_4e = (cand.z1.flavor == 211) & (cand.z2.flavor == 211)
-    flav_4mu = (cand.z1.flavor == 213) & (cand.z2.flavor == 213)
-    flav_2e2mu = (cand.z1.flavor == 211) & (cand.z2.flavor == 213)
-    flav_2mu2e = (cand.z1.flavor == 213) & (cand.z2.flavor == 211)
-    if mix:
-        flav = ak.where(
-            flav_4e,
-            411,
-            ak.where(
-                flav_4mu,
-                413,
-                ak.where(flav_2e2mu, 211213, ak.where(flav_2mu2e, 211213, -1)),
-            ),
-        )
-    else:
-        flav = ak.where(
-            flav_4e,
-            411,
-            ak.where(
-                flav_4mu,
-                413,
-                ak.where(flav_2e2mu, 211213, ak.where(flav_2mu2e, 213211, -1)),
-            ),
-        )
-    return flav
-
-
 def build_zcand(z):
     z_fields = {
         "l1": z.l1,
@@ -135,17 +101,12 @@ def fourlepcand(z1, z2):
     )
 
 
-def make_cand(cand, sort_by_mass=True):
+def make_cand(zcand, sort_by_mass=True):
     """build ZZ or ZLL candidates in a Higgs phase space"""
-    # check that the Z candidates are mutually exclusive (not sharing the same lepton)
-    mutually_exclusive_idx = ~(
-        (cand.z1.l1.idx == cand.z2.l1.idx)
-        | (cand.z1.l2.idx == cand.z2.l2.idx)
-        | (cand.z1.l2.idx == cand.z2.l1.idx)
-        | (cand.z1.l2.idx == cand.z2.l2.idx)
-    )
     if sort_by_mass:
-        # sort ZZ candidates by they proximity to the nominal Z mass
+        cand = ak.combinations(zcand, 2, fields=["z1", "z2"])
+        cand = fourlepcand(cand.z1, cand.z2)
+        # sort ZZ candidates by they proximity to the Z mass
         zmass = 91.1876
         dist_from_z1_to_zmass = np.abs(cand.z1.p4.mass - zmass)
         dist_from_z2_to_zmass = np.abs(cand.z2.p4.mass - zmass)
@@ -160,13 +121,48 @@ def make_cand(cand, sort_by_mass=True):
             cand.z1,
         )
         cand = fourlepcand(z1, z2)
-
-    # require Z1 mass to be > 40 GeV
-    z1cand_mass_g40 = cand.z1.p4.mass > 40
-
+    else:
+        cand = ak.cartesian(
+            {"z1": zcand, "z2": zcand}
+        )
+        cand = fourlepcand(cand.z1, cand.z2)
+    
+    # chech that Z1 mass > 40 GeV
+    z1_mass_g40_mask = cand.z1.p4.mass > 40
+    # check that the Zs are mutually exclusive (not sharing the same lepton)
+    share_same_lepton_mask = (
+        (cand.z1.l1.idx == cand.z2.l1.idx)
+        | (cand.z1.l2.idx == cand.z2.l2.idx)
+        | (cand.z1.l2.idx == cand.z2.l1.idx)
+        | (cand.z1.l2.idx == cand.z2.l2.idx)
+    )
+    # ghost removal: ∆R(η, φ) > 0.02 between each of the four leptons (to protect against split tracks)
+    ghost_removal_mask = (
+        (cand.z1.l1.delta_r(cand.z1.l2) > 0.02)
+        & (cand.z1.l1.delta_r(cand.z2.l1) > 0.02)
+        & (cand.z1.l1.delta_r(cand.z2.l2) > 0.02)
+        & (cand.z1.l2.delta_r(cand.z2.l1) > 0.02)
+        & (cand.z1.l2.delta_r(cand.z2.l2) > 0.02)
+        & (cand.z2.l1.delta_r(cand.z2.l2) > 0.02)
+    )
+    # trigger acceptance: two of the four selected leptons should pass pT,i > 20 GeV and pT,j > 10 (FSR photons are used)
+    trigger_acceptance_mask = (
+        ((cand.z1.l1.p4.pt > 20) & (cand.z1.l2.p4.pt > 10))
+        | ((cand.z1.l1.p4.pt > 20) & (cand.z2.l1.p4.pt > 10))
+        | ((cand.z1.l1.p4.pt > 20) & (cand.z2.l2.p4.pt > 10))
+        | ((cand.z1.l2.p4.pt > 20) & (cand.z1.l1.p4.pt > 10))
+        | ((cand.z1.l2.p4.pt > 20) & (cand.z2.l1.p4.pt > 10))
+        | ((cand.z1.l2.p4.pt > 20) & (cand.z2.l2.p4.pt > 10))
+        | ((cand.z2.l1.p4.pt > 20) & (cand.z1.l1.p4.pt > 10))
+        | ((cand.z2.l1.p4.pt > 20) & (cand.z1.l2.p4.pt > 10))
+        | ((cand.z2.l1.p4.pt > 20) & (cand.z2.l2.p4.pt > 10))
+        | ((cand.z2.l2.p4.pt > 20) & (cand.z1.l1.p4.pt > 10))
+        | ((cand.z2.l2.p4.pt > 20) & (cand.z1.l2.p4.pt > 10))
+        | ((cand.z2.l2.p4.pt > 20) & (cand.z2.l1.p4.pt > 10))
+    )
     # QCD suppression: all four opposite-sign pairs that can be built with the four leptons (regardless of lepton flavor) must satisfy m > 4 GeV
     # FSR photons are not used since a QCD-induced low mass dilepton (eg. Jpsi) may have photons nearby (e.g. from π0).
-    qcd_suppression = (
+    qcd_suppression_mask = (
         ((cand.z1.l1 + cand.z1.l2).mass > 4)
         & ((cand.z2.l1 + cand.z2.l2).mass > 4)
         & (
@@ -198,34 +194,21 @@ def make_cand(cand, sort_by_mass=True):
             )
         )
     )
-    # ghost removal: ∆R(η, φ) > 0.02 between each of the four leptons (to protect against split tracks)
-    ghost_removal = (
-        (cand.z1.l1.delta_r(cand.z1.l2) > 0.02)
-        & (cand.z1.l1.delta_r(cand.z2.l1) > 0.02)
-        & (cand.z1.l1.delta_r(cand.z2.l2) > 0.02)
-        & (cand.z1.l2.delta_r(cand.z2.l1) > 0.02)
-        & (cand.z1.l2.delta_r(cand.z2.l2) > 0.02)
-        & (cand.z2.l1.delta_r(cand.z2.l2) > 0.02)
+    # select good ZZ candidates
+    full_mask = (
+        z1_mass_g40_mask
+        & ~share_same_lepton_mask
+        & ghost_removal_mask
+        & trigger_acceptance_mask
+        & qcd_suppression_mask
     )
-    # trigger acceptance: two of the four selected leptons should pass pT,i > 20 GeV and pT,j > 10 (FSR photons are used)
-    trigger_acceptance = (
-        ((cand.z1.l1.p4.pt > 20) & (cand.z1.l2.p4.pt > 10))
-        | ((cand.z1.l1.p4.pt > 20) & (cand.z2.l1.p4.pt > 10))
-        | ((cand.z1.l1.p4.pt > 20) & (cand.z2.l2.p4.pt > 10))
-        | ((cand.z1.l2.p4.pt > 20) & (cand.z1.l1.p4.pt > 10))
-        | ((cand.z1.l2.p4.pt > 20) & (cand.z2.l1.p4.pt > 10))
-        | ((cand.z1.l2.p4.pt > 20) & (cand.z2.l2.p4.pt > 10))
-        | ((cand.z2.l1.p4.pt > 20) & (cand.z1.l1.p4.pt > 10))
-        | ((cand.z2.l1.p4.pt > 20) & (cand.z1.l2.p4.pt > 10))
-        | ((cand.z2.l1.p4.pt > 20) & (cand.z2.l2.p4.pt > 10))
-        | ((cand.z2.l2.p4.pt > 20) & (cand.z1.l1.p4.pt > 10))
-        | ((cand.z2.l2.p4.pt > 20) & (cand.z1.l2.p4.pt > 10))
-        | ((cand.z2.l2.p4.pt > 20) & (cand.z2.l1.p4.pt > 10))
-    )
-    # 'smart cut': get alternative pairing for same-sign candidates (FSR photons are used)
+    cand = cand[ak.fill_none(full_mask, False)]
+
+    # get alternative pairing for same-sign candidates (FSR photons are used)
+    # select same flavor pairs
     sf_pairs = np.abs(cand.z1.l1.pdgId) == np.abs(cand.z2.l1.pdgId)
-    cand_sf = cand.mask[sf_pairs]  # same flavor pairs
-    # set some initial alternative pairs
+    cand_sf = cand.mask[sf_pairs]
+    # get initial alternative pairs
     ops = cand_sf.z1.l1.pdgId == -cand_sf.z2.l1.pdgId
     za0 = ak.where(
         ops,
@@ -237,7 +220,7 @@ def make_cand(cand, sort_by_mass=True):
         cand_sf.z1.l2.p4 + cand_sf.z2.l2.p4,
         cand_sf.z1.l2.p4 + cand_sf.z2.l1.p4,
     )
-    # set final alternative pairs selecting Za as the one closest to the nominal Z mass
+    # get final alternative pairs selecting Za as the one closest to the Z mass
     zmass = 91.1876
     dist_from_za_to_zmass = np.abs(za0.mass - zmass)
     dist_from_zb_to_zmass = np.abs(zb0.mass - zmass)
@@ -252,18 +235,11 @@ def make_cand(cand, sort_by_mass=True):
         zb0,
     )
     smart_cut = ~(
-        (np.abs(za.mass - zmass) < np.abs(cand.z1.p4.mass - zmass)) & (zb.mass < 12)
+        (np.abs(za.mass - zmass) < np.abs(cand.z1.p4.mass - zmass))
+        & (zb.mass < 12)
     )
-    # select good ZZ candidates
-    good_cand = (
-        mutually_exclusive_idx
-        & z1cand_mass_g40
-        & qcd_suppression
-        & ghost_removal
-        & trigger_acceptance
-        & smart_cut
-    )
-    cand = cand[ak.fill_none(good_cand, False)]
+    smart_cut = ak.fill_none(smart_cut, True)
+    cand = cand[smart_cut]
     return cand
 
 

@@ -8,7 +8,6 @@ from analysis.selections.utils import (
     fourlepcand,
     make_cand,
     select_best_zllcandidate,
-    get_flavor
 )
 from analysis.selections.object_selections import ObjectSelector
 import analysis.selections.event_selections as event_selections

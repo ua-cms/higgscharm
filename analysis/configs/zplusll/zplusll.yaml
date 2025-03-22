@@ -69,11 +69,13 @@ object_selection:
   zzcandidates:
     field: select_zzcandidates
     cuts:
-      - (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70
+      - objects['zzcandidates'].z1.is_sr & objects['zzcandidates'].z2.is_sr
+      - (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70    
   zllcandidates:
     field: select_zllcandidates
     cuts:
-      -  (objects['zllcandidates'].z1.p4 + objects['zllcandidates'].z2.p4).mass > 70
+      - objects['zllcandidates'].z1.is_sr & (objects['zllcandidates'].z2.is_1fcr | objects['zllcandidates'].z2.is_2fcr | objects['zllcandidates'].z2.is_sscr)
+      - (objects['zllcandidates'].z1.p4 + objects['zllcandidates'].z2.p4).mass > 70
   best_zllcandidate_1fcr:
     field: select_best_1fcr_zllcandidate
   best_zllcandidate_2fcr:
@@ -108,10 +110,10 @@ corrections:
   event_weights:
     genWeight: true
     pileupWeight: true
-    partonshowerWeight: true
-    lhepdfWeight: true
-    lhescaleWeight: true
-    nnlopsWeight: true
+    partonshowerWeight: false
+    lhepdfWeight: false
+    lhescaleWeight: false
+    nnlopsWeight: false
     electron:
       - id: false
       - reco: true
@@ -160,15 +162,20 @@ histogram_config:
       stop: 400
       label: $p_T(Z\ell\ell)$ [GeV]
       expression: objects['zllcandidates'].p4.pt
-    zll_flavor:
+    z_flavor:
       type: IntCategory
       categories:
-        - 411
-        - 413
-        - 211213
-        - 213211
-      label: ZZflavor
-      expression: objects['zllcandidates'].flavor
+        - 22
+        - 26
+      label: Zflavor
+      expression: np.abs(objects['zllcandidates'].z1.l1.pdgId) + np.abs(objects['zllcandidates'].z1.l2.pdgId)
+    ll_flavor:
+      type: IntCategory
+      categories:
+        - 22
+        - 26
+      label: LLflavor
+      expression: np.abs(objects['zllcandidates'].z2.l1.pdgId) + np.abs(objects['zllcandidates'].z2.l2.pdgId)
     z_mass_1fcr:
       type: Regular
       bins: 54
@@ -211,15 +218,20 @@ histogram_config:
       stop: 400
       label: $p_T(Z\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_1fcr'].p4.pt
-    zll_flavor_1fcr:
+    z_flavor_1fcr:
       type: IntCategory
       categories:
-        - 411
-        - 413
-        - 211213
-        - 213211
-      label: ZZflavor
-      expression: objects['best_zllcandidate_1fcr'].flavor
+        - 22
+        - 26
+      label: Zflavor
+      expression: np.abs(objects['best_zllcandidate_1fcr'].z1.l1.pdgId) + np.abs(objects['best_zllcandidate_1fcr'].z1.l2.pdgId)
+    ll_flavor_1fcr:
+      type: IntCategory
+      categories:
+        - 22
+        - 26
+      label: LLflavor
+      expression: np.abs(objects['best_zllcandidate_1fcr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_1fcr'].z2.l2.pdgId)
     z_mass_2fcr:
       type: Regular
       bins: 54
@@ -262,15 +274,20 @@ histogram_config:
       stop: 400
       label: $p_T(Z\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_2fcr'].p4.pt
-    zll_flavor_2fcr:
+    z_flavor_2fcr:
       type: IntCategory
       categories:
-        - 411
-        - 413
-        - 211213
-        - 213211
-      label: ZZflavor
-      expression: objects['best_zllcandidate_2fcr'].flavor    
+        - 22
+        - 26
+      label: Zflavor
+      expression: np.abs(objects['best_zllcandidate_2fcr'].z1.l1.pdgId) + np.abs(objects['best_zllcandidate_2fcr'].z1.l2.pdgId)
+    ll_flavor_2fcr:
+      type: IntCategory
+      categories:
+        - 22
+        - 26
+      label: LLflavor
+      expression: np.abs(objects['best_zllcandidate_2fcr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_2fcr'].z2.l2.pdgId)
     z_mass_sscr:
       type: Regular
       bins: 54
@@ -313,31 +330,40 @@ histogram_config:
       stop: 400
       label: $p_T(Z\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_sscr'].p4.pt
-    zll_flavor_sscr:
+    z_flavor_sscr:
       type: IntCategory
       categories:
-        - 411
-        - 413
-        - 211213
-        - 213211
-      label: ZZflavor
-      expression: objects['best_zllcandidate_sscr'].flavor    
+        - 22
+        - 26
+      label: Zflavor
+      expression: np.abs(objects['best_zllcandidate_sscr'].z1.l1.pdgId) + np.abs(objects['best_zllcandidate_sscr'].z1.l2.pdgId)
+    ll_flavor_sscr:
+      type: IntCategory
+      categories:
+        - 22
+        - 26
+      label: LLflavor
+      expression: np.abs(objects['best_zllcandidate_sscr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_sscr'].z2.l2.pdgId)
   layout:
     zll:
       - zll_mass
       - zll_pt
-      - zll_flavor
+      - z_flavor
+      - ll_flavor
     zll_1fcr:
       - zll_mass_1fcr
       - zll_pt_1fcr
-      - zll_flavor_1fcr
+      - z_flavor_1fcr
+      - ll_flavor_1fcr
     zll_2fcr:
       - zll_mass_2fcr
       - zll_pt_2fcr
-      - zll_flavor_2fcr
+      - z_flavor_2fcr
+      - ll_flavor_2fcr
     zll_sscr:
       - zll_mass_sscr
       - zll_pt_sscr
-      - zll_flavor_sscr
+      - z_flavor_sscr
+      - ll_flavor_sscr
   add_syst_axis: true
   add_weight: true
