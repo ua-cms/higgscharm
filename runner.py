@@ -99,15 +99,15 @@ DATASETS = {
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
     "zzto4l": {
-        "mc": ["higgs", "ggtozz", "qqtozz", "triboson", "wz", "tt_bosons"],
+        "mc": ["higgs", "ggtozz", "qqtozz"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
     "zplusl": {
-        "mc": ["higgs", "triboson", "wz", "tt_bosons", "dyjets_50", "semilep_ttbar"],
+        "mc": ["triboson", "wz", "tt_bosons", "dyjets", "semilep_ttbar"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
     "zplusll": {
-        "mc": ["higgs", "triboson", "wz", "tt_bosons", "dyjets_50", "semilep_ttbar"],
+        "mc": ["triboson", "wz", "tt_bosons", "dyjets", "semilep_ttbar"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     }
 }
