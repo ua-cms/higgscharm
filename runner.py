@@ -16,9 +16,9 @@ MC_DATASETS = {
         "TBbarQ",
     ],
     "diboson": ["WW", "WZ", "ZZ"],
-    "dyjets_50": ["DYto2L_2Jets_50"]
+    "dyjets_50": ["DYto2L_2Jets_50"],
     "dyjets_10to50": ["DYto2L_2Jets_10to50"],
-    "dyjets": ["DYto2L_2Jets_50", "DYto2L_2Jets_10to50"]
+    "dyjets": ["DYto2L_2Jets_50", "DYto2L_2Jets_10to50"],
     "higgs": [
         "bbH_Hto2Zto4L",
         "GluGluHtoZZto4L",
