@@ -49,6 +49,7 @@ def transverse_mass(lepton, met):
 
 def get_closest_lepton(fsr, lepton, axis=1):
     mval, (a, b) = fsr.metric_table(lepton, axis, return_combinations=True)
+    mval = ak.where(b.is_relaxed, mval, np.inf)
     mmin = ak.argmin(mval, axis=axis + 1, keepdims=True)
     out = ak.firsts(b[mmin], axis=axis + 1)
     dR = ak.firsts(mval[mmin], axis=axis + 1)
