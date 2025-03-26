@@ -23,39 +23,49 @@ class WorkingPoints:
             "tight": events.Electron.cutBased == 4,
             # WP was derived before scale corrections, so the uncorrected pt should be used when available
             "bdt": (
-                (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) < 0.8)
-                & (events.Electron.pt_raw > 5)
-                & (events.Electron.pt_raw < 10)
-                & (events.Electron.mvaHZZIso > 0.9044286167)
-            )
-            | (
-                (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) < 0.8)
-                & (events.Electron.pt_raw > 10)
-                & (events.Electron.mvaHZZIso > 0.1968600840)
-            )
-            | (
-                (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) > 0.8)
-                & (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479)
-                & (events.Electron.pt_raw > 5)
-                & (events.Electron.pt_raw < 10)
-                & (events.Electron.mvaHZZIso > 0.9094166886)
-            )
-            | (
-                (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) > 0.8)
-                & (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479)
-                & (events.Electron.pt_raw > 10)
-                & (events.Electron.mvaHZZIso > 0.0759172100)
-            )
-            | (
-                (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) > 1.479)
-                & (events.Electron.pt_raw > 5)
-                & (events.Electron.pt_raw < 10)
-                & (events.Electron.mvaHZZIso > 0.9443653660)
-            )
-            | (
-                (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) > 1.479)
-                & (events.Electron.pt_raw > 10)
-                & (events.Electron.mvaHZZIso > -0.5169136775)
+                (
+                    (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) < 0.8)
+                    & (
+                        (
+                            (events.Electron.pt_raw > 5)
+                            & (events.Electron.pt_raw < 10)
+                            & (events.Electron.mvaHZZIso > 1.6339)
+                        )
+                        | (
+                            (events.Electron.pt_raw > 10)
+                            & (events.Electron.mvaHZZIso > 0.3685)
+                        )
+                    )
+                )
+                | (
+                    (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) > 0.8)
+                    & (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) < 1.479)
+                    & (
+                        (
+                            (events.Electron.pt_raw > 5)
+                            & (events.Electron.pt_raw < 10)
+                            & (events.Electron.mvaHZZIso > 1.5499)
+                        )
+                        | (
+                            (events.Electron.pt_raw > 10)
+                            & (events.Electron.mvaHZZIso > 0.2662)
+                        )
+                    )
+                )
+                | (
+                    (np.abs(events.Electron.eta + events.Electron.deltaEtaSC) > 1.479)
+                    & (
+                        (
+                            (events.Electron.pt_raw > 5)
+                            & (events.Electron.pt_raw < 10)
+                            & (events.Electron.mvaHZZIso > 2.0629)
+                        )
+                        | (
+                            (events.Electron.pt_raw > 10)
+                            & (events.Electron.mvaHZZIso > -0.5444)
+                        )
+                    )
+                )
             ),
         }
         return wps[wp]
