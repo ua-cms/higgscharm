@@ -1,9 +1,13 @@
-executable            = DIRECTORY/JOBPATH/JOBNAME.sh
-arguments             = $(ClusterId)$(ProcId)
-output                = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).out
-error                 = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).err
-log                   = DIRECTORY/logs/JOBPATH/JOBNAME.$(ClusterId).$(ProcId).log
+executable            = JOBDIR/JOBNAME.sh
+arguments             = $JOBNUM
+output                = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).out
+error                 = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).err
+log                   = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).log
+
+should_transfer_files = YES
+transfer_input_files  = INPUTFILES
 
 +JobFlavour           = "longlunch"
 +SingularityImage     = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.9"
-queue 1
+
+Queue JOBNUM from JOBNUM_FILE

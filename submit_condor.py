@@ -1,38 +1,101 @@
+import os
 import json
 import argparse
+import subprocess
 from pathlib import Path
-from condor.utils import submit_condor
 from analysis.filesets.utils import divide_list
 from analysis.utils import make_output_directory
 
 
-def main(args):
-    args = vars(args)
-    # add output path to args
-    args["output_path"] = make_output_directory(args)
-    # split dataset into batches
-    fileset_path = Path.cwd() / "analysis" / "filesets"
-    with open(f"{fileset_path}/fileset_{args['year']}_NANO_lxplus.json", "r") as f:
-        root_files = json.load(f)[args["dataset"]]
-    root_files_list = divide_list(root_files, args["nfiles"])
-    # submit job for each partition
-    for i, partition in enumerate(root_files_list, start=1):
-        if len(root_files_list) == 1:
-            dataset_key = args["dataset"]
-        else:
-            dataset_key = f'{args["dataset"]}_{i}'
-        partition_fileset = {dataset_key: partition}
-        args["dataset_key"] = dataset_key
-        args["cmd"] = (
-            "python3 submit.py "
-            f"--processor {args['processor']} "
-            f"--year {args['year']} "
-            f"--output_path {args['output_path']} "
-            f"--dataset {dataset_key} "
-            f"--output_format {args['output_format']} "
-            f"--partition_fileset '{json.dumps(partition_fileset)}' "
+def move_X509() -> str:
+    """move x509 proxy file from /tmp to /afs/private. Returns the afs path"""
+    try:
+        x509_localpath = (
+            [
+                line
+                for line in os.popen("voms-proxy-info").read().split("\n")
+                if line.startswith("path")
+            ][0]
+            .split(":")[-1]
+            .strip()
         )
-        submit_condor(args)
+    except Exception as err:
+        raise RuntimeError(
+            "x509 proxy could not be parsed, try creating it with 'voms-proxy-init --voms cms'"
+        ) from err
+    x509_path = f"{Path.home()}/private/{x509_localpath.split('/')[-1]}"
+    subprocess.run(["cp", x509_localpath, x509_path])
+    return x509_path
+
+
+def submit_condor(args):
+    """Build condor and executable files. Submit condor job"""
+    print(f"Creating {args.processor}/{args.dataset}/{args.year} condor files")
+    jobname = f"{args.processor}_{args.dataset}"
+
+    # make condor and log directories
+    condor_dir = Path.cwd() / "condor"
+    job_dir = condor_dir / args.processor / args.year / args.dataset
+    if not job_dir.exists():
+        job_dir.mkdir(parents=True, exist_ok=True)
+
+    log_dir = condor_dir / "logs" / args.processor / args.year
+    if not log_dir.exists():
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+    # save partitions json and jobnums to job directory
+    jobnum_list = []
+    partition_dataset = {}
+    fileset_path = Path.cwd() / "analysis" / "filesets"
+    with open(f"{fileset_path}/fileset_{args.year}_NANO_lxplus.json", "r") as f:
+        root_files = json.load(f)[args.dataset]
+    root_files_list = divide_list(root_files, args.nfiles)
+    for i in range(len(root_files_list)):
+        dataset_key = (
+            f"{args.dataset}_{i+1}" if len(root_files_list) > 1 else args.dataset
+        )
+        partition_dataset[i + 1] = {dataset_key: root_files_list[i]}
+        jobnum_list.append(i + 1)
+
+    partition_file = job_dir / f"{args.dataset}_partitions.json"
+    with open(f"{partition_file}", "w") as json_file:
+        json.dump(partition_dataset, json_file, indent=4)
+
+    jobnum_file = job_dir / "jobnum.txt"
+    with open(f"{jobnum_file}", "w") as f:
+        print(*jobnum_list, sep="\n", file=f)
+
+    # make condor file
+    local_condor = f"{job_dir}/{jobname}.sub"
+    with open(f"{condor_dir}/submit.sub") as condor_template_file, open(
+        local_condor, "w"
+    ) as condor_file:
+        for line in condor_template_file:
+            line = line.replace("JOBDIR", str(job_dir))
+            line = line.replace("LOGDIR", str(log_dir))
+            line = line.replace("JOBNAME", jobname)
+            line = line.replace("JOBNUM_FILE", str(jobnum_file))
+            line = line.replace("INPUTFILES", f"{partition_file},{jobnum_file}")
+            condor_file.write(line)
+
+    # make executable file
+    with open(f"{condor_dir}/submit.sh") as sh_template_file, open(
+        f"{job_dir}/{jobname}.sh", "w"
+    ) as sh_file:
+        for line in sh_template_file:
+            line = line.replace("X509PATH", move_X509())
+            line = line.replace("MAINDIRECTORY", str(Path.cwd()))
+            line = line.replace("JOBDIR", str(job_dir))
+            line = line.replace("PROCESSOR", args.processor)
+            line = line.replace("YEAR", args.year)
+            line = line.replace("DATASET", args.dataset)
+            line = line.replace("OUTPUTPATH", make_output_directory(args))
+            line = line.replace("OUTPUTFORMAT", args.output_format)
+            sh_file.write(line)
+
+    if args.submit:
+        print(f"submitting {args.processor}/{args.dataset}/{args.year} condor job")
+        subprocess.run(["condor_submit", local_condor])
 
 
 if __name__ == "__main__":
@@ -61,7 +124,7 @@ if __name__ == "__main__":
         "--nfiles",
         dest="nfiles",
         type=int,
-        default=10,
+        default=15,
         help="number of root files to include in each dataset partition (default 10)",
     )
     parser.add_argument(
@@ -82,4 +145,4 @@ if __name__ == "__main__":
         help="format of output histogram",
     )
     args = parser.parse_args()
-    main(args)
+    submit_condor(args)

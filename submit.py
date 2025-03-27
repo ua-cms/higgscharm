@@ -8,8 +8,10 @@ from analysis.processors.base import BaseProcessor
 
 
 def main(args):
+    with open(args.partition_json) as f:
+        partition_fileset = json.load(f)
     out = processor.run_uproot_job(
-        args.partition_fileset,
+        partition_fileset,
         treename="Events",
         processor_instance=BaseProcessor(processor=args.processor, year=args.year),
         executor=processor.futures_executor,
@@ -45,10 +47,10 @@ if __name__ == "__main__":
         help="dataset",
     )
     parser.add_argument(
-        "--partition_fileset",
-        dest="partition_fileset",
-        type=json.loads,
-        help="partition_fileset needed to preprocess a fileset",
+        "--partition_json",
+        dest="partition_json",
+        type=str,
+        help="json with partition dataset",
     )
     parser.add_argument(
         "--output_path",
