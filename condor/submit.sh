@@ -1,7 +1,7 @@
 #!/bin/bash -xe
 
 JOBID=$1
-MAINDIRECTORY=$2
+BASEDIR=$2
 X509PATH=$3
 
 export HOME=`pwd`
@@ -29,5 +29,5 @@ OPTS="$OPTS --partition_json $WORKDIR/partition_fileset.json"
 
 echo $OPTS
 
-cd $MAINDIRECTORY
+cd $BASEDIR
 python3 submit.py $OPTS

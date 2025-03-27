@@ -32,7 +32,7 @@ def move_X509() -> str:
 
 
 def submit_condor(args):
-    """Build condor and executable files. Submit condor job"""
+    """Build condor files. Optionally submit condor job"""
     print(f"Creating {args.processor}/{args.dataset}/{args.year} condor files")
     jobname = f"{args.processor}_{args.dataset}"
 
@@ -81,7 +81,7 @@ def submit_condor(args):
     ) as condor_file:
         for line in condor_template_file:
             line = line.replace("CONDORDIR", str(condor_dir))
-            line = line.replace("MAINDIRECTORY", str(Path.cwd()))
+            line = line.replace("BASEDIR", str(Path.cwd()))
             line = line.replace("X509PATH", move_X509())
             line = line.replace("LOGDIR", str(log_dir))
             line = line.replace("JOBNAME", jobname)
