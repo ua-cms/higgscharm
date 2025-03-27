@@ -1,5 +1,5 @@
-executable            = JOBDIR/JOBNAME.sh
-arguments             = $JOBNUM
+executable            = CONDORDIR/submit.sh
+arguments             = $(JOBNUM) MAINDIRECTORY X509PATH
 output                = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).out
 error                 = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).err
 log                   = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).log

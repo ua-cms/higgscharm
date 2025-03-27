@@ -23,7 +23,10 @@ def move_X509() -> str:
         raise RuntimeError(
             "x509 proxy could not be parsed, try creating it with 'voms-proxy-init --voms cms'"
         ) from err
-    x509_path = f"{Path.home()}/private/{x509_localpath.split('/')[-1]}"
+    user = os.environ["USER"]
+    x509_path = (
+        f"/afs/cern.ch/user/{user[0]}/{user}/private/{x509_localpath.split('/')[-1]}"
+    )
     subprocess.run(["cp", x509_localpath, x509_path])
     return x509_path
 
@@ -39,7 +42,7 @@ def submit_condor(args):
     if not job_dir.exists():
         job_dir.mkdir(parents=True, exist_ok=True)
 
-    log_dir = condor_dir / "logs" / args.processor / args.year
+    log_dir = condor_dir / "logs" / args.processor / args.year / args.dataset
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -57,7 +60,7 @@ def submit_condor(args):
         partition_dataset[i + 1] = {dataset_key: root_files_list[i]}
         jobnum_list.append(i + 1)
 
-    partition_file = job_dir / f"{args.dataset}_partitions.json"
+    partition_file = job_dir / "partitions.json"
     with open(f"{partition_file}", "w") as json_file:
         json.dump(partition_dataset, json_file, indent=4)
 
@@ -65,36 +68,30 @@ def submit_condor(args):
     with open(f"{jobnum_file}", "w") as f:
         print(*jobnum_list, sep="\n", file=f)
 
+    # build and save arguments json
+    args.output_path = make_output_directory(args)
+    args_file = job_dir / "arguments.json"
+    with open(args_file, "w") as json_file:
+        json.dump(vars(args), json_file, indent=4)
+
     # make condor file
     local_condor = f"{job_dir}/{jobname}.sub"
     with open(f"{condor_dir}/submit.sub") as condor_template_file, open(
         local_condor, "w"
     ) as condor_file:
         for line in condor_template_file:
-            line = line.replace("JOBDIR", str(job_dir))
+            line = line.replace("CONDORDIR", str(condor_dir))
+            line = line.replace("MAINDIRECTORY", str(Path.cwd()))
+            line = line.replace("X509PATH", move_X509())
             line = line.replace("LOGDIR", str(log_dir))
             line = line.replace("JOBNAME", jobname)
+            line = line.replace(
+                "INPUTFILES", f"{partition_file},{jobnum_file},{args_file}"
+            )
             line = line.replace("JOBNUM_FILE", str(jobnum_file))
-            line = line.replace("INPUTFILES", f"{partition_file},{jobnum_file}")
             condor_file.write(line)
 
-    # make executable file
-    with open(f"{condor_dir}/submit.sh") as sh_template_file, open(
-        f"{job_dir}/{jobname}.sh", "w"
-    ) as sh_file:
-        for line in sh_template_file:
-            line = line.replace("X509PATH", move_X509())
-            line = line.replace("MAINDIRECTORY", str(Path.cwd()))
-            line = line.replace("JOBDIR", str(job_dir))
-            line = line.replace("PROCESSOR", args.processor)
-            line = line.replace("YEAR", args.year)
-            line = line.replace("DATASET", args.dataset)
-            line = line.replace("OUTPUTPATH", make_output_directory(args))
-            line = line.replace("OUTPUTFORMAT", args.output_format)
-            sh_file.write(line)
-
     if args.submit:
-        print(f"submitting {args.processor}/{args.dataset}/{args.year} condor job")
         subprocess.run(["condor_submit", local_condor])
 
 
