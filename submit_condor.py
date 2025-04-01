@@ -7,23 +7,16 @@ from analysis.filesets.utils import divide_list
 from analysis.utils import make_output_directory
 
 
-def move_X509() -> str:
+def move_proxy() -> str:
     """move x509 proxy file from /tmp to /afs/private. Returns the afs path"""
     try:
-        x509_localpath = (
-            [
-                line
-                for line in os.popen("voms-proxy-info").read().split("\n")
-                if line.startswith("path")
-            ][0]
-            .split(":")[-1]
-            .strip()
+        subprocess.run("voms-proxy-info -exists -valid 0:20", shell=True, check=True)
+    except subprocess.CalledProcessError:
+        raise Exception(
+            "VOMS proxy expired or non-existing: please run 'voms-proxy-init --voms cms'"
         )
-    except Exception as err:
-        raise RuntimeError(
-            "x509 proxy could not be parsed, try creating it with 'voms-proxy-init --voms cms'"
-        ) from err
     user = os.environ["USER"]
+    x509_localpath = subprocess.check_output("voms-proxy-info -path", shell=True, text=True).strip()
     x509_path = (
         f"/afs/cern.ch/user/{user[0]}/{user}/private/{x509_localpath.split('/')[-1]}"
     )
@@ -33,7 +26,7 @@ def move_X509() -> str:
 
 def submit_condor(args):
     """Build condor files. Optionally submit condor job"""
-    print(f"Creating {args.processor}/{args.dataset}/{args.year} condor files")
+    print(f"Creating {args.processor}-{args.year}-{args.dataset} condor file")
     jobname = f"{args.processor}_{args.dataset}"
 
     # make condor and log directories
@@ -82,7 +75,7 @@ def submit_condor(args):
         for line in condor_template_file:
             line = line.replace("CONDORDIR", str(condor_dir))
             line = line.replace("BASEDIR", str(Path.cwd()))
-            line = line.replace("X509PATH", move_X509())
+            line = line.replace("X509PATH", move_proxy())
             line = line.replace("LOGDIR", str(log_dir))
             line = line.replace("JOBNAME", jobname)
             line = line.replace(
