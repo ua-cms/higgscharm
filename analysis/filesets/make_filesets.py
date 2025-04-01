@@ -6,42 +6,28 @@ from pathlib import Path
 from coffea.dataset_tools.dataset_query import DataDiscoveryCLI
 
 
-SITES = [
-    "T1_US_FNAL_Disk",
-    "T1_DE_KIT_Disk",
-    "T1_UK_RAL_Disk",
-    "T1_FR_CCIN2P3_Disk",
-    "T1_FR_CCIN2P3_Disk",
-    "T2_US_Vanderbilt",
-    "T2_US_Purdue",
-    "T2_US_Nebraska",
-    "T2_DE_DESY",
-    "T2_BE_IIHE",
-    "T2_CH_CERN",
-    "T2_DE_RWTH",
-    "T2_BE_UCL",
-    "T2_HU_Budapest",
-    "T2_RU_JINR",
-    "T2_UK_London_IC",
-    "T2_ES_CIEMAT",
-    "T2_CH_CSCS",
-    "T2_IT_Rome",
-    "T2_FR_IPHC",
-    "T3_US_FNALLPC",
-    "T3_CH_PSI",
-]
+if __name__ == "__main__":
+    years = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"]
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--year",
+        dest="year",
+        type=str,
+        choices=["all"] + years,
+    )
+    args = parser.parse_args()
 
-
-def main(args):
     # open dataset configs
-    with open(f"{Path.cwd()}/{args.year}_nanov12.yaml", "r") as f:
+    filesets_dir = Path.home() / "public" / "higgscharm" / "analysis" / "filesets"
+    datasets_dir = filesets_dir / f"{args.year}_nanov12.yaml"
+    with open(datasets_dir, "r") as f:
         dataset_configs = yaml.safe_load(f)
     # read dataset queries
     das_queries = {}
     for sample in dataset_configs:
         das_queries[sample] = dataset_configs[sample]["query"]
 
-    for year in ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"]:
+    for year in years:
         if args.year != "all":
             if year != args.year:
                 continue
@@ -59,7 +45,10 @@ def main(args):
         # the dataset definition is passed to a DataDiscoveryCLI
         ddc = DataDiscoveryCLI()
         # set the allow sites to look for replicas
-        ddc.do_allowlist_sites(SITES)
+        sites_file = filesets_dir / "sites.yaml"
+        with open(sites_file, "r") as f:
+            sites = yaml.safe_load(f)["white"]
+        ddc.do_allowlist_sites(sites)
         # query rucio and get replicas
         ddc.load_dataset_definition(
             dataset_definition,
@@ -81,17 +70,6 @@ def main(args):
                 new_dataset[dataset_key] = root_files
         # save new fileset and drop 'dataset_discovery' fileset
         os.remove(f"dataset_discovery_{args.year}.json")
-        with open(f"fileset_{args.year}_NANO_lxplus.json", "w") as json_file:
+        fileset_file = filesets_dir / f"fileset_{args.year}_NANO_lxplus.json"
+        with open(fileset_file, "w") as json_file:
             json.dump(new_dataset, json_file, indent=4, sort_keys=True)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--year",
-        dest="year",
-        type=str,
-        choices=["all", "2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
-    )
-    args = parser.parse_args()
-    main(args)
