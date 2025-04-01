@@ -2,6 +2,7 @@
 import numpy as np
 import awkward as ak
 import correctionlib
+from pathlib import Path
 from random import random
 from scipy.special import erfinv, erf
 from analysis.corrections.met import update_met
@@ -400,8 +401,8 @@ def apply_muon_ss_corrections(
     events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
 
     # get correction set
-    json_path = f"analysis/data/{year}_muonSS.json.gz"
-    cset = correctionlib.CorrectionSet.from_file(json_path)
+    json_path = Path.cwd() / "analysis" / "data" / f"{year}_muonSS.json.gz"
+    cset = correctionlib.CorrectionSet.from_file(str(json_path))
 
     if hasattr(events, "genWeight"):
         # MC: both scale correction to gen Z peak AND resolution correction to Z width in data
