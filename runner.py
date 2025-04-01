@@ -1,5 +1,6 @@
-import os
 import argparse
+import subprocess
+from pathlib import Path
 
 
 MC_DATASETS = {
@@ -109,27 +110,8 @@ DATASETS = {
     "zplusll": {
         "mc": ["triboson", "wz", "tt_bosons", "dyjets", "semilep_ttbar"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
-    }
+    },
 }
-
-
-def main(args):
-    # get datasets to run
-    to_run = []
-    for kind, datasets in DATASETS[args.processor].items():
-        for dataset in datasets:
-            if kind == "mc":
-                to_run += MC_DATASETS[dataset]
-            if kind == "data":
-                to_run += PD_DATASETS[dataset][args.year]
-    # submit jobs for each dataset
-    for dataset in to_run:
-        cmd = f"python3 submit_condor.py --processor {args.processor} --year {args.year} --dataset {dataset} --nfiles {args.nfiles} --output_format {args.output_format}"
-        if args.submit:
-            cmd += " --submit"
-        if args.eos:
-            cmd += " --eos"
-        os.system(cmd)
 
 
 if __name__ == "__main__":
@@ -173,4 +155,40 @@ if __name__ == "__main__":
         help="format of output histogram",
     )
     args = parser.parse_args()
-    main(args)
+
+    # check if the fileset for the given year exists, generate it otherwise
+    filesets_path = Path.cwd() / "analysis" / "filesets"
+    fileset_file = filesets_path / f"fileset_{args.year}_NANO_lxplus.json"
+    if not fileset_file.exists():
+        cmd = f"python3 fetch.py --year {args.year}"
+        subprocess.run(cmd, shell=True)
+
+    # build the list of datasets to run over, based on processor and year
+    to_run = []
+    for kind, datasets in DATASETS[args.processor].items():
+        for dataset in datasets:
+            if kind == "mc":
+                to_run += MC_DATASETS[dataset]
+            if kind == "data":
+                to_run += PD_DATASETS[dataset][args.year]
+
+    # submit (or prepare) a job for each dataset using the given arguments
+    cmd = ["python3", "submit_condor.py"]
+    for dataset in to_run:
+        cmd_args = [
+            "--processor",
+            args.processor,
+            "--year",
+            args.year,
+            "--dataset",
+            dataset,
+            "--nfiles",
+            str(args.nfiles),
+            "--output_format",
+            args.output_format,
+        ]
+        if args.submit:
+            cmd_args.append("--submit")
+        if args.eos:
+            cmd_args.append("--eos")
+        subprocess.run(cmd + cmd_args)
