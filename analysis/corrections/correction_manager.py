@@ -9,11 +9,13 @@ from analysis.corrections.lhescale import add_scalevar_weight
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.partonshower import add_partonshower_weight
 from analysis.corrections.electron import ElectronWeights, ElectronSS
+from analysis.corrections.muon_ss import apply_muon_ss_corrections
 
 
 def object_corrector_manager(events, year, dataset, processor_config):
     """apply object level corrections"""
     objcorr_config = processor_config.corrections_config["objects"]
+
     if "jets" in objcorr_config:
         # apply JEC/JER corrections
         apply_jec = True
@@ -29,6 +31,13 @@ def object_corrector_manager(events, year, dataset, processor_config):
             apply_jer=apply_jer,
             apply_junc=apply_junc,
         )
+    if "muons" in objcorr_config:
+        # apply muon scale and smearing corrections
+        apply_muon_ss_corrections(
+            events=events,
+            year=year,
+            variation="nominal",
+        )
     if "electrons" in objcorr_config:
         # apply electron scale and smearing corrections
         electron_ss = ElectronSS(
@@ -42,6 +51,7 @@ def object_corrector_manager(events, year, dataset, processor_config):
         else:
             # energies in data are scaled
             electron_ss.apply_scale()
+
     if "met" in objcorr_config:
         # apply MET-phi modulation corrections
         if year.startswith("2022"):
