@@ -1,3 +1,4 @@
+import re
 import glob
 import yaml
 from pathlib import Path
@@ -62,3 +63,53 @@ def get_dataset_era(dataset, year):
     for dataset_key in dataset_config:
         if dataset.startswith(dataset_key):
             return dataset_config[dataset_key]["era"]
+        
+        
+def modify_site_list(site: str, status: str) -> None:
+    """
+    Move a given site to the specified status list ("white" or "black") 
+    
+    Parameters:
+    -----------
+        site: The site identifier to modify.
+        status: Desired list to move the site to ("white" or "black").
+    """
+    yaml_file = Path.cwd() / "analysis" / "filesets" / "sites.yaml"
+    with open(yaml_file, "r") as f:
+        data = yaml.safe_load(f)
+
+    if status == "white":
+        if site not in data["white"]:
+            data["white"].append(site)
+        if site in data["black"]:
+            data["black"].remove(site)
+    else:
+        if site not in data["black"]:
+            data["black"].append(site)
+        if site in data["white"]:
+            data["white"].remove(site)
+
+    with open(yaml_file, "w") as f:
+        yaml.dump(data, f, default_flow_style=False)
+    print(f"Site '{site}' moved to the {status} list")
+    
+    
+def extract_xrootd_errors(error_files: list) -> set:
+    """
+    Extract xrootd URLs from a list of Condor error log files.
+
+    Parameters:
+    -----------
+        error_files: (list of str or Path): Paths to error log files.
+
+    Returns:
+    --------
+        set: A set of unique xrootd endpoints found in the logs.
+    """
+    xrootd_errs = set()
+    for error_file in error_files:
+        with open(error_file, "r") as f:
+            err_content = f.read()
+        xrootd_matches = re.findall(r"root://[a-zA-Z0-9\-.]+(?:[:]\d+)?", err_content)
+        xrootd_errs.update(xrootd_matches)
+    return xrootd_errs
