@@ -106,6 +106,7 @@ event_selection:
 corrections:
   objects:
     - jets
+    - muons
     - electrons
   event_weights:
     genWeight: true
