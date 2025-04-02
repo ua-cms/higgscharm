@@ -28,9 +28,9 @@ object_selection:
   dielectrons:
     field: select_dielectrons
     cuts:
-      - LorentzVector.delta_r(objects['dielectrons'].l1, objects['dielectrons'].l2) > 0.02
+      - objects['dielectrons'].l1.delta_r(objects['dielectrons'].l2) > 0.02
       - objects['dielectrons'].l1.charge * objects['dielectrons'].l2.charge < 0
-      - (objects['dielectrons'].z.mass > 60.0) & (objects['dielectrons'].z.mass < 120.0)
+      - (objects['dielectrons'].p4.mass > 60.0) & (objects['dielectrons'].p4.mass < 120.0)
 event_selection:
   hlt_paths:
     EGamma:
@@ -43,7 +43,7 @@ event_selection:
     second_electron_pt: ak.pad_none(objects['electrons'], target=2)[:, 1].pt > 15
     muon_veto: ak.num(objects["muons"]) == 0
     two_electrons: ak.num(objects['electrons']) == 2
-    one_z: ak.num(objects['dielectrons'].z) == 1
+    one_dielectron: ak.num(objects['dielectrons']) == 1
   categories:
     base:
       - atleast_one_goodvertex
@@ -53,10 +53,11 @@ event_selection:
       - second_electron_pt
       - muon_veto
       - two_electrons
-      - one_z
+      - one_dielectron
 corrections:
   objects:
     - jets
+    - muons
     - electrons
   event_weights:
     genWeight: true
@@ -77,21 +78,21 @@ histogram_config:
       start: 10
       stop: 150
       label: $m(ee)$ [GeV]
-      expression: objects['dielectrons'].z.mass
+      expression: objects['dielectrons'].p4.mass
     dielectron_pt:
       type: Regular
       bins: 50
       start: 30
       stop: 300
       label: $p_T(ee)$ [GeV]
-      expression: objects['dielectrons'].z.pt
+      expression: objects['dielectrons'].p4.pt
     dielectron_dr:
       type: Regular
       bins: 50
       start: 0
       stop: 5
       label: $\Delta R(e_1, e_2)$
-      expression: LorentzVector.delta_r(objects['dielectrons'].l1, objects['dielectrons'].l2)
+      expression: objects['dielectrons'].l1.delta_r(objects['dielectrons'].l2)
     dielectron_deta:
       type: Regular
       bins: 50

@@ -92,7 +92,7 @@ histogram_config:
       start: 0
       stop: 5
       label: $\Delta R(\mu_1, \mu_2)$
-      expression: LorentzVector.delta_r(objects['dimuons'].l1, objects['dimuons'].l2)
+      expression: objects['dimuons'].l1.delta_r(objects['dimuons'].l2)
     dimuon_deta:
       type: Regular
       bins: 50
