@@ -1,7 +1,7 @@
 import yaml
 import importlib.resources
 from analysis.histograms import HistogramConfig
-from analysis.configs.workflow_config import WorkflowConfig
+from analysis.workflows.workflow_config import WorkflowConfig
 
 
 class WorkflowConfigBuilder:
