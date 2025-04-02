@@ -7,7 +7,7 @@ Python package for analyzing H+c events. The package uses a columnar framework t
 - [Submit Condor jobs](#Submit-Condor-jobs)
 - [Postprocessing](#Postprocessing)
 
-### Process configs
+### Workflows
 
 The available workflows are:
 
