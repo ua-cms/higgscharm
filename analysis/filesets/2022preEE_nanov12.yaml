@@ -67,112 +67,57 @@ TWminusto2L2Nu:
   era: MC
   query: TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Single Top
-  xsec: 35.99
+  xsec: 4.66
 TWminusto4Q:
   era: MC
   query: TWminusto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Single Top
-  xsec: 35.99
+  xsec: 19.98
 TWminustoLNu2Q:
   era: MC
   query: TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Single Top
-  xsec: 35.99
+  xsec: 19.31
 TbarBQ:
   era: MC
   query: TbarBQ_t-channel_4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Single Top
-  xsec: 75.47
+  xsec: 87.20
 TbarWplusto2L2Nu:
   era: MC
   query: TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Single Top
-  xsec: 36.05
+  xsec: 4.66
 TbarWplusto4Q:
   era: MC
   query: TbarWplusto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Single Top
-  xsec: 36.05
+  xsec: 19.98
 TbarWplustoLNu2Q:
   era: MC
   query: TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Single Top
-  xsec: 36.05
+  xsec: 19.31
 TBbarQ:
   era: MC
   query: TBbarQ_t-channel_4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Single Top
-  xsec: 123.8
+  xsec: 145.00
 WW:
   era: MC
   query: WW_TuneCP5_13p6TeV_pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Diboson
-  xsec: 80.23
+  xsec: 122.30
 WZ:
   era: MC
   query: WZ_TuneCP5_13p6TeV_pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Diboson
-  xsec: 29.1
+  xsec: 54.30
 ZZ:
   era: MC
   query: ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: Diboson
-  xsec: 12.75
-Zto2Q_200to400:
-  era: MC
-  query: Zto2Q-4Jets_HT-200to400_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: Z+jets
-  xsec: 1012.0
-Zto2Q_400to600:
-  era: MC
-  query: Zto2Q-4Jets_HT-400to600_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: Z+jets
-  xsec: 114.2
-Zto2Q_600to800:
-  era: MC
-  query: Zto2Q-4Jets_HT-600to800_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: Z+jets
-  xsec: 25.34
-Zto2Q_800:
-  era: MC
-  query: Zto2Q-4Jets_HT-800_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: Z+jets
-  xsec: 12.99
-Wto2Q_200to400:
-  era: MC
-  query: Wto2Q-3Jets_HT-200to400_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: W+jets
-  xsec: 2549.0
-Wto2Q_400to600:
-  era: MC
-  query: Wto2Q-3Jets_HT-400to600_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: W+jets
-  xsec: 276.5
-Wto2Q_600to800:
-  era: MC
-  query: Wto2Q-3Jets_HT-600to800_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: W+jets
-  xsec: 59.25
-Wto2Q_800:
-  era: MC
-  query: Wto2Q-3Jets_HT-800_TuneCP5_13p6TeV_madgraphMLM-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: W+jets
-  xsec: 28.75
-WtoLNu_0J:
-  era: MC
-  query: WtoLNu-2Jets_0J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v3/NANOAODSIM
-  process: W+jets
-  xsec: 48716.955
-WtoLNu_1J:
-  era: MC
-  query: WtoLNu-2Jets_1J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: W+jets
-  xsec: 8107.312
-WtoLNu_2J:
-  era: MC
-  query: WtoLNu-2Jets_2J_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: W+jets
-  xsec: 3049.263
+  xsec: 16.70
 ZZZ:
   era: MC
   query: ZZZ_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
@@ -206,7 +151,7 @@ TTZ:
 WZto3LNu:
   era: MC
   query: WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: EW
+  process: WZ
   xsec: 4.924
 ZZto4L:
   era: MC
