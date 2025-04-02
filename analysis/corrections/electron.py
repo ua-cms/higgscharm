@@ -248,7 +248,7 @@ class ElectronWeights:
         )
         # get trigger match masks
         trigger_match = trigger_match_mask(
-            events=self.events, leptons=self.electrons, hlt_paths=hlt_paths
+            events=self.events, leptons=self.electrons, hlt_paths=hlt_paths, year=self.year
         )
         trigger_mask = ak.flatten(trigger_match)
 
