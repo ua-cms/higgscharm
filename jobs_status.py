@@ -1,29 +1,31 @@
+"""Check job outputs, identify missing results, and optionally resubmit jobs or update input filesets based on xrootd site issues"""
+
 import yaml
 import json
 import argparse
+import logging
 import subprocess
-from glob import glob
 from pathlib import Path
 from analysis.utils import make_output_directory
 from analysis.filesets.xrootd_sites import xroot_to_site
 from analysis.filesets.utils import divide_list, modify_site_list, extract_xrootd_errors
 
 
-if __name__ == "__main__":
+def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-w",
         "--workflow",
-        dest="workflow",
         type=str,
+        required=True,
         choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl", "zplusll"],
         help="workflow config to run",
     )
     parser.add_argument(
         "-y",
         "--year",
-        dest="year",
         type=str,
+        required=True,
         choices=["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
         help="dataset year",
     )
@@ -37,114 +39,230 @@ if __name__ == "__main__":
         choices=["coffea", "root"],
         help="Format of output histograms",
     )
-    args = parser.parse_args()
+    return parser.parse_args()
 
-    output_dir = make_output_directory(args)
-    print(f"Reading outputs from: {output_dir}")
+
+def get_jobs_info(job_dir, output_dir, log_dir, output_format):
+    """
+    Collect expected and completed job numbers per dataset, and gather error logs.
+
+    Parameters:
+    -----------
+        job_dir (Path): Directory containing dataset job folders.
+        output_dir (Path): Directory with output files.
+        log_dir (Path): Directory containing log files.
+        output_format (str): File format of the output (e.g., 'coffea' or 'root').
+
+    Returns:
+    --------
+        tuple: 
+            - jobnum (dict): Expected job numbers per dataset.
+            - jobnum_done (dict): Successfully completed job numbers per dataset.
+            - error_file (list): List of .err log files.
+    """
+    jobnum, jobnum_done = {}, {}
+    error_file = []
+
+    for dataset_dir in job_dir.iterdir():
+        if not dataset_dir.is_dir():
+            continue
+
+        dataset = dataset_dir.name
+        jobnum_path = dataset_dir / "jobnum.txt"
+        if not jobnum_path.exists():
+            raise FileNotFoundError(
+                f"Missing jobnum.txt for dataset '{dataset}'. Expected at: {jobnum_path}"
+            )
+
+        jobnum[dataset] = jobnum_path.read_text().splitlines()
+        output_files = list((output_dir / dataset).glob(f"*.{output_format}"))
+        jobnum_done[dataset] = [f.stem.replace(f"{dataset}_", "") for f in output_files]
+        error_file.extend((log_dir / dataset).glob("*.err"))
+
+    return jobnum, jobnum_done, error_file
+
+
+def print_job_status(jobnum, jobnum_done):
+    """
+    Print a summary of expected, finished, and missing jobs. Show YAML list of datasets with missing jobs.
+
+    Parameters:
+    -----------
+        jobnum (dict): Expected job numbers per dataset.
+        jobnum_done (dict): Completed job numbers per dataset.
+
+    Returns:
+    --------
+        tuple: 
+            - jobnum_missing (dict): Missing job numbers per dataset.
+            - datasets_with_missing (list): Datasets that have missing jobs.
+    """
+    jobnum_missing = {d: set(jobnum[d]) - set(jobnum_done.get(d, [])) for d in jobnum}
+    n_expected = sum(len(v) for v in jobnum.values())
+    n_done = sum(len(v) for v in jobnum_done.values())
+    n_missing = sum(len(v) for v in jobnum_missing.values())
+
+    logging.info("Jobs status:")
+    logging.info(f"Expected: {n_expected}")
+    logging.info(f"Finished: {n_done}")
+    logging.info(f"Missing: {n_missing}\n")
+
+    datasets_with_missing = [d for d in jobnum_missing if jobnum_missing[d]]
+    if n_missing:
+        print(
+            f"Datasets with missing jobs ({len(datasets_with_missing)}/{len(jobnum)}):"
+        )
+        print(
+            yaml.dump(
+                datasets_with_missing,
+                default_flow_style=False,
+                sort_keys=False,
+                indent=2,
+            )
+        )
+
+    return jobnum_missing, datasets_with_missing
+
+
+def analyze_xrootd_errors(error_file):
+    """
+    Analyze error logs and extract problematic xrootd sites.
+
+    Parameters:
+    -----------
+        error_file (list): List of error log files.
+
+    Returns:
+    --------
+        list: Sites with detected xrootd errors.
+    """
+    xrootd_errs = extract_xrootd_errors(error_file)
+    if not xrootd_errs:
+        return []
+
+    site_errs = [xroot_to_site[err] for err in xrootd_errs if err in xroot_to_site]
+    for err in xrootd_errs:
+        if err not in xroot_to_site:
+            logging.warning(f"Could not identify the site for xrootd error {err}")
+
+    print("Sites with xrootd OS errors:")
+    print(yaml.dump(site_errs, default_flow_style=False, sort_keys=False, indent=2))
+    return site_errs
+
+
+def update_input_filesets(
+    site_errs, year, fileset_dir, job_dir, datasets_with_missing_jobs
+):
+    """
+    Blacklist failing xrootd sites and update filesets for affected datasets.
+
+    Parameters:
+    -----------
+        site_errs (list): List of sites to blacklist.
+        year (str): Dataset year.
+        fileset_dir (Path): Directory containing JSON filesets.
+        job_dir (Path): Directory with Condor job files.
+        datasets_with_missing_jobs (list): Datasets to update.
+    """
+    for site in site_errs:
+        modify_site_list(site, "black")
+
+    subprocess.run(["python3", "fetch.py", "--year", year])
+
+    fileset_path = fileset_dir / f"fileset_{year}_NANO_lxplus.json"
+    all_filesets = json.loads(fileset_path.read_text())
+
+    for dataset in datasets_with_missing_jobs:
+        if dataset not in all_filesets:
+            logging.warning(f"Dataset {dataset} not found in fileset JSON")
+            continue
+
+        root_files = all_filesets[dataset]
+        args_json = job_dir / dataset / "arguments.json"
+        if not args_json.exists():
+            logging.error(f"Missing arguments.json for dataset {dataset}")
+            continue
+
+        nfiles = json.loads(args_json.read_text())["nfiles"]
+        root_files_list = divide_list(root_files, nfiles)
+
+        partition_dataset = {
+            i
+            + 1: {(f"{dataset}_{i+1}" if len(root_files_list) > 1 else dataset): chunk}
+            for i, chunk in enumerate(root_files_list)
+        }
+
+        partition_file = job_dir / dataset / "partitions.json"
+        with open(partition_file, "w") as json_file:
+            json.dump(partition_dataset, json_file, indent=4)
+
+
+def resubmit_jobs(job_dir, jobnum_missing, datasets_with_missing_jobs, workflow, year):
+    """
+    Prepare and resubmit jobs for datasets with missing jobs.
+
+    Parameters:
+    -----------
+        job_dir (Path): Directory with Condor job files.
+        jobnum_missing (dict): Missing job numbers per dataset.
+        datasets_with_missing_jobs (list): List of affected datasets.
+        workflow (str): Workflow name.
+        year (str): Dataset year.
+    """
+    to_resubmit = []
+    for dataset in datasets_with_missing_jobs:
+        missing_file = job_dir / dataset / "missing.txt"
+        with open(missing_file, "w") as f:
+            print(*sorted(jobnum_missing[dataset]), sep="\n", file=f)
+
+        condor_file = job_dir / dataset / f"{workflow}_{dataset}.sub"
+        condor_backup = condor_file.with_name(condor_file.stem + "_all.sub")
+        subprocess.run(["cp", str(condor_file), str(condor_backup)])
+
+        submit_text = condor_file.read_text().replace("jobnum.txt", "missing.txt")
+        condor_file.write_text(submit_text)
+        logging.info(f"Condor file updated: {workflow}/{year}/{dataset}")
+        to_resubmit.append(str(condor_file))
+
+    for submit_file in to_resubmit:
+        subprocess.run(["condor_submit", submit_file])
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    args = parse_args()
+
+    output_dir = Path(make_output_directory(args))
+    logging.info(f"Reading outputs from: {output_dir}\n")
 
     base_dir = Path.cwd()
     condor_dir = base_dir / "condor"
     job_dir = condor_dir / args.workflow / args.year
     log_dir = condor_dir / "logs" / args.workflow / args.year
-    fileset_path = base_dir / "analysis" / "filesets"
+    fileset_dir = base_dir / "analysis" / "filesets"
 
-    datasets = [item.name for item in job_dir.iterdir() if item.is_dir()]
-    jobnum, jobnum_done = {}, {}
-    error_file = []
-    for dataset in datasets:
-        jobnum[dataset] = [
-            line.strip() for line in open(job_dir / dataset / "jobnum.txt")
-        ]
-        output_files = glob(f"{output_dir}/{dataset}/*.{args.output_format}")
-        jobnum_done[dataset] = [
-            Path(f).stem.replace(f"{dataset}_", "") for f in output_files
-        ]
-        error_file.extend(glob(f"{log_dir}/{dataset}/*.err"))
-
-    xrootd_errs = extract_xrootd_errors(error_file)
-    jobnum_missing = {
-        d: sorted(set(jobnum[d]) - set(jobnum_done.get(d, []))) for d in jobnum
-    }
-    total = sum(len(v) for v in jobnum.values())
-    done = sum(len(jobnum_done[d]) for d in jobnum_done)
-    missing = sum(len(v) for v in jobnum_missing.values())
-    datasets_with_missing_jobs = [d for d in jobnum_missing if jobnum_missing[d]]
-
-    print(
-        f"Jobs to be run: {total}\nJobs already run: {done}\nMissing jobs: {missing}\n"
+    jobnum, jobnum_done, error_file = get_jobs_info(
+        job_dir, output_dir, log_dir, args.output_format
     )
 
-    if missing:
-        print(
-            f"Datasets with missing jobs ({len(datasets_with_missing_jobs)}/{len(jobnum.keys())}): {datasets_with_missing_jobs}"
-        )
-        if len(xrootd_errs) > 0:
-            site_errs = [
-                xroot_to_site[err] for err in xrootd_errs if err in xroot_to_site
-            ]
-            for err in xrootd_errs:
-                if err not in xroot_to_site:
-                    print(f"Could not identify the site for xrootd error {err}")
-            print(f"Sites with xrootd errors: {site_errs}")
+    jobnum_missing, datasets_with_missing_jobs = print_job_status(jobnum, jobnum_done)
 
-            if input("Update datasets? (y/n): ").lower() in ["y", "yes"]:
-                for site in site_errs:
-                    modify_site_list(site, "black")
+    if jobnum_missing and datasets_with_missing_jobs:
+        site_errs = analyze_xrootd_errors(error_file)
 
-                cmd = f"python3 fetch.py --year {args.year}"
-                subprocess.run(cmd, shell=True)
-
-                for dataset in datasets_with_missing_jobs:
-                    # get root files to split
-                    fileset_file = (
-                        fileset_path / f"fileset_{args.year}_NANO_lxplus.json"
-                    )
-                    with open(fileset_file, "r") as f:
-                        root_files = json.load(f)[dataset]
-
-                    # get number of partitions
-                    args_json = job_dir / dataset / "arguments.json"
-                    with open(args_json, "r") as f:
-                        nfiles = json.load(f)["nfiles"]
-
-                    # get new dataset partitions
-                    root_files_list = divide_list(root_files, nfiles)
-                    partition_dataset = {
-                        i
-                        + 1: {
-                            (
-                                f"{dataset}_{i+1}"
-                                if len(root_files_list) > 1
-                                else dataset
-                            ): chunk
-                        }
-                        for i, chunk in enumerate(root_files_list)
-                    }
-                    partition_file = job_dir / dataset / "partitions.json"
-                    with open(partition_file, "w") as json_file:
-                        json.dump(partition_dataset, json_file, indent=4)
-
-        if input("Update and resubmit condor files? (y/n): ").lower() in ["y", "yes"]:
-            to_resubmit = []
-            for dataset in datasets_with_missing_jobs:
-                missing_file = job_dir / "missing.txt"
-                with open(missing_file, "w") as f:
-                    print(*jobnum_missing[dataset], sep="\n", file=f)
-
-                condor_file = job_dir / dataset / f"{args.workflow}_{dataset}.sub"
-                subprocess.run(
-                    [
-                        "cp",
-                        str(condor_file),
-                        str(condor_file).replace(".sub", "_all.sub"),
-                    ]
-                )
-                with open(condor_file, "r") as file:
-                    submit_file = file.read().replace("jobnum.txt", "missing.txt")
-                with open(condor_file, "w") as file:
-                    file.write(submit_file)
-                print(f"condor file {args.workflow}/{args.year}/{dataset} updated")
-                to_resubmit.append(str(condor_file))
-
-            for submit_file in to_resubmit:
-                subprocess.run(["condor_submit", submit_file], shell=True)
+        if site_errs and input("Update input filesets? (y/n): ").lower() in [
+            "y",
+            "yes",
+        ]:
+            update_input_filesets(
+                site_errs, args.year, fileset_dir, job_dir, datasets_with_missing_jobs
+            )
+            
+        if input("Update and resubmit jobs? (y/n): ").lower() in ["y", "yes"]:
+            resubmit_jobs(
+                job_dir,
+                jobnum_missing,
+                datasets_with_missing_jobs,
+                args.workflow,
+                args.year,
+            )
