@@ -13,7 +13,7 @@ def main(args):
     out = processor.run_uproot_job(
         partition_fileset,
         treename="Events",
-        processor_instance=BaseProcessor(processor=args.processor, year=args.year),
+        processor_instance=BaseProcessor(workflow=args.workflow, year=args.year),
         executor=processor.futures_executor,
         executor_args={"schema": NanoAODSchema, "workers": 4},
     )
@@ -27,13 +27,15 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--processor",
-        dest="processor",
+        "-w",
+        "--workflow",
+        dest="workflow",
         type=str,
         choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl", "zplusll"],
-        help="processor to be used",
+        help="workflow config to run",
     )
     parser.add_argument(
+        "-y",
         "--year",
         dest="year",
         type=str,
@@ -41,6 +43,7 @@ if __name__ == "__main__":
         help="dataset year",
     )
     parser.add_argument(
+        "-d",
         "--dataset",
         dest="dataset",
         type=str,

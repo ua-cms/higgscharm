@@ -6,7 +6,7 @@ from coffea.nanoevents import NanoAODSchema
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.utils import dump_lumi
-from analysis.configs import ProcessorConfigBuilder
+from analysis.workflows import WorkflowConfigBuilder
 from analysis.histograms import HistBuilder, fill_histograms
 from analysis.corrections.correction_manager import (
     object_corrector_manager,
@@ -25,22 +25,22 @@ NanoAODSchema.warn_missing_crossrefs = False
 
 
 class BaseProcessor(processor.ProcessorABC):
-    def __init__(self, processor: str, year: str):
+    def __init__(self, workflow: str, year: str):
         self.year = year
 
-        config_builder = ProcessorConfigBuilder(
-            processor=processor, year="2022" if year.startswith("2022") else "2023"
+        config_builder = WorkflowConfigBuilder(
+            workflow=workflow, year="2022" if year.startswith("2022") else "2023"
         )
-        self.processor_config = config_builder.build_processor_config()
-        self.histogram_config = self.processor_config.histogram_config
-        self.histograms = HistBuilder(self.processor_config).build_histogram()
+        self.workflow_config = config_builder.build_workflow_config()
+        self.histogram_config = self.workflow_config.histogram_config
+        self.histograms = HistBuilder(self.workflow_config).build_histogram()
 
     def process(self, events):
         year = self.year
         dataset = events.metadata["dataset"]
 
-        object_selections = self.processor_config.object_selection
-        event_selection = self.processor_config.event_selection
+        object_selections = self.workflow_config.object_selection
+        event_selection = self.workflow_config.event_selection
         hlt_paths = event_selection["hlt_paths"]
         histograms = deepcopy(self.histograms)
 
@@ -64,7 +64,7 @@ class BaseProcessor(processor.ProcessorABC):
             events=events,
             year=year,
             dataset=dataset,
-            processor_config=self.processor_config,
+            workflow_config=self.workflow_config,
         )
 
         # --------------------------------------------------------------
@@ -106,7 +106,7 @@ class BaseProcessor(processor.ProcessorABC):
                     pruned_ev=pruned_ev,
                     year=year,
                     dataset=dataset,
-                    processor_config=self.processor_config,
+                    workflow_config=self.workflow_config,
                 )
                 # save cutflow to metadata
                 output["metadata"][category] = {"cutflow": {"initial": len(events)}}

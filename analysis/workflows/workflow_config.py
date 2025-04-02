@@ -1,7 +1,7 @@
 import yaml
 
 
-class ProcessorConfig:
+class WorkflowConfig:
     """
     Attributes:
     -----------
@@ -24,7 +24,7 @@ class ProcessorConfig:
         self.histogram_config = histogram_config
 
     def to_dict(self):
-        """Convert ProcessorConfig to a dictionary."""
+        """Convert WorkflowConfig to a dictionary."""
         return {
             "object_selection": self.object_selection,
             "event_selection": self.event_selection,
@@ -33,5 +33,5 @@ class ProcessorConfig:
         }
 
     def to_yaml(self):
-        """Convert ProcessorConfig to a YAML string."""
+        """Convert WorkflowConfig to a YAML string."""
         return yaml.dump(self.to_dict(), sort_keys=False, default_flow_style=False)

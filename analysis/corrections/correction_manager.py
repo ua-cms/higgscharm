@@ -12,9 +12,9 @@ from analysis.corrections.electron import ElectronWeights, ElectronSS
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
 
 
-def object_corrector_manager(events, year, dataset, processor_config):
+def object_corrector_manager(events, year, dataset, workflow_config):
     """apply object level corrections"""
-    objcorr_config = processor_config.corrections_config["objects"]
+    objcorr_config = workflow_config.corrections_config["objects"]
 
     if "jets" in objcorr_config:
         # apply JEC/JER corrections
@@ -60,10 +60,10 @@ def object_corrector_manager(events, year, dataset, processor_config):
             )
 
 
-def weight_manager(pruned_ev, year, dataset, processor_config, variation="nominal"):
+def weight_manager(pruned_ev, year, dataset, workflow_config, variation="nominal"):
     """apply event level corrections (weights)"""
     # get weights config info
-    weights_config = processor_config.corrections_config["event_weights"]
+    weights_config = workflow_config.corrections_config["event_weights"]
     # initialize weights container
     weights_container = Weights(len(pruned_ev), storeIndividual=True)
     # add weights
@@ -125,7 +125,7 @@ def weight_manager(pruned_ev, year, dataset, processor_config, variation="nomina
                             dataset=dataset,
                             id_wp=weights_config["muon"]["id"],
                             iso_wp=weights_config["muon"]["iso"],
-                            hlt_paths=processor_config.event_selection["hlt_paths"],
+                            hlt_paths=workflow_config.event_selection["hlt_paths"],
                         )
         if "electron" in weights_config:
             if "selected_electrons" in pruned_ev.fields:
@@ -150,7 +150,7 @@ def weight_manager(pruned_ev, year, dataset, processor_config, variation="nomina
                         electron_weights.add_hlt_weights(
                             dataset=dataset,
                             id_wp=weights_config["electron"]["id"],
-                            hlt_paths=processor_config.event_selection["hlt_paths"],
+                            hlt_paths=workflow_config.event_selection["hlt_paths"],
                         )
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))

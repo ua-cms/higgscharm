@@ -2,9 +2,9 @@ import hist
 
 
 class HistBuilder:
-    def __init__(self, processor_config):
-        self.processor_config = processor_config
-        self.histogram_config = processor_config.histogram_config
+    def __init__(self, workflow_config):
+        self.workflow_config = workflow_config
+        self.histogram_config = workflow_config.histogram_config
         self.axis_opt = {
             "StrCategory": hist.axis.StrCategory,
             "IntCategory": hist.axis.IntCategory,

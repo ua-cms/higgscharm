@@ -26,16 +26,16 @@ def move_proxy() -> str:
 
 def submit_condor(args):
     """Build condor files. Optionally submit condor job"""
-    print(f"Creating {args.processor}-{args.year}-{args.dataset} condor file")
-    jobname = f"{args.processor}_{args.dataset}"
+    print(f"Creating {args.workflow}-{args.year}-{args.dataset} condor file")
+    jobname = f"{args.workflow}_{args.dataset}"
 
     # make condor and log directories
     condor_dir = Path.cwd() / "condor"
-    job_dir = condor_dir / args.processor / args.year / args.dataset
+    job_dir = condor_dir / args.workflow / args.year / args.dataset
     if not job_dir.exists():
         job_dir.mkdir(parents=True, exist_ok=True)
 
-    log_dir = condor_dir / "logs" / args.processor / args.year / args.dataset
+    log_dir = condor_dir / "logs" / args.workflow / args.year / args.dataset
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -91,24 +91,27 @@ def submit_condor(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--processor",
-        dest="processor",
+        "-w",
+        "--workflow",
+        dest="workflow",
         type=str,
         choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl", "zplusll"],
-        help="processor to be used",
+        help="workflow config to run",
     )
     parser.add_argument(
-        "--dataset",
-        dest="dataset",
-        type=str,
-        help="dataset name",
-    )
-    parser.add_argument(
+        "-y",
         "--year",
         dest="year",
         type=str,
         choices=["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
         help="dataset year",
+    )
+    parser.add_argument(
+        "-d",
+        "--dataset",
+        dest="dataset",
+        type=str,
+        help="dataset",
     )
     parser.add_argument(
         "--nfiles",

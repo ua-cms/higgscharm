@@ -1,19 +1,19 @@
 import yaml
 import importlib.resources
 from analysis.histograms import HistogramConfig
-from analysis.configs.processor_config import ProcessorConfig
+from analysis.configs.workflow_config import WorkflowConfig
 
 
-class ProcessorConfigBuilder:
+class WorkflowConfigBuilder:
 
-    def __init__(self, processor: str, year: str):
+    def __init__(self, workflow: str, year: str):
         with importlib.resources.open_text(
-            f"analysis.configs.{processor}", f"{processor}.yaml"
+            f"analysis.workflows.{workflow}", f"{workflow}.yaml"
         ) as file:
             self.config = yaml.safe_load(file)
 
-    def build_processor_config(self):
-        return ProcessorConfig(
+    def build_workflow_config(self):
+        return WorkflowConfig(
             object_selection=self.parse_object_selection(),
             event_selection=self.parse_event_selection(),
             corrections_config=self.parse_corrections_config(),

@@ -117,13 +117,15 @@ DATASETS = {
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--processor",
-        dest="processor",
+        "-w",
+        "--workflow",
+        dest="workflow",
         type=str,
         choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl", "zplusll"],
-        help="processor to be used",
+        help="workflow config to run",
     )
     parser.add_argument(
+        "-y",
         "--year",
         dest="year",
         type=str,
@@ -165,7 +167,7 @@ if __name__ == "__main__":
 
     # build the list of datasets to run over, based on processor and year
     to_run = []
-    for kind, datasets in DATASETS[args.processor].items():
+    for kind, datasets in DATASETS[args.workflow].items():
         for dataset in datasets:
             if kind == "mc":
                 to_run += MC_DATASETS[dataset]
@@ -176,8 +178,8 @@ if __name__ == "__main__":
     cmd = ["python3", "submit_condor.py"]
     for dataset in to_run:
         cmd_args = [
-            "--processor",
-            args.processor,
+            "--workflow",
+            args.workflow,
             "--year",
             args.year,
             "--dataset",
