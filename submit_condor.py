@@ -39,6 +39,12 @@ def submit_condor(args):
     if not log_dir.exists():
         log_dir.mkdir(parents=True, exist_ok=True)
 
+    # check if the fileset for the given year exists, generate it otherwise
+    filesets_path = Path.cwd() / "analysis" / "filesets"
+    fileset_file = filesets_path / f"fileset_{args.year}_NANO_lxplus.json"
+    if not fileset_file.exists():
+        cmd = f"python3 fetch.py --year {args.year}"
+        subprocess.run(cmd, shell=True)
     # save partitions json and jobnums to job directory
     jobnum_list = []
     partition_dataset = {}
