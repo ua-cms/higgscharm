@@ -13,9 +13,9 @@ class Paths:
             # finds the root path as the directory one level upwards of where this file is located
             self.root_path = pathlib.Path(__file__).resolve().parent.parent
 
-    def processor_path(
+    def workflow_path(
         self,
-        processor: str,
+        workflow: str,
         year: str,
         dataset: str
     ) -> pathlib.Path:
@@ -30,11 +30,11 @@ class Paths:
         Returns:
             Input path.
         """
-        processor_path = "/".join(
+        workflow_path = "/".join(
             [
                 elem
                 for elem in [
-                    processor,
+                    workflow,
                     year,
                     dataset
                 ]
@@ -42,7 +42,7 @@ class Paths:
             ]
         )
         # make output directory
-        output_path = self.root_path / "outputs" / processor_path
+        output_path = self.root_path / "outputs" / workflow_path
         if not output_path.exists():
             output_path.mkdir(parents=True)
         return output_path

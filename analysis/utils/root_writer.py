@@ -1,5 +1,5 @@
 import pickle
-from analysis.configs import ProcessorConfigBuilder
+from analysis.workflows import WorkflowConfigBuilder
 
 
 def write_root(out, save_path, args):
@@ -8,9 +8,9 @@ def write_root(out, save_path, args):
     with open(f"{save_path}.pkl", "wb") as handle:
         pickle.dump(out["metadata"], handle, protocol=pickle.HIGHEST_PROTOCOL)
     # save 1D histograms
-    config_builder = ProcessorConfigBuilder(processor=args.processor, year=args.year)
-    processor_config = config_builder.build_processor_config()
-    categories = processor_config.event_selection["categories"]
+    config_builder = WorkflowConfigBuilder(workflow=args.workflow, year=args.year)
+    workflow_config = config_builder.build_workflow_config()
+    categories = workflow_config.event_selection["categories"]
     with uproot.recreate(f"{save_path}.root") as f:
         for category in categories:
             for histogram in out["histograms"].values():
