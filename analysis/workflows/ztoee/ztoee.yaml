@@ -2,19 +2,15 @@ object_selection:
   muons:
     field: events.Muon
     cuts:
-      - events.Muon.pt > 10
+      - events.Muon.pt > 5
       - np.abs(events.Muon.eta) < 2.4
-      - np.abs(events.Muon.dxy) < 0.5
-      - np.abs(events.Muon.dz) < 1
       - working_points.muon_iso(events, 'tight')
       - working_points.muon_id(events, 'tight')
   electrons:
     field: events.Electron
     cuts:
-      - events.Electron.pt > 10
+      - events.Electron.pt > 7
       - np.abs(events.Electron.eta) < 2.5
-      - events.Electron.dxy < 0.5
-      - events.Electron.dz < 1
       - working_points.electron_id(events, 'wp80iso')
       - delta_r_higher(events.Electron, objects['muons'], 0.4)
   jets:
@@ -39,8 +35,8 @@ event_selection:
     trigger: get_trigger_mask(events, hlt_paths, dataset, year)
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
-    first_electron_pt: ak.firsts(objects['electrons'].pt) > 33
-    second_electron_pt: ak.pad_none(objects['electrons'], target=2)[:, 1].pt > 15
+    leading_electron_pt: ak.fill_none(ak.firsts(objects['dielectrons'].l1.pt) > 33, False)
+    subleading_electron_pt: ak.fill_none(ak.firsts(objects['dielectrons'].l2.pt) > 15, False)
     muon_veto: ak.num(objects["muons"]) == 0
     two_electrons: ak.num(objects['electrons']) == 2
     one_dielectron: ak.num(objects['dielectrons']) == 1
@@ -49,8 +45,8 @@ event_selection:
       - atleast_one_goodvertex
       - lumimask
       - trigger
-      - first_electron_pt
-      - second_electron_pt
+      - leading_electron_pt
+      - subleading_electron_pt
       - muon_veto
       - two_electrons
       - one_dielectron
