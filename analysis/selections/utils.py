@@ -32,6 +32,7 @@ def select_dileptons(objects, key):
     leptons = leptons[ak.argsort(leptons.pt, axis=1)]
     # create pair combinations with all muons
     dileptons = ak.combinations(leptons, 2, fields=["l1", "l2"])
+    dileptons = dileptons[ak.argsort(dileptons.l1.pt, axis=1)]
     # add dimuon 4-momentum field
     dileptons["p4"] = dileptons.l1 + dileptons.l2
     dileptons["pt"] = dileptons.p4.pt
