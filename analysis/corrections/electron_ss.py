@@ -54,6 +54,8 @@ def apply_electron_ss_corrections(
         Path.cwd() / "analysis" / "data" / f"{year}_electronSS_EtDependent.json.gz"
     )
     cset = correctionlib.CorrectionSet.from_file(str(json_path))
+    scale_evaluator = cset.compound[f"EGMScale_Compound_Ele_{year}"]
+    smear_evaluator = cset[f"EGMSmearAndSyst_ElePTsplit_{year}"]
 
     events["Electron", "pt_raw"] = ak.ones_like(events.Electron.pt) * events.Electron.pt
     electrons = ak.flatten(events.Electron)
@@ -65,25 +67,20 @@ def apply_electron_ss_corrections(
     r9 = electrons.r9
     pt = electrons.pt_raw
 
-    # get correction factor: scale for Data and smear for MC
-    if hasattr(events, "genWeight"):
-        smear_evaluator = cset[f"EGMSmearAndSyst_ElePTsplit_{year}"]
-        rho = smear_evaluator.evaluate("smear", pt, r9, abseta)
-        rng = np.random.default_rng(seed=42)
-        correction_factor = rng.normal(loc=1.0, scale=rho)
-    else:
-        scale_evaluator = cset.compound[f"EGMScale_Compound_Ele_{year}"]
-        correction_factor = scale_evaluator.evaluate(
-            "scale", run, eta, r9, abseta, pt, gain
-        )
-
     if variation == "nominal":
-        # get corrected electron pt
+        if hasattr(events, "genWeight"):
+            smear = smear_evaluator.evaluate("smear", pt, r9, abseta)
+            rng = np.random.default_rng(seed=42)
+            random_numbers = rng.normal(loc=0.0, scale=1.0, size=len(pt))
+            correction_factor = 1 + smear * random_numbers
+        else:
+            correction_factor = scale_evaluator.evaluate(
+                "scale", run, eta, r9, abseta, pt, gain
+            )
+
         ele_pt = ak.unflatten(electrons.pt_raw, counts)
         ele_pt_corr = ak.unflatten(electrons.pt_raw * correction_factor, counts)
         corrected_pt = filter_boundaries(ele_pt_corr, ele_pt)
 
-        # update muon pT
         events["Electron", "pt"] = corrected_pt
-        # Propagate to MET
         update_met(events=events, other_obj="Muon", met_obj="PuppiMET")
