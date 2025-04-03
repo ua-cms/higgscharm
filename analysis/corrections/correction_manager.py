@@ -4,12 +4,12 @@ from analysis.corrections.muon import MuonWeights
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
 from analysis.corrections.lhepdf import add_lhepdf_weight
+from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.jerc import apply_jerc_corrections
 from analysis.corrections.lhescale import add_scalevar_weight
 from analysis.corrections.met import apply_met_phi_corrections
-from analysis.corrections.partonshower import add_partonshower_weight
-from analysis.corrections.electron import ElectronWeights, ElectronSS
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
+from analysis.corrections.partonshower import add_partonshower_weight
 from analysis.corrections.electron_ss import apply_electron_ss_corrections
 
 
@@ -45,20 +45,6 @@ def object_corrector_manager(events, year, dataset, workflow_config):
             year=year,
             variation="nominal",
         )
-        """
-        # apply electron scale and smearing corrections
-        electron_ss = ElectronSS(
-            events=events,
-            year=year,
-            variation="nominal",
-        )
-        if hasattr(events, "genWeight"):
-            # energies in MC are smeared
-            electron_ss.apply_smearing()
-        else:
-            # energies in data are scaled
-            electron_ss.apply_scale()
-        """
     if "met" in objcorr_config:
         # apply MET-phi modulation corrections
         if year.startswith("2022"):
