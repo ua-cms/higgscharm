@@ -248,7 +248,10 @@ class ElectronWeights:
         )
         # get trigger match masks
         trigger_match = trigger_match_mask(
-            events=self.events, leptons=self.electrons, hlt_paths=hlt_paths, year=self.year
+            events=self.events,
+            leptons=self.electrons,
+            hlt_paths=hlt_paths,
+            year=self.year,
         )
         trigger_mask = ak.flatten(trigger_match)
 
@@ -277,6 +280,46 @@ class ElectronWeights:
             self.electrons_counts,
         )
         return weights
+
+
+def filter_boundaries(pt_corr, pt, nested=True):
+    if not nested:
+        pt_corr = np.asarray(pt_corr)
+        pt = np.asarray(pt)
+
+    # Check for pt values outside the range
+    outside_bounds = (pt < 20) | (pt > 200)
+
+    if nested:
+        n_pt_outside = ak.sum(ak.any(outside_bounds, axis=-1))
+    else:
+        n_pt_outside = np.sum(outside_bounds)
+
+    if n_pt_outside > 0:
+        print(
+            f"There are {n_pt_outside} events with muon pt outside of [20,200] GeV. "
+            "Setting those entries to their initial value."
+        )
+        pt_corr = np.where(pt > 200, pt, pt_corr)
+        pt_corr = np.where(pt < 20, pt, pt_corr)
+
+    # Check for NaN entries in pt_corr
+    nan_entries = np.isnan(pt_corr)
+
+    if nested:
+        n_nan = ak.sum(ak.any(nan_entries, axis=-1))
+    else:
+        n_nan = np.sum(nan_entries)
+
+    if n_nan > 0:
+        print(
+            f"There are {n_nan} nan entries in the corrected pt. "
+            "This might be due to the number of tracker layers hitting boundaries. "
+            "Setting those entries to their initial value."
+        )
+        pt_corr = np.where(np.isnan(pt_corr), pt, pt_corr)
+
+    return pt_corr
 
 
 class ElectronSS:
@@ -356,9 +399,10 @@ class ElectronSS:
                 self.flat_electrons.pt * scale,
                 self.flat_electrons.pt,
             )
-            self.events["Electron", "pt"] = ak.unflatten(
-                corrected_flat_electrons_pt, self.electrons_counts
-            )
+            pt = ak.unflatten(self.flat_electrons.pt, self.electrons_counts)
+            pt_corr = ak.unflatten(corrected_flat_electrons_pt, self.electrons_counts)
+            corrected_pt = filter_boundaries(pt_corr, pt)
+            self.events["Electron", "pt"] = corrected_pt
             # propagate electron pT corrections to MET
             update_met(events=self.events, other_obj="Electron", met_obj="PuppiMET")
         else:
@@ -386,9 +430,10 @@ class ElectronSS:
                 self.flat_electrons.pt * smearing,
                 self.flat_electrons.pt,
             )
-            self.events["Electron", "pt"] = ak.unflatten(
-                corrected_flat_electrons_pt, self.electrons_counts
-            )
+            pt = ak.unflatten(self.flat_electrons.pt, self.electrons_counts)
+            pt_corr = ak.unflatten(corrected_flat_electrons_pt, self.electrons_counts)
+            corrected_pt = filter_boundaries(pt_corr, pt)
+            self.events["Electron", "pt"] = corrected_pt
             # propagate electron pT corrections to MET
             update_met(events=self.events, other_obj="Electron", met_obj="PuppiMET")
         else:
