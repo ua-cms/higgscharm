@@ -10,6 +10,7 @@ class HistBuilder:
             "IntCategory": hist.axis.IntCategory,
             "Regular": hist.axis.Regular,
             "Variable": hist.axis.Variable,
+            "Integer": hist.axis.Integer,
         }
         self.cat_axis = hist.axis.StrCategory(
             name="category", categories=self.histogram_config.categories

@@ -21,7 +21,7 @@ def get_flow_array(histogram, variable, variables_map):
 
 
 def get_variable_array(histogram, histogram_config, variable, variables_map, flow):
-    if histogram_config.axes[variable].type == "IntCategory":
+    if histogram_config.axes[variable].type in ["IntCategory", "Integer"]:
         # cast to integer array
         variable_array = normalize(variables_map[variable])
         variable_array = ak.to_numpy(variable_array).astype(int)

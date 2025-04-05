@@ -54,7 +54,24 @@ class IntCategoryAxis:
             "growth": self.growth,
         }
 
+@dataclass
+class IntegerAxis:
+    name: str
+    start: Union[int, float]
+    stop: Union[int, float]
+    label: str
+    expression: str
+    type_: str = field(default="Integer", metadata={"alias": "type"})
 
+    def __post_init__(self):
+        self.__dict__["type"] = self.type_
+        self.build_args = {
+            "name": self.name,
+            "label": self.label,
+            "start": self.start,
+            "stop": self.stop,
+        }
+        
 @dataclass
 class StrCategoryAxis:
     name: str
@@ -143,6 +160,7 @@ class HistogramConfig:
             "Regular": RegularAxis,
             "IntCategory": IntCategoryAxis,
             "StrCategory": StrCategoryAxis,
+            "Integer": IntegerAxis,
         }
         for name, axis_dict in self.axes.items():
             axis_type = axis_dict.pop("type")
