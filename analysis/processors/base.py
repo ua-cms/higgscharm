@@ -29,9 +29,7 @@ class BaseProcessor(processor.ProcessorABC):
     def __init__(self, workflow: str, year: str):
         self.year = year
 
-        config_builder = WorkflowConfigBuilder(
-            workflow=workflow, year="2022" if year.startswith("2022") else "2023"
-        )
+        config_builder = WorkflowConfigBuilder(workflow)
         self.workflow_config = config_builder.build_workflow_config()
         self.histogram_config = self.workflow_config.histogram_config
         self.histograms = HistBuilder(self.workflow_config).build_histogram()

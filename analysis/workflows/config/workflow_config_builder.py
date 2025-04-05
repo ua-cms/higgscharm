@@ -6,7 +6,7 @@ from .workflow_config import WorkflowConfig
 
 class WorkflowConfigBuilder:
 
-    def __init__(self, workflow: str, year: str):
+    def __init__(self, workflow: str):
         with importlib.resources.open_text(
             f"analysis.workflows", f"{workflow}.yaml"
         ) as file:
