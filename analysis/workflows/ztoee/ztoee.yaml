@@ -70,9 +70,9 @@ histogram_config:
   axes:
     dielectron_mass:
       type: Regular
-      bins: 100
-      start: 10
-      stop: 150
+      bins: 24
+      start: 60
+      stop: 120
       label: $m(ee)$ [GeV]
       expression: objects['dielectrons'].p4.mass
     dielectron_pt:

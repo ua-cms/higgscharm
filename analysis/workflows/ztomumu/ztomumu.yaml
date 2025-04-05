@@ -74,9 +74,9 @@ histogram_config:
   axes:
     dimuon_mass:
       type: Regular
-      bins: 100
-      start: 10
-      stop: 150
+      bins: 24
+      start: 60
+      stop: 120
       label: $m(\mu\mu)$ [GeV]
       expression: objects['dimuons'].p4.mass
     dimuon_pt:
