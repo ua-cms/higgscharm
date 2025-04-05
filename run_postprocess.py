@@ -108,12 +108,12 @@ def load_year_histograms(workflow, year, output_format):
     pre_file = (
         base_path
         / pre_year
-        / f"{workflow}_{pre_year}_processed_histograms.{output_format}"
+        / f"{pre_year}_processed_histograms.{output_format}"
     )
     post_file = (
         base_path
         / post_year
-        / f"{workflow}_{post_year}_processed_histograms.{output_format}"
+        / f"{post_year}_processed_histograms.{output_format}"
     )
     return accumulate([load(pre_file), load(post_file)])
 
