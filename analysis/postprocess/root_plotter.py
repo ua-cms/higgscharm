@@ -10,7 +10,7 @@ from matplotlib import ticker
 from hist.intervals import poisson_interval
 from coffea.processor import accumulate
 from analysis.histograms import VariableAxis
-from analysis.configs import ProcessorConfigBuilder
+from analysis.workflows.config import WorkflowConfigBuilder
 from analysis.postprocess.utils import setup_logger, divide_by_binwidth
 
 
@@ -33,9 +33,9 @@ class ROOTPlotter:
         self.output_dir = output_dir
 
         # get histogram config
-        config_builder = ProcessorConfigBuilder(processor=processor, year=year)
-        processor_config = config_builder.build_processor_config()
-        self.histogram_config = processor_config.histogram_config
+        config_builder = WorkflowConfigBuilder(workflow=workflow, year=year)
+        workflow_config = config_builder.build_workflow_config()
+        self.histogram_config = workflow_config.histogram_config
 
         # load luminosities
         with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:

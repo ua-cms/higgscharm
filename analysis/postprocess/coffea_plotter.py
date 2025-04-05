@@ -7,9 +7,14 @@ from pathlib import Path
 from matplotlib import ticker
 from coffea.processor import accumulate
 from hist.intervals import poisson_interval
-from analysis.histograms import VariableAxis
-from analysis.configs import ProcessorConfigBuilder
-from analysis.postprocess.utils import setup_logger, divide_by_binwidth
+from matplotlib.offsetbox import AnchoredText
+from analysis.histograms import VariableAxis, IntegerAxis
+from analysis.workflows.config import WorkflowConfigBuilder
+from analysis.postprocess.utils import (
+    setup_logger,
+    divide_by_binwidth,
+    get_variations_keys,
+)
 
 
 np.seterr(invalid="ignore")
@@ -19,29 +24,42 @@ np.seterr(divide="ignore")
 class CoffeaPlotter:
     def __init__(
         self,
-        processor: str,
+        workflow: str,
         year: str,
         processed_histograms: dict,
         output_dir: str,
     ):
-        self.processor = processor
+        self.workflow = workflow
         self.year = year
         self.processed_histograms = processed_histograms
         self.output_dir = output_dir
 
         # get histogram config
-        config_builder = ProcessorConfigBuilder(processor=processor, year=year)
-        processor_config = config_builder.build_processor_config()
-        self.histogram_config = processor_config.histogram_config
+        config_builder = WorkflowConfigBuilder(workflow=workflow)
+        workflow_config = config_builder.build_workflow_config()
+        self.histogram_config = workflow_config.histogram_config
 
-        # load luminosities
-        with open(f"{Path.cwd()}/analysis/data/luminosity.yaml", "r") as f:
-            self.luminosities = yaml.safe_load(f)
-        # load style config
-        with open(f"{Path.cwd()}/analysis/postprocess/style.yaml", "r") as f:
+        campaigns = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"]
+        if year not in campaigns:
+            if year.startswith("2022"):
+                aux_year = "2022preEE"
+            elif year.startswith("2023"):
+                aux_year = "2023preBPix"
+        else:
+            aux_year = year
+
+        # load luminosities and style
+        postprocess_dir = Path.cwd() / "analysis" / "postprocess"
+        style_file = postprocess_dir / "style.yaml"
+        luminosity_file = postprocess_dir / "luminosity.yaml"
+
+        with open(style_file, "r") as f:
             self.style = yaml.safe_load(f)
+        with open(f"{Path.cwd()}/analysis/postprocess/luminosity.yaml", "r") as f:
+            self.luminosities = yaml.safe_load(f)
+
         # set processes color map
-        with open(f"{Path.cwd()}/analysis/filesets/{self.year}_nanov12.yaml", "r") as f:
+        with open(f"{Path.cwd()}/analysis/filesets/{aux_year}_nanov12.yaml", "r") as f:
             dataset_configs = yaml.safe_load(f)
         processes = sorted(
             set(
@@ -72,30 +90,14 @@ class CoffeaPlotter:
                     histogram = histogram_dict[key]
                     break
         # get variable histogram for nominal variation and category
-        histogram = histogram[{"variation": variation, "category": category}].project(
-            variable
-        )
+        selector = {"variation": variation}
+        if "category" in histogram.axes.name:
+            selector.extend({"category": category})
+        histogram = histogram[selector].project(variable)
         # if axis type is variable divide by bin width
         if isinstance(self.histogram_config.axes[variable], VariableAxis):
             histogram = divide_by_binwidth(histogram)
         return histogram
-
-    def get_variations_keys(self):
-        variations = {}
-        for process, histogram_dict in self.processed_histograms.items():
-            for feature in histogram_dict:
-                helper_histogram = histogram_dict[feature]
-                variations = [
-                    var
-                    for var in helper_histogram.axes["variation"]
-                    if var != "nominal"
-                ]
-                break
-            break
-        variations = list(
-            set([var.replace("Up", "").replace("Down", "") for var in variations])
-        )
-        return variations
 
     def get_variations(
         self,
@@ -103,26 +105,17 @@ class CoffeaPlotter:
         variable,
         category,
         variation,
-        histogram_dict,
+        histogram,
     ):
         """returns variation histogram by processes/variable/category"""
-        # get histogram from histogram dictionary
-        if variable in histogram_dict:
-            histogram = histogram_dict[variable]
-        else:
-            for key in histogram_dict:
-                if variable in histogram_dict[key].axes.name:
-                    histogram = histogram_dict[key]
-                    break
-
         # get variable histogram for nominal variation and category
-        histogram_up = histogram[
-            {"variation": f"{variation}Up", "category": category}
-        ].project(variable)
-        histogram_down = histogram[
-            {"variation": f"{variation}Down", "category": category}
-        ].project(variable)
-
+        selectorup = {"variation": f"{variation}Up"}
+        selectordown = {"variation": f"{variation}Down"}
+        if "category" in histogram.axes.name:
+            selectorup.extend({"category": category})
+            selectordown.extend({"category": category})
+        histogram_up = histogram[selectorup].project(variable)
+        histogram_down = histogram[selectordown].project(variable)
         # if axis type is variable divide by bin width
         if isinstance(self.histogram_config.axes[variable], VariableAxis):
             histogram_up = divide_by_binwidth(histogram_up)
@@ -153,13 +146,23 @@ class CoffeaPlotter:
                 histogram_info["nominal"][process] = histogram
 
                 # save variations histograms
-                for variation in self.get_variations_keys():
+                if variable in histogram_dict:
+                    histogram = histogram_dict[variable]
+                else:
+                    for key in histogram_dict:
+                        if variable in histogram_dict[key].axes.name:
+                            histogram = histogram_dict[key]
+                            break
+                for variation in get_variations_keys(self.processed_histograms):
+                    var_cats = [v for v in histogram.axes["variation"]]
+                    if not f"{variation}Up" in var_cats:
+                        continue
                     up, down = self.get_variations(
                         process=process,
                         variable=variable,
                         category=category,
                         variation=variation,
-                        histogram_dict=histogram_dict,
+                        histogram=histogram,
                     )
                     if f"{variation}Up" in histogram_info["variations"]:
                         histogram_info["variations"][f"{variation}Up"] += up
@@ -182,7 +185,7 @@ class CoffeaPlotter:
         mcstat_err2 = self.nominal_variances
         err2_up = mcstat_err2
         err2_down = mcstat_err2
-        for variation in self.get_variations_keys():
+        for variation in get_variations_keys(self.processed_histograms):
             # Up/down variations for a single MC sample
             var_up = histogram_info["variations"][f"{variation}Up"].values()
             var_down = histogram_info["variations"][f"{variation}Down"].values()
@@ -258,7 +261,7 @@ class CoffeaPlotter:
         variable: str,
         category: str,
         yratio_limits: str = None,
-        log_scale: bool = False,
+        log: bool = False,
         extension: str = "png",
     ):
         setup_logger(self.output_dir)
@@ -317,13 +320,6 @@ class CoffeaPlotter:
         ax.set_xlim(xlimits)
         rax.set_xlim(xlimits)
         rax.set_ylim(yratio_limits)
-        # set legend layout
-        if log_scale:
-            ax.legend(loc="lower left", frameon=True)
-        elif ("eta" in variable) or ("phi" in variable):
-            ax.legend(loc="lower left", frameon=True)
-        else:
-            ax.legend()
         # set axes labels
         ylabel = "Events"
         if isinstance(self.histogram_config.axes[variable], VariableAxis):
@@ -337,9 +333,36 @@ class CoffeaPlotter:
             ylabel="Data / Pred",
             facecolor="white",
         )
+        text_map = {
+            "ztoee": r"$ Z \rightarrow ee$ events",
+            "ztomumu": r"$ Z \rightarrow \mu\mu$ events",
+        }
+        at = AnchoredText(
+            text_map.get(self.workflow, f"{self.workflow} events") + "\n",
+            loc="upper left",
+            frameon=False,
+        )
+        ax.add_artist(at)
         # set log scale
-        if log_scale:
+        if log:
             ax.set_yscale("log")
+            ax.set_ylim(top=np.max(data_histogram.values()) * 100)
+        else:
+            ylim = ax.get_ylim()[1]
+            ax.set_ylim(0, ylim + 0.2 * ylim)
+        ax.legend(
+            frameon=True,
+            loc="upper right",
+            fontsize=13,
+        )
+        if isinstance(self.histogram_config.axes[variable], IntegerAxis):
+            start = self.histogram_config.axes[variable].start
+            stop = self.histogram_config.axes[variable].stop
+            categories = np.arange(start, stop)
+            if len(categories) > 20:
+                for i, label in enumerate(rax.get_xticklabels()):
+                    if i % 5 != 0:  # Show only every 5th tick
+                        label.set_visible(False)
         # add CMS info
         hep.cms.lumitext(
             f"{self.luminosities[self.year] * 1e-3:.1f} fb$^{{-1}}$ ({self.year}, 13.6 TeV)",
@@ -351,6 +374,6 @@ class CoffeaPlotter:
         if not output_path.exists():
             output_path.mkdir(parents=True, exist_ok=True)
         fig.savefig(
-            f"{str(output_path)}/{self.processor}_{category}_{variable}_{self.year}.{extension}"
+            f"{str(output_path)}/{self.workflow}_{category}_{variable}_{self.year}.{extension}"
         )
         plt.close()

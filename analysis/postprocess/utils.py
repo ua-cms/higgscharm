@@ -130,3 +130,19 @@ def df_to_latex(df):
 
     # Return the generated LaTeX table
     return output
+
+
+def get_variations_keys(processed_histograms):
+    variations = {}
+    for process, histogram_dict in processed_histograms.items():
+        for feature in histogram_dict:
+            helper_histogram = histogram_dict[feature]
+            variations = [
+                var for var in helper_histogram.axes["variation"] if var != "nominal"
+            ]
+            break
+        break
+    variations = list(
+        set([var.replace("Up", "").replace("Down", "") for var in variations])
+    )
+    return variations

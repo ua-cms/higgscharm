@@ -9,7 +9,7 @@ import pandas as pd
 from glob import glob
 from pathlib import Path
 from coffea.processor import accumulate
-from analysis.configs import ProcessorConfigBuilder
+from analysis.workflows.config import WorkflowConfigBuilder
 from analysis.postprocess.utils import open_output, print_header, df_to_latex
 
 
@@ -37,9 +37,9 @@ class ROOTPostprocessor:
         with open(f"{Path.cwd()}/analysis/postprocess/luminosity.yaml", "r") as f:
             self.luminosities = yaml.safe_load(f)
 
-        config_builder = ProcessorConfigBuilder(processor=processor, year=year)
-        processor_config = config_builder.build_processor_config()
-        self.histogram_config = processor_config.histogram_config
+        config_builder = WorkflowConfigBuilder(workflow=workflow, year=year)
+        workflow_config = config_builder.build_workflow_config()
+        self.histogram_config = workflow_config.histogram_config
 
     def run_postprocess(self):
         self.merge_metadata()
