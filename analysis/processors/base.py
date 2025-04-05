@@ -28,7 +28,6 @@ NanoAODSchema.warn_missing_crossrefs = False
 class BaseProcessor(processor.ProcessorABC):
     def __init__(self, workflow: str, year: str):
         self.year = year
-
         config_builder = WorkflowConfigBuilder(workflow)
         self.workflow_config = config_builder.build_workflow_config()
         self.histogram_config = self.workflow_config.histogram_config
