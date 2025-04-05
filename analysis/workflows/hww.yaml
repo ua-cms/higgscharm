@@ -309,24 +309,9 @@ histogram_config:
       label: Candidate c-jet $\phi$
       expression: objects['candidate_cjet'].phi
     jet_multiplicity:
-      type: IntCategory
-      categories:
-        - 0
-        - 1
-        - 2
-        - 3
-        - 4
-        - 5
-        - 6
-        - 7
-        - 8
-        - 9
-        - 10
-        - 11
-        - 12
-        - 13
-        - 14
-        - 15
+      type: Integer
+      start: 0
+      stop: 14
       label: c-jets multiplicity
       expression: ak.num(objects['cjets'])
   layout:
