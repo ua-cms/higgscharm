@@ -28,8 +28,8 @@ def get_trigger_mask(events, hlt_paths, dataset_key, year):
     return trigger_mask(events, hlt_paths, dataset_key, year)
 
 
-def get_trigger_match_mask(events, leptons, hlt_paths):
-    mask = trigger_match_mask(events, leptons, hlt_paths)
+def get_trigger_match_mask(events, hlt_paths, year, leptons):
+    mask = trigger_match_mask(events, hlt_paths, year, leptons)
     return ak.sum(mask, axis=-1) > 0
 
 

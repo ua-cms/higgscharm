@@ -18,6 +18,7 @@ from analysis.selections import (
     get_trigger_mask,
     get_zzto4l_trigger_mask,
     get_metfilters_mask,
+    get_trigger_match_mask
 )
 
 

@@ -1,18 +1,18 @@
 object_selection:
-  muons:
-    field: events.Muon
-    cuts:
-      - events.Muon.pt > 5
-      - np.abs(events.Muon.eta) < 2.4
-      - working_points.muon_iso(events, 'tight')
-      - working_points.muon_id(events, 'tight')
   electrons:
     field: events.Electron
     cuts:
-      - events.Electron.pt > 7
-      - np.abs(events.Electron.eta) < 2.5
+      - events.Electron.pt > 10
+      - np.abs(events.Electron.eta) < 2.4
       - working_points.electron_id(events, 'wp80iso')
-      - delta_r_higher(events.Electron, objects['muons'], 0.4)
+  muons:
+    field: events.Muon
+    cuts:
+      - events.Muon.pt > 10
+      - np.abs(events.Muon.eta) < 2.4
+      - working_points.muon_iso(events, 'tight')
+      - working_points.muon_id(events, 'tight')
+      - delta_r_higher(events.Muon, objects['electrons'], 0.4)
   jets:
     field: events.Jet
     cuts:
@@ -24,7 +24,7 @@ object_selection:
   dielectrons:
     field: select_dielectrons
     cuts:
-      - objects['dielectrons'].l1.delta_r(objects['dielectrons'].l2) > 0.02
+      - objects['dielectrons'].l1.delta_r(objects['dielectrons'].l2) > 0.3
       - objects['dielectrons'].l1.charge * objects['dielectrons'].l2.charge < 0
       - (objects['dielectrons'].p4.mass > 60.0) & (objects['dielectrons'].p4.mass < 120.0)
 event_selection:
@@ -33,23 +33,25 @@ event_selection:
       - SingleEle
   selections:
     trigger: get_trigger_mask(events, hlt_paths, dataset, year)
+    trigger_match: get_trigger_match_mask(events, hlt_paths, year, events.Electron) 
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     leading_electron_pt: ak.fill_none(ak.firsts(objects['dielectrons'].l1.pt) > 33, False)
-    subleading_electron_pt: ak.fill_none(ak.firsts(objects['dielectrons'].l2.pt) > 15, False)
+    subleading_electron_pt: ak.fill_none(ak.firsts(objects['dielectrons'].l2.pt) > 20, False)
     muon_veto: ak.num(objects["muons"]) == 0
     two_electrons: ak.num(objects['electrons']) == 2
     one_dielectron: ak.num(objects['dielectrons']) == 1
   categories:
     base:
-      - atleast_one_goodvertex
-      - lumimask
       - trigger
+      - trigger_match
+      - lumimask
+      - atleast_one_goodvertex
       - leading_electron_pt
       - subleading_electron_pt
-      - muon_veto
-      - two_electrons
       - one_dielectron
+      - two_electrons
+      - muon_veto
 corrections:
   objects:
     - jets
@@ -67,6 +69,8 @@ corrections:
       - reco: true
       - trigger: true
 histogram_config:
+  add_syst_axis: true
+  add_weight: true
   axes:
     dielectron_mass:
       type: Regular
@@ -181,24 +185,9 @@ histogram_config:
       label: $|\Delta \eta(j_1, j_2)|$
       expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta -ak.pad_none(objects['jets'], target=2)[:, 1].eta)
     jet_multiplicity:
-      type: IntCategory
-      categories:
-        - 0
-        - 1
-        - 2
-        - 3
-        - 4
-        - 5
-        - 6
-        - 7
-        - 8
-        - 9
-        - 10
-        - 11
-        - 12
-        - 13
-        - 14
-        - 15
+      type: Integer
+      start: 0
+      stop: 14
       label: $N(j)$
       expression: ak.num(objects['jets'])
     leadingjet_cvsl:
@@ -245,6 +234,12 @@ histogram_config:
         - 5
       label: HadronFlavour
       expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
+    npvs:
+      type: Integer
+      start: 0
+      stop: 60
+      label: npvs
+      expression: events.PV.npvsGood
   layout: 
     dielectron_mass: 
       - dielectron_mass
@@ -288,5 +283,5 @@ histogram_config:
       - subleadingjet_flavour
       - subleadingjet_cvsb
       - subleadingjet_cvsl
-  add_syst_axis: true
-  add_weight: true
+    vertex:
+      - npvs

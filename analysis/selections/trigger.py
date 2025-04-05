@@ -175,7 +175,7 @@ def trigger_match(leptons, trigobjs, hlt_path):
     return trig_matched_locs
 
 
-def trigger_match_mask(events, leptons, hlt_paths, year):
+def trigger_match_mask(events, hlt_paths, year, leptons):
     trigger_match_mask = np.zeros(len(events), dtype="bool")
     for dataset_flags in hlt_paths.values():
         for flag in dataset_flags:
