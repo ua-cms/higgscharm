@@ -1,14 +1,14 @@
 import yaml
 import importlib.resources
 from analysis.histograms import HistogramConfig
-from analysis.workflows.workflow_config import WorkflowConfig
+from .workflow_config import WorkflowConfig
 
 
 class WorkflowConfigBuilder:
 
     def __init__(self, workflow: str, year: str):
         with importlib.resources.open_text(
-            f"analysis.workflows.{workflow}", f"{workflow}.yaml"
+            f"analysis.workflows", f"{workflow}.yaml"
         ) as file:
             self.config = yaml.safe_load(file)
 

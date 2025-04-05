@@ -73,8 +73,8 @@ event_selection:
 corrections:
   objects:
     - jets
+    - muons
     - electrons
-    - met
   event_weights:
     genWeight: true
     pileupWeight: true
