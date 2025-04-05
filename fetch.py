@@ -4,13 +4,12 @@ from pathlib import Path
 
 
 if __name__ == "__main__":
-    years = ["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"]
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--year",
         dest="year",
         type=str,
-        choices=["all"] + years,
+        choices=["2022preEE", "2022postEE", "2023preBPix", "2023postBPix"],
     )
     parser.add_argument(
         "--image",
@@ -27,9 +26,9 @@ if __name__ == "__main__":
             "VOMS proxy expired or non-existing: please run 'voms-proxy-init --voms cms'"
         )
 
-    sites_file = Path.cwd() / "analysis" / "filesets" / "sites.yaml"
+    sites_file = Path.cwd() / "analysis" / "filesets" / f"{args.year}_sites.yaml"
     if not sites_file.exists():
-        cmd = "python3 analysis/filesets/build_sites.py"
+        cmd = f"python3 analysis/filesets/build_sites.py --year {args.year}"
         subprocess.run(cmd, shell=True)
 
     cmd = f"singularity exec -B /afs -B /cvmfs {args.image} python3 analysis/filesets/make_filesets.py --year {args.year}"

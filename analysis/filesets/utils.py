@@ -65,7 +65,7 @@ def get_dataset_era(dataset, year):
             return dataset_config[dataset_key]["era"]
         
         
-def modify_site_list(site: str, status: str) -> None:
+def modify_site_list(year: str, site: str, status: str) -> None:
     """
     Move a given site to the specified status list ("white" or "black") 
     
@@ -74,7 +74,7 @@ def modify_site_list(site: str, status: str) -> None:
         site: The site identifier to modify.
         status: Desired list to move the site to ("white" or "black").
     """
-    yaml_file = Path.cwd() / "analysis" / "filesets" / "sites.yaml"
+    yaml_file = Path.cwd() / "analysis" / "filesets" / f"{year}_sites.yaml"
     with open(yaml_file, "r") as f:
         data = yaml.safe_load(f)
 
