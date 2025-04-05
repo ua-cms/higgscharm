@@ -6,7 +6,7 @@ from coffea.nanoevents import NanoAODSchema
 from coffea.analysis_tools import Weights, PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.utils import dump_lumi
-from analysis.workflows import WorkflowConfigBuilder
+from analysis.workflows.config import WorkflowConfigBuilder
 from analysis.histograms import HistBuilder, fill_histograms
 from analysis.corrections.correction_manager import (
     object_corrector_manager,

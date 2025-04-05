@@ -1,5 +1,5 @@
 import pickle
-from analysis.workflows import WorkflowConfigBuilder
+from analysis.workflows.config import WorkflowConfigBuilder
 
 
 def write_root(out, save_path, args):
