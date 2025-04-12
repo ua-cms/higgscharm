@@ -67,7 +67,11 @@ corrections:
     electron:
       - id: wp80iso
       - reco: true
-      - trigger: true
+      - trigger: false
+    muon:
+      - id: false
+      - iso: false
+      - trigger: false
 histogram_config:
   add_syst_axis: true
   add_weight: true

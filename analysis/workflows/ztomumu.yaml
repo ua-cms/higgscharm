@@ -72,6 +72,10 @@ corrections:
       - id: tight
       - iso: tight
       - trigger: true
+    electron:
+      - id: false
+      - reco: false
+      - trigger: false
 histogram_config:
   add_syst_axis: true
   add_weight: true
