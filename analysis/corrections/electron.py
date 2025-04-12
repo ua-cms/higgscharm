@@ -3,7 +3,6 @@ import numpy as np
 import awkward as ak
 from typing import Type
 from coffea.analysis_tools import Weights
-from analysis.working_points import working_points
 from analysis.selections.trigger import trigger_match_mask
 from analysis.selections.event_selections import get_trigger_mask
 from analysis.corrections.met import update_met
@@ -246,7 +245,7 @@ class ElectronWeights:
         cset = correctionlib.CorrectionSet.from_file(
             get_pog_json(json_name="electron_hlt", year=self.year)
         )
-        # get trigger match masks
+        # get trigger match mask
         trigger_match = trigger_match_mask(
             events=self.events,
             leptons=self.electrons,
