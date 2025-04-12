@@ -91,7 +91,6 @@ def modify_site_list(year: str, site: str, status: str) -> None:
 
     with open(yaml_file, "w") as f:
         yaml.dump(data, f, default_flow_style=False)
-    print(f"Site '{site}' moved to the {status} list")
     
     
 def extract_xrootd_errors(error_files: list) -> set:
