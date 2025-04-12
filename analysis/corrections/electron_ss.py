@@ -54,8 +54,14 @@ def apply_electron_ss_corrections(
         Path.cwd() / "analysis" / "data" / f"{year}_electronSS_EtDependent.json.gz"
     )
     cset = correctionlib.CorrectionSet.from_file(str(json_path))
-    scale_evaluator = cset.compound[f"EGMScale_Compound_Ele_{year}"]
-    smear_evaluator = cset[f"EGMSmearAndSyst_ElePTsplit_{year}"]
+    year_map = {
+        "2022preEE": "2022preEE",
+        "2022postEE": "2022postEE",
+        "2023preBPix": "2023preBPIX",
+        "2023postBPix": "2023postBPIX",
+    }
+    scale_evaluator = cset.compound[f"EGMScale_Compound_Ele_{year_map[year]}"]
+    smear_evaluator = cset[f"EGMSmearAndSyst_ElePTsplit_{year_map[year]}"]
 
     events["Electron", "pt_raw"] = ak.ones_like(events.Electron.pt) * events.Electron.pt
     electrons = ak.flatten(events.Electron)
