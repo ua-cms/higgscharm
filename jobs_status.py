@@ -6,6 +6,7 @@ import argparse
 import logging
 import subprocess
 from pathlib import Path
+from datetime import datetime, timedelta
 from analysis.utils import make_output_directory
 from analysis.filesets.xrootd_sites import xroot_to_site
 from analysis.filesets.utils import divide_list, modify_site_list, extract_xrootd_errors
@@ -39,10 +40,17 @@ def parse_args():
         choices=["coffea", "root"],
         help="Format of output histograms",
     )
+    parser.add_argument(
+        "-h",
+        "--hours_ago",
+        type=int,
+        default=8,
+        help="use .err files that have been modified less than 'hours_ago' hours ago",
+    )
     return parser.parse_args()
 
 
-def get_jobs_info(job_dir, output_dir, log_dir, output_format):
+def get_jobs_info(job_dir, output_dir, log_dir, output_format, hours_ago=3):
     """
     Collect expected and completed job numbers per dataset, and gather error logs.
 
@@ -55,7 +63,7 @@ def get_jobs_info(job_dir, output_dir, log_dir, output_format):
 
     Returns:
     --------
-        tuple: 
+        tuple:
             - jobnum (dict): Expected job numbers per dataset.
             - jobnum_done (dict): Successfully completed job numbers per dataset.
             - error_file (list): List of .err log files.
@@ -77,7 +85,11 @@ def get_jobs_info(job_dir, output_dir, log_dir, output_format):
         jobnum[dataset] = jobnum_path.read_text().splitlines()
         output_files = list((output_dir / dataset).glob(f"*.{output_format}"))
         jobnum_done[dataset] = [f.stem.replace(f"{dataset}_", "") for f in output_files]
-        error_file.extend((log_dir / dataset).glob("*.err"))
+
+        x_hours_ago = datetime.now() - timedelta(hours=hours_ago)
+        for err_file in (log_dir / dataset).glob("*.err"):
+            if datetime.fromtimestamp(err_file.stat().st_mtime) > x_hours_ago:
+                error_file.append(err_file)
 
     return jobnum, jobnum_done, error_file
 
@@ -93,7 +105,7 @@ def print_job_status(jobnum, jobnum_done):
 
     Returns:
     --------
-        tuple: 
+        tuple:
             - jobnum_missing (dict): Missing job numbers per dataset.
             - datasets_with_missing (list): Datasets that have missing jobs.
     """
@@ -164,6 +176,9 @@ def update_input_filesets(
         job_dir (Path): Directory with Condor job files.
         datasets_with_missing_jobs (list): Datasets to update.
     """
+    for site in xroot_to_site.values():
+        modify_site_list(year, site, "white")
+
     for site in site_errs:
         modify_site_list(year, site, "black")
 
@@ -242,7 +257,7 @@ if __name__ == "__main__":
     fileset_dir = base_dir / "analysis" / "filesets"
 
     jobnum, jobnum_done, error_file = get_jobs_info(
-        job_dir, output_dir, log_dir, args.output_format
+        job_dir, output_dir, log_dir, args.output_format, args.hours_ago
     )
 
     jobnum_missing, datasets_with_missing_jobs = print_job_status(jobnum, jobnum_done)
@@ -257,7 +272,7 @@ if __name__ == "__main__":
             update_input_filesets(
                 site_errs, args.year, fileset_dir, job_dir, datasets_with_missing_jobs
             )
-            
+
         if input("Update and resubmit jobs? (y/n): ").lower() in ["y", "yes"]:
             resubmit_jobs(
                 job_dir,
