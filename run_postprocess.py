@@ -1,6 +1,7 @@
 import gc
-import copy
 import yaml
+import json
+import glob
 import logging
 import argparse
 import pandas as pd
@@ -10,16 +11,17 @@ from coffea.util import save, load
 from coffea.processor import accumulate
 from analysis.workflows.config import WorkflowConfigBuilder
 from analysis.postprocess.coffea_plotter import CoffeaPlotter
+from analysis.postprocess.coffea_postprocessor import (
+    save_process_histograms_by_process,
+    save_process_histograms_by_sample,
+    load_processed_histograms,
+    get_results_report,
+    get_cutflow,
+)
 from analysis.postprocess.utils import (
     print_header,
     setup_logger,
     clear_output_directory,
-)
-from analysis.postprocess.coffea_postprocessor import (
-    save_process_histograms,
-    load_processed_histograms,
-    get_results_report,
-    get_cutflow,
 )
 
 OUTPUT_DIR = Path.cwd() / "outputs"
@@ -87,12 +89,23 @@ def parse_arguments():
         choices=["coffea", "root"],
         help="format of output histograms",
     )
+    parser.add_argument(
+        "--group_by",
+        type=str,
+        default="process",
+        help="Axis to group by when plotting (e.g., 'process', 'leadingjet_flavour', etc.)",
+    )
     return parser.parse_args()
 
 
-def build_process_sample_map(dataset_configs):
+def build_process_sample_map(datasets, year):
+    fileset_path = Path.cwd() / "analysis/filesets" / f"{year}_nanov12.yaml"
+    with open(fileset_path, "r") as f:
+        dataset_configs = yaml.safe_load(f)
+
     process_map = defaultdict(list)
-    for sample, config in dataset_configs.items():
+    for sample in datasets:
+        config = dataset_configs[sample]
         process_map[config["process"]].append(sample)
     return process_map
 
@@ -105,15 +118,9 @@ def load_year_histograms(workflow, year, output_format):
     pre_year, post_year = aux_map[year]
     base_path = OUTPUT_DIR / workflow
 
-    pre_file = (
-        base_path
-        / pre_year
-        / f"{pre_year}_processed_histograms.{output_format}"
-    )
+    pre_file = base_path / pre_year / f"{pre_year}_processed_histograms.{output_format}"
     post_file = (
-        base_path
-        / post_year
-        / f"{post_year}_processed_histograms.{output_format}"
+        base_path / post_year / f"{post_year}_processed_histograms.{output_format}"
     )
     return accumulate([load(pre_file), load(post_file)])
 
@@ -146,30 +153,54 @@ if __name__ == "__main__":
 
     if args.postprocess:
         logging.info(workflow_config.to_yaml())
-
-        fileset_path = Path.cwd() / "analysis/filesets" / f"{args.year}_nanov12.yaml"
-        with open(fileset_path, "r") as f:
-            dataset_configs = yaml.safe_load(f)
-
-        process_samples_map = build_process_sample_map(dataset_configs)
-        process_map = copy.deepcopy(process_samples_map)
         print_header(f"Reading outputs from: {output_dir}")
 
+        extension = ".coffea"
+        output_files = [
+            i
+            for i in glob.glob(f"{output_dir}/*/*{extension}", recursive=True)
+            if not i.split("/")[-1].startswith("cutflow")
+        ]
+        # group output file paths by sample name
+        grouped_outputs = {}
+        for output_file in output_files:
+            sample_name = output_file.split("/")[-1].split(extension)[0]
+            if sample_name.rsplit("_")[-1].isdigit():
+                sample_name = "_".join(sample_name.rsplit("_")[:-1])
+            sample_name = sample_name.replace(f"{args.year}_", "")
+            if sample_name in grouped_outputs:
+                grouped_outputs[sample_name].append(output_file)
+            else:
+                grouped_outputs[sample_name] = [output_file]
+
+        process_samples_map = build_process_sample_map(
+            grouped_outputs.keys(), args.year
+        )
+
+        for sample in grouped_outputs:
+            save_process_histograms_by_sample(
+                year=args.year,
+                output_dir=output_dir,
+                sample=sample,
+                grouped_outputs=grouped_outputs,
+                categories=categories,
+            )
+            gc.collect()
+
         for process in process_samples_map:
-            p = save_process_histograms(
+            save_process_histograms_by_process(
                 year=args.year,
                 output_dir=output_dir,
                 process_samples_map=process_samples_map,
                 process=process,
                 categories=categories,
             )
-            if not p:
-                del process_map[process]
             gc.collect()
+
         processed_histograms = load_processed_histograms(
             year=args.year,
             output_dir=output_dir,
-            process_samples_map=process_map,
+            process_samples_map=process_samples_map,
         )
 
         for category in categories:
@@ -178,7 +209,7 @@ if __name__ == "__main__":
 
             print_header(f"Cutflow")
             cutflow_df = pd.DataFrame()
-            for process in process_map:
+            for process in process_samples_map:
                 cutflow_file = category_dir / f"cutflow_{category}_{process}.csv"
                 cutflow_df = pd.concat(
                     [cutflow_df, pd.read_csv(cutflow_file, index_col=[0])], axis=1
@@ -186,7 +217,7 @@ if __name__ == "__main__":
 
             cutflow_df["Total Background"] = cutflow_df.drop(columns="Data").sum(axis=1)
 
-            cutflow_index = ["initial"] + event_selection["categories"][category]
+            cutflow_index = event_selection["categories"][category]
             cutflow_df = cutflow_df.loc[cutflow_index]
 
             cutflow_df = cutflow_df[
@@ -224,21 +255,45 @@ if __name__ == "__main__":
                 )
 
         print_header("Plots")
+        group_by = args.group_by
+        if args.group_by != "process":
+            group_by = json.loads(args.group_by)
         plotter = CoffeaPlotter(
             workflow=args.workflow,
             processed_histograms=processed_histograms,
             year=args.year,
             output_dir=output_dir,
+            group_by=group_by,
         )
 
         for category in workflow_config.event_selection["categories"]:
             logging.info(f"Plotting histograms for category: {category}")
             for variable in workflow_config.histogram_config.variables:
-                logging.info(variable)
-                plotter.plot_histograms(
-                    variable=variable,
-                    category=category,
-                    yratio_limits=args.yratio_limits,
-                    log=args.log,
-                    extension=args.extension,
-                )
+                if group_by != "process":
+                    for hist_key in workflow_config.histogram_config.layout:
+                        if (
+                            variable
+                            in workflow_config.histogram_config.layout[hist_key]
+                        ):
+                            if (
+                                group_by["name"]
+                                in workflow_config.histogram_config.layout[hist_key]
+                            ):
+                                if group_by["name"] != variable:
+                                    logging.info(variable)
+                                    plotter.plot_histograms(
+                                        variable=variable,
+                                        category=category,
+                                        yratio_limits=args.yratio_limits,
+                                        log=args.log,
+                                        extension=args.extension,
+                                    )
+                else:
+                    logging.info(variable)
+                    plotter.plot_histograms(
+                        variable=variable,
+                        category=category,
+                        yratio_limits=args.yratio_limits,
+                        log=args.log,
+                        extension=args.extension,
+                    )
