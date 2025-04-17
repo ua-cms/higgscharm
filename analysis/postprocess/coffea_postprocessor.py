@@ -9,7 +9,88 @@ from coffea.processor import accumulate
 from analysis.postprocess.utils import print_header, get_variations_keys
 
 
-def save_process_histograms(
+def save_process_histograms_by_sample(
+    grouped_outputs,
+    sample,
+    year: str,
+    output_dir: str,
+    categories,
+):
+    print_header(f"Processing {sample} outputs")
+
+    fileset_file = Path.cwd() / "analysis" / "filesets" / f"{year}_nanov12.yaml"
+    with open(fileset_file, "r") as f:
+        dataset_config = yaml.safe_load(f)
+
+    metadata = {}
+    histograms = {}
+    grouped_metadata = {}
+    grouped_histograms = {}
+
+    logging.info("Accumulating histograms and metadata...")
+    grouped_histograms = []
+    grouped_metadata = {}
+    for fname in grouped_outputs[sample]:
+        output = load(fname)
+        if output:
+            # group histograms by sample
+            grouped_histograms.append(output["histograms"])
+            # group metadata by sample
+            for meta_key in output["metadata"]:
+                if meta_key in grouped_metadata:
+                    grouped_metadata[meta_key].append(output["metadata"][meta_key])
+                else:
+                    grouped_metadata[meta_key] = [output["metadata"][meta_key]]
+
+    histograms = accumulate(grouped_histograms)
+    metadata = {}
+    for meta_key in grouped_metadata:
+        metadata[meta_key] = accumulate(grouped_metadata[meta_key])
+
+    logging.info("Scaling lumi-xsec weights")
+    lumi_file = Path.cwd() / "analysis" / "postprocess" / "luminosity.yaml"
+    with open(lumi_file, "r") as f:
+        luminosities = yaml.safe_load(f)
+
+    weights = {}
+    xsecs = {}
+    sumw = {}
+    weight = 1
+    xsec = dataset_config[sample]["xsec"]
+    sumw = metadata["sumw"]
+    if dataset_config[sample]["era"] == "MC":
+        weight = (luminosities[year] * xsec) / sumw
+
+    logging.info(f"luminosity [1/pb]: {luminosities[year]}")
+    logging.info(f"xsec [pb]: {xsec}")
+    logging.info(f"sumw: {sumw}")
+    logging.info(f"weight: {weight}")
+
+    scaled_histograms = {}
+    for variable in histograms:
+        scaled_histograms[variable] = histograms[variable] * weight
+
+    logging.info(f"saving histograms")
+    save(scaled_histograms, f"{output_dir}/{sample}.coffea")
+
+    scaled_cutflow = {}
+    for category in categories:
+        logging.info(f"saving cutflow for category {category}\n")
+        category_dir = Path(f"{output_dir}/{category}")
+        if not category_dir.exists():
+            category_dir.mkdir(parents=True, exist_ok=True)
+        scaled_cutflow[category] = {}
+        if category in metadata:
+            for cut, nevents in metadata[category]["cutflow"].items():
+                scaled_cutflow[category][cut] = nevents * weight
+        processed_cutflow = {sample: scaled_cutflow[category]}
+        cutflow_file = Path(
+            f"{output_dir}/{category}/cutflow_{category}_{sample}.coffea"
+        )
+        save(processed_cutflow, cutflow_file)
+
+
+def save_process_histograms_by_process(
     process: str,
     year: str,
     output_dir: str,
@@ -17,136 +98,35 @@ def save_process_histograms(
     categories,
 ):
     print_header(f"Processing {process} outputs")
-
-    # load dataset config
-    fileset_file = Path.cwd() / "analysis" / "filesets" / f"{year}_nanov12.yaml"
-    with open(fileset_file, "r") as f:
-        dataset_config = yaml.safe_load(f)
-
     # group and accumulate output files by sample
     extension = ".coffea"
     output_files = []
     for sample in process_samples_map[process]:
-        output_files += glob.glob(
-            f"{output_dir}/*/{sample}*{extension}", recursive=True
-        )
-    n_output_files = len(output_files)
-    # assert n_output_files != 0, "No output files found"
-    if n_output_files == 0:
-        return
+        output_files += glob.glob(f"{output_dir}/{sample}*{extension}", recursive=True)
 
-    logging.info(f"{n_output_files} output files were found for process {process}")
-
-    logging.info("grouping output file paths by sample name")
-    grouped_outputs = {}
-    for output_file in output_files:
-        sample_name = output_file.split("/")[-1].split(extension)[0]
-        if sample_name.rsplit("_")[-1].isdigit():
-            sample_name = "_".join(sample_name.rsplit("_")[:-1])
-        sample_name = sample_name.replace(f"{year}_", "")
-        if sample_name in grouped_outputs:
-            grouped_outputs[sample_name].append(output_file)
-        else:
-            grouped_outputs[sample_name] = [output_file]
-
-    logging.info("Reading and accumulating outputs by sample")
-    n_grouped_outputs = {}
-    # open output dictionaries with layout:
-    #      {<sample>_<i-th>: {"histograms": {"pt": Hist(...), ...}, "metadata": {"sumw": x, ...}}})
-    # group and accumulate histograms and metadata by <sample>
-    metadata = {}
-    histograms = {}
-    grouped_metadata = {}
-    grouped_histograms = {}
-    for sample in grouped_outputs:
-        logging.info(f"{sample}...")
-        grouped_histograms[sample] = []
-        grouped_metadata[sample] = {}
-        for fname in grouped_outputs[sample]:
-            output = load(fname)
-            if output:
-                # group histograms by sample
-                grouped_histograms[sample].append(output["histograms"])
-                # group metadata by sample
-                for meta_key in output["metadata"]:
-                    if meta_key in grouped_metadata[sample]:
-                        grouped_metadata[sample][meta_key].append(
-                            output["metadata"][meta_key]
-                        )
-                    else:
-                        grouped_metadata[sample][meta_key] = [
-                            output["metadata"][meta_key]
-                        ]
-        # accumulate histograms and metadata by sample
-        histograms[sample] = accumulate(grouped_histograms[sample])
-        metadata[sample] = {}
-        for meta_key in grouped_metadata[sample]:
-            metadata[sample][meta_key] = accumulate(grouped_metadata[sample][meta_key])
-
-    logging.info("Computing lumi-xsec weights")
-    lumi_file = Path.cwd() / "analysis" / "postprocess" / "luminosity.yaml"
-    with open(lumi_file, "r") as f:
-        luminosities = yaml.safe_load(f)
-    logging.info(f"luminosity [/pb] {luminosities[year]}")
-
-    # compute lumi-xsec weights
-    weights = {}
-    xsecs = {}
-    sumw = {}
-    for sample, md in metadata.items():
-        weights[sample] = 1
-        xsecs[sample] = dataset_config[sample]["xsec"]
-        sumw[sample] = md["sumw"]
-        if dataset_config[sample]["era"] == "MC":
-            weights[sample] = (luminosities[year] * xsecs[sample]) / sumw[sample]
-    scale_info = pd.DataFrame(
-        {
-            "xsec [pb]": xsecs,
-            "sumw": sumw,
-            "weight": weights,
-        }
-    )
-    logging.info(scale_info.applymap(lambda x: f"{x}" if pd.notnull(x) else ""))
-
-    logging.info("scaling histograms to lumi-xsec")
-    scaled_histograms = {}
-    for sample, variables in histograms.items():
-        # scale histograms
-        scaled_histograms[sample] = {}
-        for variable in variables:
-            scaled_histograms[sample][variable] = (
-                histograms[sample][variable] * weights[sample]
-            )
-
-    logging.info("grouping and accumulating histograms by process")
+    logging.info(f"saving {process} histograms")
     hist_to_accumulate = []
-    for sample in scaled_histograms:
-        hist_to_accumulate.append(scaled_histograms[sample])
-
-    logging.info(f"saving {process} histograms\n")
+    for out in output_files:
+        hist_to_accumulate.append(load(out))
     output_histograms = {process: accumulate(hist_to_accumulate)}
     save(output_histograms, f"{output_dir}/{process}.coffea")
 
-    logging.info("""scaling cutflow to lumi-xsec""")
-    scaled_cutflow = {}
+    cutflow = {}
     for category in categories:
+        logging.info(f"saving cutflow for category {category}\n")
         category_dir = Path(f"{output_dir}/{category}")
-        if not category_dir.exists():
-            category_dir.mkdir(parents=True, exist_ok=True)
-        scaled_cutflow[category] = {}
         cut_to_accumulate = []
-        for sample in metadata:
-            scaled_cutflow[category][sample] = {}
-            if category in metadata[sample]:
-                for cut, nevents in metadata[sample][category]["cutflow"].items():
-                    scaled_cutflow[category][sample][cut] = nevents * weights[sample]
-            cut_to_accumulate.append(scaled_cutflow[category][sample])
-        processed_cutflow = {process: accumulate(cut_to_accumulate)}
-        cutflow_df = pd.DataFrame(processed_cutflow)
-        logging.info(f"saving {process} cutflow for category {category}\n")
+        df = pd.DataFrame()
+        for sample in process_samples_map[process]:
+            cutflow_file = category_dir / f"cutflow_{category}_{sample}.coffea"
+            if cutflow_file.exists():
+                df_sample = pd.DataFrame(load(cutflow_file).values())
+                df = pd.concat([df, df_sample])
+
+        cutflow_df = pd.DataFrame(df.sum())
+        cutflow_df.columns = [process]
         cutflow_file = Path(f"{output_dir}/{category}/cutflow_{category}_{process}.csv")
         cutflow_df.to_csv(cutflow_file)
-    return process
 
 
 def load_processed_histograms(
@@ -156,9 +136,7 @@ def load_processed_histograms(
 ):
     processed_histograms = {}
     for process in process_samples_map:
-        print(process)
         processed_histograms.update(load(f"{output_dir}/{process}.coffea"))
-
     save(processed_histograms, f"{output_dir}/{year}_processed_histograms.coffea")
     return processed_histograms
 
