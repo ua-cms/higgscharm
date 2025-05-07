@@ -36,8 +36,8 @@ event_selection:
     trigger_match: get_trigger_match_mask(events, hlt_paths, year, events.Electron) 
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
-    leading_electron_pt: ak.fill_none(ak.firsts(objects['dielectrons'].l1.pt) > 33, False)
-    subleading_electron_pt: ak.fill_none(ak.firsts(objects['dielectrons'].l2.pt) > 20, False)
+    leading_electron_pt: ak.firsts(objects['electrons'].pt) > 33
+    subleading_electron_pt: ak.pad_none(objects['electrons'], target=2)[:, 1].pt > 20
     muon_veto: ak.num(objects["muons"]) == 0
     two_electrons: ak.num(objects['electrons']) == 2
     one_dielectron: ak.num(objects['dielectrons']) == 1
