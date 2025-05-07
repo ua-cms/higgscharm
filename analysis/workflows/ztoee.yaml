@@ -84,10 +84,33 @@ histogram_config:
       label: $m(ee)$ [GeV]
       expression: objects['dielectrons'].p4.mass
     dielectron_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
+      type: Variable
+      edges:
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 225
+        - 250
+        - 275
+        - 300
+        - 325
+        - 350
+        - 375
+        - 400
+        - 450
+        - 500
+        - 550
+        - 600
+        - 700
+        - 800
+        - 1000
       label: $p_T(ee)$ [GeV]
       expression: objects['dielectrons'].p4.pt
     dielectron_dr:
@@ -105,17 +128,33 @@ histogram_config:
       label: $|\Delta \eta(e_1, e_2)|$
       expression: np.abs(objects['dielectrons'].l1.eta - objects['dielectrons'].l2.eta)
     leading_electron_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
       label: $p_T(e_1)$ [GeV]
       expression: objects['dielectrons'].l1.pt
     subleading_electron_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
       label: $p_T(e_2)$ [GeV]
       expression: objects['dielectrons'].l2.pt
     leading_electron_eta:
@@ -133,10 +172,18 @@ histogram_config:
       label: $\eta(e_2)$
       expression: objects['dielectrons'].l2.eta
     electron_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
       label: $p_T(e)$ [GeV]
       expression: objects['electrons'].pt
     electron_eta:
@@ -154,10 +201,18 @@ histogram_config:
       label: $\phi(e)$
       expression: objects['electrons'].phi
     jet_pt:
-      type: Regular
-      bins: 50
-      start: 20
-      stop: 500
+      type: Variable
+      edges:
+        - 20
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
       label: $p_T(j)$ [GeV]
       expression: objects['jets'].pt
     jet_eta:

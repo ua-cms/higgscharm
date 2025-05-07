@@ -37,7 +37,7 @@ event_selection:
       - SingleMu
   selections:
     trigger: get_trigger_mask(events, hlt_paths, dataset, year)
-    trigger_match: get_trigger_match_mask(events, hlt_paths, year, events.Muon) 
+    trigger_match: get_trigger_match_mask(events, hlt_paths, year, events.Muon)
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     leading_muon_pt: ak.fill_none(ak.firsts(objects['dimuons'].l1.pt) > 27, False)
@@ -45,6 +45,7 @@ event_selection:
     electron_veto: ak.num(objects['electrons']) == 0
     two_muons: ak.num(objects['muons']) == 2
     one_dimuon: ak.num(objects['dimuons']) == 1
+    one_jet: ak.num(objects['jets']) == 1
   categories:
     base:
       - trigger
@@ -56,6 +57,7 @@ event_selection:
       - two_muons
       - one_dimuon
       - electron_veto
+      - one_jet
 corrections:
   objects:
     - jets
@@ -72,10 +74,6 @@ corrections:
       - id: tight
       - iso: tight
       - trigger: true
-    electron:
-      - id: false
-      - reco: false
-      - trigger: false
 histogram_config:
   add_syst_axis: true
   add_weight: true
@@ -88,10 +86,33 @@ histogram_config:
       label: $m(\mu\mu)$ [GeV]
       expression: objects['dimuons'].p4.mass
     dimuon_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
+      type: Variable
+      edges:
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 225
+        - 250
+        - 275
+        - 300
+        - 325
+        - 350
+        - 375
+        - 400
+        - 450
+        - 500
+        - 550
+        - 600
+        - 700
+        - 800
+        - 1000
       label: $p_T(\mu\mu)$ [GeV]
       expression: objects['dimuons'].p4.pt
     dimuon_dr:
@@ -109,17 +130,33 @@ histogram_config:
       label: $|\Delta \eta(\mu_1, \mu_2)|$
       expression: np.abs(objects['dimuons'].l1.eta - objects['dimuons'].l2.eta)
     leading_muon_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
       label: $p_T(\mu_1)$ [GeV]
       expression: objects['dimuons'].l1.pt
     subleading_muon_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
       label: $p_T(\mu_2)$ [GeV]
       expression: objects['dimuons'].l2.pt
     leading_muon_eta:
@@ -137,10 +174,18 @@ histogram_config:
       label: $\eta(\mu_2)$
       expression: objects['dimuons'].l2.eta
     muon_pt:
-      type: Regular
-      bins: 50
-      start: 30
-      stop: 300
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
       label: $p_T(\mu)$ [GeV]
       expression: objects['muons'].pt
     muon_eta:
@@ -158,19 +203,20 @@ histogram_config:
       label: $\phi(\mu)$
       expression: objects['muons'].phi
     jet_pt:
-      type: Regular
-      bins: 50
-      start: 20
-      stop: 500
+      type: Variable
+      edges:
+        - 20
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
       label: $p_T(j)$ [GeV]
       expression: objects['jets'].pt
-    jet_eta:
-      type: Regular
-      bins: 50
-      start: -2.4
-      stop: 2.4
-      label: $\eta(j)$
-      expression: objects['jets'].eta
     jet_phi:
       type: Regular
       bins: 50
@@ -178,6 +224,12 @@ histogram_config:
       stop: 3.14159
       label: $\phi(j)$
       expression: objects['jets'].phi
+    jet_multiplicity:
+      type: Integer
+      start: 0
+      stop: 14
+      label: $N(j)$
+      expression: ak.num(objects['jets'])
     jet_dr:
       type: Regular
       bins: 50
@@ -192,26 +244,6 @@ histogram_config:
       stop: 5
       label: $|\Delta \eta(j_1, j_2)|$
       expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta -ak.pad_none(objects['jets'], target=2)[:, 1].eta)
-    jet_multiplicity:
-      type: Integer
-      start: 0
-      stop: 14
-      label: $N(j)$
-      expression: ak.num(objects['jets'])
-    leadingjet_cvsl:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Leading Jet CvsL
-      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
-    leadingjet_cvsb:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Leading Jet CvsB
-      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
     leadingjet_flavour:
       type: IntCategory
       categories:
@@ -220,76 +252,98 @@ histogram_config:
         - 5
       label: HadronFlavour
       expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
-    subleadingjet_cvsl:
+    leadingjet_cvsl_pnet:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: Subleading Jet CvsL
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
-    subleadingjet_cvsb:
+      label: Leading Jet CvsL (PNet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
+    leadingjet_cvsb_pnet:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: Subleading Jet CvsB
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
-    subleadingjet_flavour:
-      type: IntCategory
-      categories:
-        - 0
-        - 4
-        - 5
-      label: HadronFlavour
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
+      label: Leading Jet CvsB (PNet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
+    leadingjet_cvsb_deepjet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsB (DeepJet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagDeepFlavCvB
+    leadingjet_cvsl_deepjet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet Cvsl (DeepJet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagDeepFlavCvL
+    leadingjet_cvsb_partb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet btagRobustParTAK4CvB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagRobustParTAK4CvB
+    leadingjet_cvsl_partb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet btagRobustParTAK4CvL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagRobustParTAK4CvL
     npvs:
       type: Integer
       start: 0
       stop: 60
       label: npvs
       expression: events.PV.npvsGood
-  layout: 
-    dimuon_mass: 
+  layout:
+    dimuon_mass:
       - dimuon_mass
-    dimuon_pt: 
+    dimuon_pt:
       - dimuon_pt
-    dimuon_dr: 
+    dimuon_dr:
       - dimuon_dr
-    dimuon_deta: 
+    dimuon_deta:
       - dimuon_deta
-    leading_muon_pt: 
+    leading_muon_pt:
       - leading_muon_pt
-    leading_muon_eta: 
+    leading_muon_eta:
       - leading_muon_eta
-    subleading_muon_pt: 
+    subleading_muon_pt:
       - subleading_muon_pt
-    subleading_muon_eta: 
+    subleading_muon_eta:
       - subleading_muon_eta
-    muon_pt: 
+    muon_pt:
       - muon_pt
-    muon_eta: 
+    muon_eta:
       - muon_eta
-    muon_phi: 
+    muon_phi:
       - muon_phi
-    jet_pt: 
+    jet_pt:
       - jet_pt
-    jet_eta: 
-      - jet_eta
-    jet_phi: 
+    jet_phi:
       - jet_phi
+    jet_multiplicity:
+      - jet_multiplicity
     jet_dr: 
       - jet_dr
     jet_deta: 
       - jet_deta
-    jet_multiplicity: 
-      - jet_multiplicity
-    leading_jet:
+    leading_jet_pnet:
       - leadingjet_flavour
-      - leadingjet_cvsb
-      - leadingjet_cvsl
-    subleading_jet:
-      - subleadingjet_flavour
-      - subleadingjet_cvsb
-      - subleadingjet_cvsl
+      - leadingjet_cvsb_pnet
+      - leadingjet_cvsl_pnet
+    leading_jet_deepjet:
+      - leadingjet_flavour
+      - leadingjet_cvsb_deepjet
+      - leadingjet_cvsl_deepjet
+    leading_jet_partb:
+      - leadingjet_flavour
+      - leadingjet_cvsb_partb
+      - leadingjet_cvsl_partb
     vertex:
       - npvs
