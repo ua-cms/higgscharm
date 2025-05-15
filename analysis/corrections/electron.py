@@ -246,7 +246,7 @@ class ElectronWeights:
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = self.flat_electrons.pt > 25.0
         trigger_match = trigger_match_mask(
-            events=self.events, leptons=self.muons, hlt_paths=hlt_paths, year=self.year
+            events=self.events, leptons=self.electrons, hlt_paths=hlt_paths, year=self.year
         )
         trigger_match_flat = ak.flatten(trigger_match)
         in_electrons_mask = electron_pt_mask & trigger_match_flat
