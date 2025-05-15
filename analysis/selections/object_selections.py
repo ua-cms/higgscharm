@@ -175,7 +175,7 @@ class ObjectSelector:
             behavior=candidate.behavior,
         )
         # select leptons (muons) such that relIso < 0.35 and update lepton index
-        leptons = leptons[leptons.pfRelIso03_all < 0.35]
+        #leptons = leptons[leptons.pfRelIso03_all < 0.35]
         leptons["idx"] = ak.local_index(leptons, axis=1)
 
         # assign -1 to FSR lepton_idx associated with the excluded leptons

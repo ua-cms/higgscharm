@@ -14,6 +14,7 @@ object_selection:
       is_tight:
         - objects['muons'].is_loose
         - objects['muons'].is_relaxed
+        - events.Muon.pfRelIso03_all < 0.35
         - events.Muon.isPFcand | ((events.Muon.highPtId > 0) & (events.Muon.pt > 200))
   electrons:
     field: events.Electron
