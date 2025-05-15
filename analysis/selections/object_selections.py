@@ -152,6 +152,9 @@ class ObjectSelector:
         muons["pfRelIso03_all"] = ak.where(
             muon_corrected_iso > 0, muon_corrected_iso, 0.0
         )
+        # update 'is_tight' selection for muons 
+        muons["is_tight"] = muons.is_tight & (muons.pfRelIso03_all < 0.35)
+        
         electrons["pfRelIso03_all"] = ak.zeros_like(electrons.pt)
         # concatenate muons and electrons with corrected iso
         leptons = ak.concatenate([muons, electrons], axis=1)
@@ -174,10 +177,7 @@ class ObjectSelector:
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
-        # select leptons (muons) such that relIso < 0.35 and update lepton index
-        #leptons = leptons[leptons.pfRelIso03_all < 0.35]
         leptons["idx"] = ak.local_index(leptons, axis=1)
-
         # assign -1 to FSR lepton_idx associated with the excluded leptons
         index_still_present = ak.any(
             fsr_photons.idx == leptons.fsr_idx[:, None], axis=-1
