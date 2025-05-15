@@ -52,13 +52,13 @@ object_selection:
         - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 2
       is_1fcr:
         - objects['zcandidates'].is_ossf
-        - objects['zcandidates'].l1.is_loose
-        - objects['zcandidates'].l2.is_loose
+        - objects['zcandidates'].l1.is_relaxed
+        - objects['zcandidates'].l2.is_relaxed
         - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 1
       is_2fcr:
         - objects['zcandidates'].is_ossf
-        - objects['zcandidates'].l1.is_loose
-        - objects['zcandidates'].l2.is_loose
+        - objects['zcandidates'].l1.is_relaxed
+        - objects['zcandidates'].l2.is_relaxed
         - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 0
       is_sscr:
         - objects['zcandidates'].is_ss
