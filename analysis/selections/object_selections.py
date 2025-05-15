@@ -259,76 +259,76 @@ class ObjectSelector:
         ]
         self.objects[obj_name] = best_zcand
 
-    def select_other_loose_leptons(self, obj_name):
+    def select_other_relaxed_leptons(self, obj_name):
         """
-        selects additional loose leptons in the Z+L CR. Adds the mask 'pass_selection' to additional loose leptons that pass the analysis selection
+        selects additional relaxed leptons in the Z+L CR. Adds the mask 'pass_selection' to additional relaxed leptons that pass the analysis selection
         """
         # select best Z candidates
         best_zcands = self.objects["best_zcandidates"]
-        # select loose leptons (whose idx are different to best Z candidate lepton's idx)
-        loose_leptons = self.objects["leptons"][self.objects["leptons"].is_loose]
-        loose_leptons_bestzl1_idx = loose_leptons.idx != best_zcands.l1.idx[:, None]
-        loose_leptons_bestzl2_idx = loose_leptons.idx != best_zcands.l2.idx[:, None]
-        loose_leptons_bestz_idx_mask = ak.flatten(
-            loose_leptons_bestzl1_idx & loose_leptons_bestzl2_idx, axis=-1
+        # select relaxed leptons (whose idx are different to best Z candidate lepton's idx)
+        relaxed_leptons = self.objects["leptons"][self.objects["leptons"].is_relaxed]
+        relaxed_leptons_bestzl1_idx = relaxed_leptons.idx != best_zcands.l1.idx[:, None]
+        relaxed_leptons_bestzl2_idx = relaxed_leptons.idx != best_zcands.l2.idx[:, None]
+        relaxed_leptons_bestz_idx_mask = ak.flatten(
+            relaxed_leptons_bestzl1_idx & relaxed_leptons_bestzl2_idx, axis=-1
         )
-        loose_leptons = loose_leptons[loose_leptons_bestz_idx_mask]
+        relaxed_leptons = relaxed_leptons[relaxed_leptons_bestz_idx_mask]
 
-        # add the 'pass_selection' attribute to 'loose_leptons'. It flags loose leptons passing the analysis selection
-        is_tight = loose_leptons.is_tight == ak.ones_like(
+        # add the 'pass_selection' attribute to 'relaxed_leptons'. It flags relaxed leptons passing the analysis selection
+        is_tight = relaxed_leptons.is_tight == ak.ones_like(
             best_zcands.l1.idx[:, None], dtype=bool
         )
         is_tight = ak.flatten(is_tight, axis=-1)
         # ghost removal: ∆R(η, φ) > 0.02 between each of the leptons (to protect against split tracks)
-        loose_leptons_bestzl1_dr = loose_leptons.metric_table(best_zcands.l1)
-        loose_leptons_bestzl2_dr = loose_leptons.metric_table(best_zcands.l2)
-        loose_leptons_bestz_dr_mask = ak.flatten(
-            (loose_leptons_bestzl1_dr > 0.02) & (loose_leptons_bestzl2_dr > 0.02),
+        relaxed_leptons_bestzl1_dr = relaxed_leptons.metric_table(best_zcands.l1)
+        relaxed_leptons_bestzl2_dr = relaxed_leptons.metric_table(best_zcands.l2)
+        relaxed_leptons_bestz_dr_mask = ak.flatten(
+            (relaxed_leptons_bestzl1_dr > 0.02) & (relaxed_leptons_bestzl2_dr > 0.02),
             axis=-1,
         )
-        # QCD suppression cut: invariant mass of loose lepton and the opposite sign tight lepton from the best Z candidate should satisfy m2l > 4 GeV
-        loose_leptons_bestzl1_opposite_charge = ak.flatten(
-            loose_leptons.charge != best_zcands.l1.charge[:, None], axis=-1
+        # QCD suppression cut: invariant mass of relaxed lepton and the opposite sign tight lepton from the best Z candidate should satisfy m2l > 4 GeV
+        relaxed_leptons_bestzl1_opposite_charge = ak.flatten(
+            relaxed_leptons.charge != best_zcands.l1.charge[:, None], axis=-1
         )
-        loose_leptons_bestzl2_opposite_charge = ak.flatten(
-            loose_leptons.charge != best_zcands.l2.charge[:, None], axis=-1
+        relaxed_leptons_bestzl2_opposite_charge = ak.flatten(
+            relaxed_leptons.charge != best_zcands.l2.charge[:, None], axis=-1
         )
-        loose_leptons_bestzl1_cartesian = ak.cartesian(
-            {"lepton": loose_leptons.p4, "zl1": best_zcands.l1.p4},
+        relaxed_leptons_bestzl1_cartesian = ak.cartesian(
+            {"lepton": relaxed_leptons.p4, "zl1": best_zcands.l1.p4},
             nested=True,
             axis=1,
         )
-        loose_leptons_bestzl1_mass = ak.flatten(
+        relaxed_leptons_bestzl1_mass = ak.flatten(
             (
-                loose_leptons_bestzl1_cartesian.lepton
-                + loose_leptons_bestzl1_cartesian.zl1
+                relaxed_leptons_bestzl1_cartesian.lepton
+                + relaxed_leptons_bestzl1_cartesian.zl1
             ).mass,
             axis=-1,
         )
-        loose_leptons_bestzl1_mass_mask = loose_leptons_bestzl1_mass > 4
-        loose_leptons_bestzl2_cartesian = ak.cartesian(
-            {"lepton": loose_leptons.p4, "zl2": best_zcands.l2.p4},
+        relaxed_leptons_bestzl1_mass_mask = relaxed_leptons_bestzl1_mass > 4
+        relaxed_leptons_bestzl2_cartesian = ak.cartesian(
+            {"lepton": relaxed_leptons.p4, "zl2": best_zcands.l2.p4},
             nested=True,
             axis=1,
         )
-        loose_leptons_bestzl2_mass = ak.flatten(
+        relaxed_leptons_bestzl2_mass = ak.flatten(
             (
-                loose_leptons_bestzl2_cartesian.lepton
-                + loose_leptons_bestzl2_cartesian.zl2
+                relaxed_leptons_bestzl2_cartesian.lepton
+                + relaxed_leptons_bestzl2_cartesian.zl2
             ).mass,
             axis=-1,
         )
-        loose_leptons_bestzl2_mass_mask = loose_leptons_bestzl2_mass > 4
+        relaxed_leptons_bestzl2_mass_mask = relaxed_leptons_bestzl2_mass > 4
         qcd_suppression_mask = (
-            loose_leptons_bestzl1_opposite_charge & loose_leptons_bestzl1_mass_mask
-        ) | (loose_leptons_bestzl2_opposite_charge & loose_leptons_bestzl2_mass_mask)
+            relaxed_leptons_bestzl1_opposite_charge & relaxed_leptons_bestzl1_mass_mask
+        ) | (relaxed_leptons_bestzl2_opposite_charge & relaxed_leptons_bestzl2_mass_mask)
 
         # get full pass selection mask
-        pass_selection = is_tight & loose_leptons_bestz_dr_mask & qcd_suppression_mask
-        loose_leptons["pass_selection"] = pass_selection
+        pass_selection = is_tight & relaxed_leptons_bestz_dr_mask & qcd_suppression_mask
+        relaxed_leptons["pass_selection"] = pass_selection
 
-        # add loose leptons to objects
-        self.objects[obj_name] = loose_leptons
+        # add relaxed leptons to objects
+        self.objects[obj_name] = relaxed_leptons
 
     def select_zzcandidates(self, obj_name):
         """selects ZZ candidates for SR and CRs"""
