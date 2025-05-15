@@ -74,7 +74,7 @@ def get_egamma_json(year: str) -> str:
 
 
 def get_muon_hlt_json(year: str)  -> str:
-    return f"{Path.cwd()}/analysis/data/{year}_MuHlt_abseta_pt_wEff.json"
+    return f"{Path.cwd()}/analysis/data/{year}_Muon_HLT_Eff.json"
     
 
 def unflat_sf(sf: ak.Array, in_limit_mask: ak.Array, n: ak.Array):
