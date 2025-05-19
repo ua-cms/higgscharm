@@ -46,13 +46,11 @@ event_selection:
     two_muons: ak.num(objects['muons']) == 2
     one_dimuon: ak.num(objects['dimuons']) == 1
     one_jet: ak.num(objects['jets']) == 1
-    dy_stitching: get_stitching_mask(events, dataset, 'DYto2L_2Jets', 70)
   categories:
     base:
       - trigger
       - trigger_match
       - lumimask
-      - dy_stitching
       - atleast_one_goodvertex
       - leading_muon_pt
       - subleading_muon_pt
