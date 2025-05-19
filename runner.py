@@ -94,7 +94,7 @@ PD_DATASETS = {
 }
 DATASETS = {
     "ztoee": {"mc": ["dyjets", "ttbar", "singletop", "diboson"], "data": ["EGamma"]},
-    "ztomumu": {"mc": ["dyjets", "ttbar", "singletop", "diboson"], "data": ["Muon"]},
+    "ztomumu": {"mc": ["dyjets", "ttbar", "singletop", "diboson"], "data": ["Muon", "SingleMuon"]},
     "hww": {
         "mc": ["ttbar", "singletop", "diboson"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
@@ -104,11 +104,11 @@ DATASETS = {
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
     "zplusl": {
-        "mc": ["triboson", "wz", "tt_bosons", "dyjets", "semilep_ttbar"],
+        "mc": ["wz", "dyjets", "semilep_ttbar"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
     "zplusll": {
-        "mc": ["triboson", "wz", "tt_bosons", "dyjets", "semilep_ttbar"],
+        "mc": ["wz", "dyjets", "semilep_ttbar"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
 }
