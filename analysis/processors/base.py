@@ -113,10 +113,9 @@ class BaseProcessor(processor.ProcessorABC):
                 for cut_name in category_cuts:
                     selections.append(cut_name)
                     current_selection = selection_manager.all(*selections)
-                    if is_mc:
-                        output["metadata"][category]["cutflow"][cut_name] = ak.sum(
-                            current_selection
-                        )
+                    output["metadata"][category]["cutflow"][cut_name] = ak.sum(
+                        current_selection
+                    )
                 # save number of events after selection to metadata
                 weighted_final_nevents = ak.sum(weights_container.weight())
                 output["metadata"][category].update(
