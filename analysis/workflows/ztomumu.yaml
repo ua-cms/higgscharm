@@ -46,11 +46,13 @@ event_selection:
     two_muons: ak.num(objects['muons']) == 2
     one_dimuon: ak.num(objects['dimuons']) == 1
     one_jet: ak.num(objects['jets']) == 1
+    dy_stitching: get_stitching_mask(events, dataset, 'DYto2L_2Jets', 70)
   categories:
     base:
       - trigger
       - trigger_match
       - lumimask
+      - dy_stitching
       - atleast_one_goodvertex
       - leading_muon_pt
       - subleading_muon_pt
@@ -66,9 +68,9 @@ corrections:
   event_weights:
     genWeight: true
     pileupWeight: true
-    partonshowerWeight: true
-    lhepdfWeight: true
-    lhescaleWeight: true
+    partonshowerWeight: false
+    lhepdfWeight: false
+    lhescaleWeight: false
     nnlopsWeight: false
     muon:
       - id: tight
@@ -243,7 +245,7 @@ histogram_config:
       start: 0
       stop: 5
       label: $|\Delta \eta(j_1, j_2)|$
-      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta -ak.pad_none(objects['jets'], target=2)[:, 1].eta)
+      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta - ak.pad_none(objects['jets'], target=2)[:, 1].eta)
     leadingjet_flavour:
       type: IntCategory
       categories:
@@ -298,7 +300,7 @@ histogram_config:
       type: Integer
       start: 0
       stop: 60
-      label: npvs
+      label: vertex multiplicity
       expression: events.PV.npvsGood
   layout:
     dimuon_mass:

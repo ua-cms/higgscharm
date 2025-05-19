@@ -18,7 +18,8 @@ from analysis.selections import (
     get_trigger_mask,
     get_zzto4l_trigger_mask,
     get_metfilters_mask,
-    get_trigger_match_mask
+    get_trigger_match_mask,
+    get_stitching_mask
 )
 
 
@@ -112,9 +113,10 @@ class BaseProcessor(processor.ProcessorABC):
                 for cut_name in category_cuts:
                     selections.append(cut_name)
                     current_selection = selection_manager.all(*selections)
-                    output["metadata"][category]["cutflow"][cut_name] = ak.sum(
-                        current_selection
-                    )
+                    if is_mc:
+                        output["metadata"][category]["cutflow"][cut_name] = ak.sum(
+                            current_selection
+                        )
                 # save number of events after selection to metadata
                 weighted_final_nevents = ak.sum(weights_container.weight())
                 output["metadata"][category].update(
