@@ -126,40 +126,6 @@ histogram_config:
       stop: 3.14159
       label: $\phi(p_T^{miss})$ [GeV]
       expression: objects['met'].phi
-    met_pt_raw:
-      type: Variable
-      edges:
-        - 45
-        - 55
-        - 65
-        - 75
-        - 85
-        - 95
-        - 105
-        - 115
-        - 125
-        - 135
-        - 145
-        - 155
-        - 170
-        - 185
-        - 200
-        - 220
-        - 250
-        - 300
-        - 350
-        - 400
-        - 500
-        - 600
-      label: Raw $p_T^{miss}$ [GeV]
-      expression: objects['met'].pt_raw
-    met_phi_raw:
-      type: Regular
-      bins: 50
-      start: -3.14159
-      stop: 3.14159
-      label: Raw $\phi(p_T^{miss})$ [GeV]
-      expression: objects['met'].phi_raw
     lepton1_pt:
       type: Variable
       edges:
@@ -318,8 +284,6 @@ histogram_config:
     met:
       - met_pt
       - met_phi
-      - met_pt_raw
-      - met_phi_raw
     lepton:
       - lepton1_pt
       - lepton2_pt
