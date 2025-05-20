@@ -109,8 +109,6 @@ class MuonWeights:
             id_wp=id_wp,
             iso_wp=iso_wp,
             variation="nominal",
-            hlt_paths=hlt_paths,
-            dataset=dataset,
         )
         if self.variation == "nominal":
             """
@@ -119,15 +117,11 @@ class MuonWeights:
                 id_wp=id_wp,
                 iso_wp=iso_wp,
                 variation="systup",
-                hlt_paths=hlt_paths,
-                dataset=dataset,
             )
             down_weights = self.get_hlt_weights(
                 id_wp=id_wp,
                 iso_wp=iso_wp,
                 variation="systdown",
-                hlt_paths=hlt_paths,
-                dataset=dataset,
             )
             """
             # add nominal, up and down weights to weights container
