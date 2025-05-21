@@ -118,6 +118,7 @@ histogram_config:
       type: Variable
       edges:
         - 5
+        - 7
         - 10
         - 20
         - 30
