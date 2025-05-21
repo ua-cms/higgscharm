@@ -179,6 +179,10 @@ def save_results_report(category: str, category_dir: Path, processed_histograms:
     logging.info("\n")
     results_df.to_csv(category_dir / f"results_{category}.csv")
 
+    latex_table = df_to_latex(results_df)
+    with open(category_dir / f"results_{category}.txt", "w") as f:
+        f.write(latex_table)
+
 
 if __name__ == "__main__":
     args = parse_arguments()
