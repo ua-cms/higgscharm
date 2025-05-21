@@ -157,7 +157,7 @@ def save_cutflow_report(
     else:
         cutflow_df["Total Background"] = cutflow_df.sum(axis=1)
 
-    cutflow_index = event_selection["categories"][category]
+    cutflow_index = ["initial"] + event_selection["categories"][category]
     cutflow_df = cutflow_df.loc[cutflow_index]
 
     ordered_cols = ["Data", "Total Background"] + [

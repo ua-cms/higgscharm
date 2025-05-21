@@ -141,29 +141,6 @@ def load_processed_histograms(
     return processed_histograms
 
 
-def get_cutflow(processed_histograms, category):
-
-    processed_cutflow = self.group_by_process(self.scaled_cutflow[category])
-    self.cutflow_df = pd.DataFrame(processed_cutflow)
-    # add total background events to cutflow
-    self.cutflow_df["Total Background"] = self.cutflow_df.drop(columns="Data").sum(
-        axis=1
-    )
-    # sort cutflow to show 'Data' and 'Total Background' first
-    self.cutflow_df = self.cutflow_df[
-        ["Data", "Total Background"]
-        + [
-            process
-            for process in self.cutflow_df.columns
-            if process not in ["Data", "Total Background"]
-        ]
-    ]
-    logging.info(
-        f'{self.cutflow_df.applymap(lambda x: f"{x:.3f}" if pd.notnull(x) else "")}\n'
-    )
-    self.cutflow_df.to_csv(f"{output_path}/cutflow_{category}.csv")
-
-
 def get_results_report(processed_histograms, category):
     nominal = {}
     for process in processed_histograms:
