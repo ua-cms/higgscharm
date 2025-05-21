@@ -142,7 +142,6 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, variation="nominal
                     if weights_config["electron"]["trigger"]:
                         electron_weights.add_hlt_weights(
                             id_wp=weights_config["electron"]["id"],
-                            hlt_paths=workflow_config.event_selection["hlt_paths"],
                         )
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))

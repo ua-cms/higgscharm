@@ -257,11 +257,7 @@ class MuonWeights:
             sf = self.cset[hlt_path_id_map[(id_wp, iso_wp)]].evaluate(
                 muon_eta, muon_pt, variation
             )
-            nominal_sf = unflat_sf(
-                sf,
-                in_muons_mask,
-                self.muons_counts
-            )
+            nominal_sf = unflat_sf(sf, in_muons_mask, self.muons_counts)
         elif kind == "double":
             # compute trigger efficiency for data and MC
             double_cset = correctionlib.CorrectionSet.from_file(
@@ -280,7 +276,7 @@ class MuonWeights:
                 - data_eff_leading * data_eff_subleading
             )
             full_data_eff = ak.fill_none(full_data_eff, 1)
-    
+
             mc_eff = double_cset["Muon-HLT-McEff"].evaluate(
                 variation, hlt_path_id_map[(id_wp, iso_wp)], muon_eta, muon_pt
             )
@@ -292,7 +288,7 @@ class MuonWeights:
                 mc_eff_leading + mc_eff_subleading - mc_eff_leading * mc_eff_subleading
             )
             full_mc_eff = ak.fill_none(full_mc_eff, 1)
-    
+
             nominal_sf = full_data_eff / full_mc_eff
-    
+
         return nominal_sf
