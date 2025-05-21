@@ -25,11 +25,13 @@ object_selection:
         - np.abs(events.Electron.dz) < 1
       is_relaxed:
         - objects['electrons'].is_loose
-        - events.Electron.sip3d < 4
+        - np.abs(events.Electron.sip3d) < 4
       is_tight:
         - objects['electrons'].is_loose
         - objects['electrons'].is_relaxed
         - working_points.electron_id(events, 'bdt')
+    cuts:
+      - delta_r_higher(events.Electron, objects['muons'], 0.05)
   fsr_photons:
     field: events.FsrPhoton
     cuts:
