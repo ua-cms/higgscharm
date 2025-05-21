@@ -45,7 +45,6 @@ event_selection:
     electron_veto: ak.num(objects['electrons']) == 0
     two_muons: ak.num(objects['muons']) == 2
     one_dimuon: ak.num(objects['dimuons']) == 1
-    one_jet: ak.num(objects['jets']) == 1
   categories:
     base:
       - trigger
@@ -57,7 +56,6 @@ event_selection:
       - two_muons
       - one_dimuon
       - electron_veto
-      - one_jet
 corrections:
   objects:
     - jets
