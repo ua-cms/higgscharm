@@ -92,6 +92,39 @@ def df_to_latex(df, table_title="Events"):
     return output
 
 
+def combine_event_tables(df1, df2):
+    assert all(df1.index == df2.index), "Los índices de los DataFrames no coinciden."
+    combined = pd.DataFrame(index=df1.index)
+    combined["events"] = df1["events"] + df2["events"]
+    combined["stat err"] = np.sqrt(df1["stat err"] ** 2 + df2["stat err"] ** 2)
+    combined["syst err"] = np.sqrt(df1["syst err"] ** 2 + df2["syst err"] ** 2)
+    data = combined.loc["Data", "events"]
+    total_bkg = combined.loc["Total background", "events"]
+    combined.loc["Data/Total background", ["events", "stat err", "syst err"]] = [
+        data / total_bkg,
+        np.nan,
+        np.nan,
+    ]
+    return combined
+
+
+def combine_cutflows(df1, df2):
+    if not df1.index.equals(df2.index):
+        raise ValueError("Los índices (etiquetas de cortes) no coinciden.")
+    combined = df1.add(df2, fill_value=0)
+    return combined
+
+
+def format_cutflow_with_efficiency(events_df, eff_df):
+    combined = pd.DataFrame(index=events_df.index, columns=events_df.columns)
+    for col in events_df.columns:
+        for idx in events_df.index:
+            val = events_df.loc[idx, col]
+            eff = eff_df.loc[idx, col]
+            combined.loc[idx, col] = f"{val} ({eff:.2f}%)"
+    return combined
+
+
 def get_variations_keys(processed_histograms):
     variations = {}
     for process, histogram_dict in processed_histograms.items():
