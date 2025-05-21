@@ -7,7 +7,7 @@ object_selection:
         - np.abs(events.Muon.eta) < 2.4
         - np.abs(events.Muon.dxy) < 0.5
         - np.abs(events.Muon.dz) < 1
-        - events.Muon.isGlobal | (events.Muon.isTracker & (events.Muon.nStations > 0))
+        - events.Muon.isGlobal | events.Muon.isTracker
       is_relaxed:
         - objects['muons'].is_loose
         - np.abs(events.Muon.sip3d) < 4
@@ -30,8 +30,6 @@ object_selection:
         - objects['electrons'].is_loose
         - objects['electrons'].is_relaxed
         - working_points.electron_id(events, 'bdt')
-    cuts:
-      - delta_r_higher(events.Electron, objects['muons'], 0.05)
   fsr_photons:
     field: events.FsrPhoton
     cuts:
@@ -51,7 +49,7 @@ object_selection:
     cuts: 
       - objects['zcandidates'].is_sr
       - np.abs(objects['zcandidates'].p4.mass - 91.1876) < 7
-      - ((objects['zcandidates'].l1.p4.pt > 10) & (objects['zcandidates'].l1.p4.pt > 20)) | ((objects['zcandidates'].l1.p4.pt > 20) & (objects['zcandidates'].l1.p4.pt > 10))
+      - ((objects['zcandidates'].l1.p4.pt > 10) & (objects['zcandidates'].l2.p4.pt > 20)) | ((objects['zcandidates'].l1.p4.pt > 20) & (objects['zcandidates'].l2.p4.pt > 10))
   best_zcandidates:
     field: select_best_zcandidate
   other_relaxed_leptons:
