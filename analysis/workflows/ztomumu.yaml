@@ -64,10 +64,14 @@ corrections:
   event_weights:
     genWeight: true
     pileupWeight: true
-    partonshowerWeight: false
-    lhepdfWeight: false
-    lhescaleWeight: false
+    partonshowerWeight: true
+    lhepdfWeight: true
+    lhescaleWeight: true
     nnlopsWeight: false
+    electron:
+      - id: false
+      - reco: false
+      - trigger: false
     muon:
       - id: tight
       - iso: tight

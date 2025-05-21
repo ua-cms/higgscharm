@@ -49,8 +49,8 @@ event_selection:
       - atleast_one_goodvertex
       - leading_electron_pt
       - subleading_electron_pt
-      - one_dielectron
       - two_electrons
+      - one_dielectron
       - muon_veto
 corrections:
   objects:
@@ -67,7 +67,7 @@ corrections:
     electron:
       - id: wp80iso
       - reco: true
-      - trigger: false
+      - trigger: true
     muon:
       - id: false
       - iso: false
