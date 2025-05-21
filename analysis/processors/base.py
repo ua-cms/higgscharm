@@ -114,6 +114,8 @@ class BaseProcessor(processor.ProcessorABC):
                     selections.append(cut_name)
                     current_selection = selection_manager.all(*selections)
                     pruned_ev_cutflow = events[current_selection]
+                    for obj in objects:
+                        pruned_ev_cutflow[f"selected_{obj}"] = objects[obj][current_selection]
                     weights_container_cutflow = weight_manager(
                         pruned_ev=pruned_ev_cutflow,
                         year=year,
