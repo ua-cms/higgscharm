@@ -19,7 +19,7 @@ from analysis.selections import (
     get_zzto4l_trigger_mask,
     get_metfilters_mask,
     get_trigger_match_mask,
-    get_stitching_mask
+    get_stitching_mask,
 )
 
 
@@ -108,14 +108,22 @@ class BaseProcessor(processor.ProcessorABC):
                     workflow_config=self.workflow_config,
                 )
                 # save cutflow to metadata
-                output["metadata"][category] = {"cutflow": {"initial": len(events)}}
+                output["metadata"][category] = {"cutflow": {"initial": sumw}}
                 selections = []
                 for cut_name in category_cuts:
                     selections.append(cut_name)
                     current_selection = selection_manager.all(*selections)
-                    output["metadata"][category]["cutflow"][cut_name] = ak.sum(
-                        current_selection
+                    pruned_ev_cutflow = events[current_selection]
+                    weights_container_cutflow = weight_manager(
+                        pruned_ev=pruned_ev_cutflow,
+                        year=year,
+                        dataset=dataset,
+                        workflow_config=self.workflow_config,
                     )
+                    output["metadata"][category]["cutflow"][cut_name] = ak.sum(
+                        weights_container_cutflow.weight()
+                    )
+
                 # save number of events after selection to metadata
                 weighted_final_nevents = ak.sum(weights_container.weight())
                 output["metadata"][category].update(
