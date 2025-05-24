@@ -45,8 +45,6 @@ object_selection:
     add_cut:
       is_ossf:
         - objects['zcandidates'].l1.pdgId == -objects['zcandidates'].l2.pdgId
-      is_ss:
-        - objects['zcandidates'].l1.pdgId == objects['zcandidates'].l2.pdgId
       is_sr:
         - objects['zcandidates'].is_ossf
         - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 2
@@ -60,10 +58,6 @@ object_selection:
         - objects['zcandidates'].l1.is_relaxed
         - objects['zcandidates'].l2.is_relaxed
         - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 0
-      is_sscr:
-        - objects['zcandidates'].is_ss
-        - objects['zcandidates'].l1.is_relaxed
-        - objects['zcandidates'].l2.is_relaxed
     cuts: 
       - (objects['zcandidates'].p4.mass > 12) & (objects['zcandidates'].p4.mass < 120)
   zzcandidates:
@@ -72,16 +66,14 @@ object_selection:
       - objects['zzcandidates'].z1.is_sr & objects['zzcandidates'].z2.is_sr
       - (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70    
   zllcandidates:
-    field: select_zllcandidates
+    field: select_zllcandidates_os
     cuts:
-      - objects['zllcandidates'].z1.is_sr & (objects['zllcandidates'].z2.is_1fcr | objects['zllcandidates'].z2.is_2fcr | objects['zllcandidates'].z2.is_sscr)
+      - objects['zllcandidates'].z1.is_sr & (objects['zllcandidates'].z2.is_1fcr | objects['zllcandidates'].z2.is_2fcr)
       - (objects['zllcandidates'].z1.p4 + objects['zllcandidates'].z2.p4).mass > 70
   best_zllcandidate_1fcr:
     field: select_best_1fcr_zllcandidate
   best_zllcandidate_2fcr:
     field: select_best_2fcr_zllcandidate
-  best_zllcandidate_sscr:
-    field: select_best_sscr_zllcandidate
 event_selection:
   hlt_paths:
     - SingleMu
@@ -289,62 +281,6 @@ histogram_config:
         - 26
       label: LLflavor
       expression: np.abs(objects['best_zllcandidate_2fcr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_2fcr'].z2.l2.pdgId)
-    z_mass_sscr:
-      type: Regular
-      bins: 54
-      start: 12
-      stop: 120
-      label: $m(Z)$ [GeV]
-      expression: objects['best_zllcandidate_sscr'].z1.p4.mass
-    ll_mass_sscr:
-      type: Regular
-      bins: 54
-      start: 12
-      stop: 120
-      label: $m(\ell\ell)$ [GeV]
-      expression: objects['best_zllcandidate_sscr'].z2.p4.mass
-    z_pt_sscr:
-      type: Regular
-      bins: 100
-      start: 0
-      stop: 500
-      label: $p_T(Z)$ [GeV]
-      expression: objects['best_zllcandidate_sscr'].z1.p4.pt
-    ll_pt_sscr:
-      type: Regular
-      bins: 100
-      start: 0
-      stop: 500
-      label: $p_T(\ell\ell)$ [GeV]
-      expression: objects['best_zllcandidate_sscr'].z2.p4.pt
-    zll_mass_sscr:
-      type: Regular
-      bins: 66
-      start: 70
-      stop: 400
-      label: $m(Z\ell\ell)$ [GeV]
-      expression: objects['best_zllcandidate_sscr'].p4.mass
-    zll_pt_sscr:
-      type: Regular
-      bins: 40
-      start: 0
-      stop: 400
-      label: $p_T(Z\ell\ell)$ [GeV]
-      expression: objects['best_zllcandidate_sscr'].p4.pt
-    z_flavor_sscr:
-      type: IntCategory
-      categories:
-        - 22
-        - 26
-      label: Zflavor
-      expression: np.abs(objects['best_zllcandidate_sscr'].z1.l1.pdgId) + np.abs(objects['best_zllcandidate_sscr'].z1.l2.pdgId)
-    ll_flavor_sscr:
-      type: IntCategory
-      categories:
-        - 22
-        - 26
-      label: LLflavor
-      expression: np.abs(objects['best_zllcandidate_sscr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_sscr'].z2.l2.pdgId)
   layout:
     zll:
       - zll_mass
@@ -361,10 +297,5 @@ histogram_config:
       - zll_pt_2fcr
       - z_flavor_2fcr
       - ll_flavor_2fcr
-    zll_sscr:
-      - zll_mass_sscr
-      - zll_pt_sscr
-      - z_flavor_sscr
-      - ll_flavor_sscr
   add_syst_axis: true
   add_weight: true

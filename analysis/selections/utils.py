@@ -100,7 +100,7 @@ def fourlepcand(z1, z2):
     )
 
 
-def make_cand(zcand, kind, sort_by_mass=True):
+def make_cand(zcand, kind, sort_by_mass=True, os_method=True):
     """build ZZ or ZLL candidates in a Higgs phase space"""
     if kind == "zz":
         cand = ak.combinations(zcand, 2, fields=["z1", "z2"])
@@ -197,49 +197,54 @@ def make_cand(zcand, kind, sort_by_mass=True):
         )
     )
     # select good ZZ candidates
-    full_mask = (
-        z1_mass_g40_mask
-        & ghost_removal_mask
-        & trigger_acceptance_mask
-        & qcd_suppression_mask
-    )
+    if os_method:
+        full_mask = (
+            z1_mass_g40_mask
+            & ghost_removal_mask
+            & trigger_acceptance_mask
+            & qcd_suppression_mask
+        )
+    else:
+        full_mask = ghost_removal_mask
+
     cand = cand[ak.fill_none(full_mask, False)]
 
-    # get alternative pairing for same-sign candidates (FSR photons are used)
-    # select same flavor pairs
-    sf_pairs = np.abs(cand.z1.l1.pdgId) == np.abs(cand.z2.l1.pdgId)
-    cand_sf = cand.mask[sf_pairs]
-    # get initial alternative pairs
-    ops = cand_sf.z1.l1.pdgId == -cand_sf.z2.l1.pdgId
-    za0 = ak.where(
-        ops,
-        cand_sf.z1.l1.p4 + cand_sf.z2.l1.p4,
-        cand_sf.z1.l1.p4 + cand_sf.z2.l2.p4,
-    )
-    zb0 = ak.where(
-        ops,
-        cand_sf.z1.l2.p4 + cand_sf.z2.l2.p4,
-        cand_sf.z1.l2.p4 + cand_sf.z2.l1.p4,
-    )
-    # get final alternative pairs selecting Za as the one closest to the Z mass
-    zmass = 91.1876
-    dist_from_za_to_zmass = np.abs(za0.mass - zmass)
-    dist_from_zb_to_zmass = np.abs(zb0.mass - zmass)
-    za = ak.where(
-        dist_from_zb_to_zmass > dist_from_za_to_zmass,
-        za0,
-        zb0,
-    )
-    zb = ak.where(
-        dist_from_zb_to_zmass < dist_from_za_to_zmass,
-        za0,
-        zb0,
-    )
-    smart_cut = ~(
-        (np.abs(za.mass - zmass) < np.abs(cand.z1.p4.mass - zmass)) & (zb.mass < 12)
-    )
-    smart_cut = ak.fill_none(smart_cut, True)
-    cand = cand[smart_cut]
+    if os_method:
+        # get alternative pairing for same-sign candidates (FSR photons are used)
+        # select same flavor pairs
+        sf_pairs = np.abs(cand.z1.l1.pdgId) == np.abs(cand.z2.l1.pdgId)
+        cand_sf = cand.mask[sf_pairs]
+        # get initial alternative pairs
+        ops = cand_sf.z1.l1.pdgId == -cand_sf.z2.l1.pdgId
+        za0 = ak.where(
+            ops,
+            cand_sf.z1.l1.p4 + cand_sf.z2.l1.p4,
+            cand_sf.z1.l1.p4 + cand_sf.z2.l2.p4,
+        )
+        zb0 = ak.where(
+            ops,
+            cand_sf.z1.l2.p4 + cand_sf.z2.l2.p4,
+            cand_sf.z1.l2.p4 + cand_sf.z2.l1.p4,
+        )
+        # get final alternative pairs selecting Za as the one closest to the Z mass
+        zmass = 91.1876
+        dist_from_za_to_zmass = np.abs(za0.mass - zmass)
+        dist_from_zb_to_zmass = np.abs(zb0.mass - zmass)
+        za = ak.where(
+            dist_from_zb_to_zmass > dist_from_za_to_zmass,
+            za0,
+            zb0,
+        )
+        zb = ak.where(
+            dist_from_zb_to_zmass < dist_from_za_to_zmass,
+            za0,
+            zb0,
+        )
+        smart_cut = ~(
+            (np.abs(za.mass - zmass) < np.abs(cand.z1.p4.mass - zmass)) & (zb.mass < 12)
+        )
+        smart_cut = ak.fill_none(smart_cut, True)
+        cand = cand[smart_cut]
 
     # add p4 and pT fields to ZLL candidates
     cand["p4"] = cand.z1.p4 + cand.z2.p4

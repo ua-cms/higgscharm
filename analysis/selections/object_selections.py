@@ -152,9 +152,9 @@ class ObjectSelector:
         muons["pfRelIso03_all"] = ak.where(
             muon_corrected_iso > 0, muon_corrected_iso, 0.0
         )
-        # update 'is_tight' selection for muons 
+        # update 'is_tight' selection for muons
         muons["is_tight"] = muons.is_tight & (muons.pfRelIso03_all < 0.35)
-        
+
         electrons["pfRelIso03_all"] = ak.zeros_like(electrons.pt)
         # concatenate muons and electrons with corrected iso
         leptons = ak.concatenate([muons, electrons], axis=1)
@@ -321,7 +321,9 @@ class ObjectSelector:
         relaxed_leptons_bestzl2_mass_mask = relaxed_leptons_bestzl2_mass > 4
         qcd_suppression_mask = (
             relaxed_leptons_bestzl1_opposite_charge & relaxed_leptons_bestzl1_mass_mask
-        ) | (relaxed_leptons_bestzl2_opposite_charge & relaxed_leptons_bestzl2_mass_mask)
+        ) | (
+            relaxed_leptons_bestzl2_opposite_charge & relaxed_leptons_bestzl2_mass_mask
+        )
 
         # get full pass selection mask
         pass_selection = is_tight & relaxed_leptons_bestz_dr_mask & qcd_suppression_mask
@@ -336,10 +338,16 @@ class ObjectSelector:
             self.objects["zcandidates"], kind="zz", sort_by_mass=True
         )
 
-    def select_zllcandidates(self, obj_name):
+    def select_zllcandidates_os(self, obj_name):
         """selects Zll candidates for CRs"""
         self.objects[obj_name] = make_cand(
-            self.objects["zcandidates"], kind="zll", sort_by_mass=False
+            self.objects["zcandidates"], kind="zll", sort_by_mass=False, os_method=True
+        )
+
+    def select_zllcandidates_ss(self, obj_name):
+        """selects Zll candidates for CRs"""
+        self.objects[obj_name] = make_cand(
+            self.objects["zcandidates"], kind="zll", sort_by_mass=False, os_method=False
         )
 
     def select_best_zzcandidate(self, obj_name):

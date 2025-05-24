@@ -19,7 +19,7 @@ def parse_args():
         "--workflow",
         type=str,
         required=True,
-        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl_os", "zplusl_ss", "zplusll"],
+        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl_os", "zplusl_ss", "zplusll_os", "zplusll_ss"],
         help="workflow config to run",
     )
     parser.add_argument(
