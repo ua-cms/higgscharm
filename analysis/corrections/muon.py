@@ -229,8 +229,15 @@ class MuonWeights:
             variation:
                 {nominal, systup, systdown}
         """
-        upper_limit = 199.9 if self.year == "2022postEE" else 499.9
-        muon_pt_mask = (self.flat_muons.pt > 26.0) & (self.flat_muons.pt < upper_limit)
+        muon_pt_mask = self.flat_muons.pt > 26.0
+
+        kind = "single" if ak.all(ak.num(self.muons) == 1) else "double"
+        if kind == "double":
+            upper_limit = 199.99
+            if self.year == "2022preEE":
+                upper_limit = 499.99
+            muon_pt_mask = muon_pt_mask & (self.flat_muons.pt < upper_limit)
+
         muon_eta_mask = np.abs(self.flat_muons.eta) < 2.4
 
         # get muons passing ID and Iso wps, trigger, and within SF binning
@@ -250,8 +257,6 @@ class MuonWeights:
         ) in hlt_path_id_map, (
             f"There's no HLT correction for (ID, ISO) wps pair {(id_wp, iso_wp)}"
         )
-
-        kind = "single" if ak.all(ak.num(self.muons) == 1) else "double"
         if kind == "single":
             # for single muon events, compute SF from POG SF
             sf = self.cset[hlt_path_id_map[(id_wp, iso_wp)]].evaluate(
@@ -259,7 +264,7 @@ class MuonWeights:
             )
             nominal_sf = unflat_sf(sf, in_muons_mask, self.muons_counts)
         elif kind == "double":
-            # compute trigger efficiency for data and MC
+            # for double muon events, compute SF from data/mc muon hlt efficiencies
             double_cset = correctionlib.CorrectionSet.from_file(
                 get_muon_hlt_json(year=self.year)
             )
