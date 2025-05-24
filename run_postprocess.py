@@ -38,7 +38,7 @@ def parse_arguments():
         "-w",
         "--workflow",
         required=True,
-        # choices=["ztomumu", "ztoee", "zzto4l", "zplusl", "zplusll", "hww"],
+        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl_os", "zplusl_ss", "zplusll_os", "zplusll_ss"],
         help="Workflow config to run",
     )
     parser.add_argument(
