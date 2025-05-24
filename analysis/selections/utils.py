@@ -205,7 +205,7 @@ def make_cand(zcand, kind, sort_by_mass=True, os_method=True):
             & qcd_suppression_mask
         )
     else:
-        full_mask = ghost_removal_mask
+        full_mask = qcd_suppression_mask
 
     cand = cand[ak.fill_none(full_mask, False)]
 
