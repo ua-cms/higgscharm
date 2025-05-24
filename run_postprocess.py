@@ -4,6 +4,7 @@ import json
 import glob
 import logging
 import argparse
+import subprocess
 import pandas as pd
 from pathlib import Path
 from collections import defaultdict
@@ -25,6 +26,7 @@ from analysis.postprocess.coffea_postprocessor import (
     save_process_histograms_by_sample,
     load_processed_histograms,
     get_results_report,
+    get_results_report_zplusl,
 )
 
 OUTPUT_DIR = Path.cwd() / "outputs"
@@ -86,6 +88,12 @@ def parse_arguments():
         type=str,
         default="process",
         help="Axis to group by (e.g., 'process', or a JSON dict)",
+    )
+    parser.add_argument(
+        "--pass_axis",
+        type=str,
+        default="",
+        help="Binary axis (e.g., 'is_passing_lepton')",
     )
     return parser.parse_args()
 
@@ -174,17 +182,25 @@ def save_cutflow_report(
     cutflow_df.to_csv(category_dir / f"cutflow_{category}.csv")
 
 
-def save_results_report(category: str, category_dir: Path, processed_histograms: dict):
+def save_results_report(
+    workflow: str, category: str, category_dir: Path, processed_histograms: dict
+):
     """generate and save the results summary table for a given category"""
     print_header("Results")
-    results_df = get_results_report(processed_histograms, category)
-    logging.info(results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
-    logging.info("\n")
-    results_df.to_csv(category_dir / f"results_{category}.csv")
+    if workflow in ["zplusl_os", "zplusl_ss"]:
+        results_df = get_results_report_zplusl(processed_histograms, category)
+        logging.info(results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
+        logging.info("\n")
+        results_df.to_csv(category_dir / f"results_{category}.csv")
+    else:
+        results_df = get_results_report(processed_histograms, category)
+        logging.info(results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
+        logging.info("\n")
+        results_df.to_csv(category_dir / f"results_{category}.csv")
 
-    latex_table = df_to_latex(results_df)
-    with open(category_dir / f"results_{category}.txt", "w") as f:
-        f.write(latex_table)
+        latex_table = df_to_latex(results_df)
+        with open(category_dir / f"results_{category}.txt", "w") as f:
+            f.write(latex_table)
 
 
 if __name__ == "__main__":
@@ -203,6 +219,7 @@ if __name__ == "__main__":
 
     config_builder = WorkflowConfigBuilder(workflow=args.workflow)
     workflow_config = config_builder.build_workflow_config()
+    histogram_config = workflow_config.histogram_config
     event_selection = workflow_config.event_selection
     categories = event_selection["categories"]
     processed_histograms = None
@@ -338,7 +355,9 @@ if __name__ == "__main__":
             save_cutflow_report(
                 category, category_dir, event_selection, process_samples_map
             )
-            save_results_report(category, category_dir, processed_histograms)
+            save_results_report(
+                args.workflow, category, category_dir, processed_histograms
+            )
 
     if args.plot:
         if not args.postprocess and args.year not in ["2022", "2023"]:
@@ -359,11 +378,24 @@ if __name__ == "__main__":
             year=args.year,
             output_dir=output_dir,
             group_by=group_by,
+            pass_axis=args.pass_axis,
         )
-
         for category in categories:
             logging.info(f"Plotting histograms for category: {category}")
             for variable in workflow_config.histogram_config.variables:
+                if args.pass_axis:
+                    if variable == args.pass_axis:
+                        continue
+                    if histogram_config.layout == "individual":
+                        print("There's only individual axes!")
+                        break
+                    proceed = False
+                    for key, variables in histogram_config.layout.items():
+                        if (variable in variables) and (args.pass_axis in variables):
+                            proceed = True
+                            break
+                    if not proceed:
+                        continue
                 if plot_variable(variable, group_by, workflow_config.histogram_config):
                     logging.info(variable)
                     plotter.plot_histograms(
@@ -373,3 +405,9 @@ if __name__ == "__main__":
                         log=args.log,
                         extension=args.extension,
                     )
+            if args.workflow in ["zplusl_os", "zplusl_ss"]:
+                plotter.plot_fake_rate(category)
+            subprocess.run(
+                f"tar -zcvf {output_dir}/{category}/{args.workflow}_{args.year}_plots.tar.gz {output_dir}/{category}/*.{args.extension}",
+                shell=True,
+            )

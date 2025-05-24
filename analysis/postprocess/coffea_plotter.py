@@ -5,6 +5,7 @@ import mplhep as hep
 import matplotlib.pyplot as plt
 from pathlib import Path
 from matplotlib import ticker
+from matplotlib.lines import Line2D
 from coffea.processor import accumulate
 from hist.intervals import poisson_interval
 from matplotlib.offsetbox import AnchoredText
@@ -15,7 +16,6 @@ from analysis.postprocess.utils import (
     divide_by_binwidth,
     get_variations_keys,
 )
-
 
 np.seterr(invalid="ignore")
 np.seterr(divide="ignore")
@@ -29,12 +29,14 @@ class CoffeaPlotter:
         processed_histograms: dict,
         output_dir: str,
         group_by: str,
+        pass_axis: str,
     ):
         self.workflow = workflow
         self.year = year
         self.processed_histograms = processed_histograms
         self.output_dir = output_dir
         self.group_by = group_by
+        self.pass_axis = pass_axis
 
         # get histogram config
         config_builder = WorkflowConfigBuilder(workflow=workflow)
@@ -87,6 +89,8 @@ class CoffeaPlotter:
         selector = {"variation": variation}
         if "category" in histogram.axes.name:
             selector["category"] = category
+        if self.pass_axis:
+            selector[self.pass_axis] = True
         if other_category is not None:
             selector[self.group_by["name"]] = other_category
         histogram = histogram[selector].project(variable)
@@ -106,6 +110,9 @@ class CoffeaPlotter:
         # get variable histogram for nominal variation and category
         selectorup = {"variation": f"{variation}Up"}
         selectordown = {"variation": f"{variation}Down"}
+        if self.pass_axis:
+            selectorup[self.pass_axis] = True
+            selectordown[self.pass_axis] = True
         if "category" in histogram.axes.name:
             selectorup["category"] = category
             selectordown["category"] = category
@@ -348,14 +355,36 @@ class CoffeaPlotter:
         formatter = ticker.ScalarFormatter()
         formatter.set_scientific(False)
         ax.yaxis.set_major_formatter(formatter)
+
+        xlabel = self.histogram_config.axes[variable].label
+        if self.workflow in ["zplusl_os", "zplusl_ss"]:
+            if category == "electron":
+                xlabel = xlabel.replace(r"\ell", r"e")
+            elif category == "muon":
+                xlabel = xlabel.replace(r"\ell", r"\mu")
         rax.set(
-            xlabel=self.histogram_config.axes[variable].label,
+            xlabel=xlabel,
             ylabel="Data / Pred",
             facecolor="white",
         )
+        zplusl_method = {
+            "zplusl_os": "(OS)",
+            "zplusl_ss": "(SS)",
+        }
+        zplusl_text = {
+            "electron": rf"$Z+e$ {zplusl_method[self.workflow]} events",
+            "muon": rf"$Z+\mu$ {zplusl_method[self.workflow]} events",
+        }
+        if self.pass_axis:
+            zplusl_text = {
+                "electron": f"$Z+e$ {zplusl_method[self.workflow]} events with $e$ passing selection",
+                "muon": f"$Z+\mu$ {zplusl_method[self.workflow]} events with $\mu$ passing selection",
+            }
         text_map = {
             "ztoee": rf"$ Z \rightarrow ee$ events",
             "ztomumu": rf"$ Z \rightarrow \mu\mu$ events",
+            "zplusl_os": zplusl_text[category],
+            "zplusl_ss": zplusl_text[category],
         }
         at = AnchoredText(
             text_map.get(self.workflow, f"{self.workflow} events") + "\n",
@@ -363,7 +392,7 @@ class CoffeaPlotter:
             frameon=False,
         )
         ax.add_artist(at)
-        # set log scale
+
         if log:
             ax.set_yscale("log")
             ax.set_ylim(top=np.max(data_histogram.values()) * 100)
@@ -394,7 +423,212 @@ class CoffeaPlotter:
         if not output_path.exists():
             output_path.mkdir(parents=True, exist_ok=True)
         figname = f"{str(output_path)}/{self.workflow}_{category}_{variable}_{self.year}.{extension}"
+        if self.pass_axis:
+            figname = f"{str(output_path)}/{self.workflow}_{category}_{variable}_{self.pass_axis}_{self.year}.{extension}"
         if self.group_by != "process":
             figname = f"{str(output_path)}/{self.workflow}_{category}_{variable}_{self.year}_groupedby{self.group_by['name']}.{extension}"
         fig.savefig(figname)
         plt.close()
+
+    def plot_fake_rate(self, category, ylim=(None, 0.35), extension="pdf"):
+        edges = (
+            self.processed_histograms["Data"]["loose_lepton"]
+            .project("loose_lepton_pt")
+            .axes.edges[0]
+        )
+        xerr = edges[1:] - edges[:-1]
+        centers = (
+            self.processed_histograms["Data"]["loose_lepton"]
+            .project("loose_lepton_pt")
+            .axes.centers[0]
+        )
+        data_barrel = self.processed_histograms["Data"]["loose_lepton"][
+            {"variation": "nominal", "category": category, "is_barrel_lepton": True}
+        ].project("loose_lepton_pt", "is_passing_lepton")
+        data_endcap = self.processed_histograms["Data"]["loose_lepton"][
+            {"variation": "nominal", "category": category, "is_barrel_lepton": False}
+        ].project("loose_lepton_pt", "is_passing_lepton")
+        wz_barrel = self.processed_histograms["WZ"]["loose_lepton"][
+            {"variation": "nominal", "category": category, "is_barrel_lepton": True}
+        ].project("loose_lepton_pt", "is_passing_lepton")
+        wz_endcap = self.processed_histograms["WZ"]["loose_lepton"][
+            {"variation": "nominal", "category": category, "is_barrel_lepton": False}
+        ].project("loose_lepton_pt", "is_passing_lepton")
+        data_wz_barrel = data_barrel + (wz_barrel * -1)
+        data_wz_endcap = data_endcap + (wz_endcap * -1)
+
+        data_barrel_ratio = (
+            data_barrel[{"is_passing_lepton": True}].values()
+            / data_barrel[{"is_passing_lepton": sum}].values()
+        )
+        data_endcap_ratio = (
+            data_endcap[{"is_passing_lepton": True}].values()
+            / data_endcap[{"is_passing_lepton": sum}].values()
+        )
+        data_wz_barrel_ratio = (
+            data_wz_barrel[{"is_passing_lepton": True}].values()
+            / data_wz_barrel[{"is_passing_lepton": sum}].values()
+        )
+        data_wz_endcap_ratio = (
+            data_wz_endcap[{"is_passing_lepton": True}].values()
+            / data_wz_endcap[{"is_passing_lepton": sum}].values()
+        )
+
+        data_barrel_den = data_barrel[{"is_passing_lepton": sum}].values()
+        data_barrel_num_variances = data_barrel[{"is_passing_lepton": True}].variances()
+        data_barrel_ratio_variance = data_barrel_num_variances * np.power(
+            data_barrel_den, -2
+        )
+        data_barrel_ratio_uncert = np.abs(
+            poisson_interval(data_barrel_ratio, data_barrel_ratio_variance)
+            - data_barrel_ratio
+        )
+
+        data_endcap_den = data_endcap[{"is_passing_lepton": sum}].values()
+        data_endcap_num_variances = data_endcap[{"is_passing_lepton": True}].variances()
+        data_endcap_ratio_variance = data_endcap_num_variances * np.power(
+            data_endcap_den, -2
+        )
+        data_endcap_ratio_uncert = np.abs(
+            poisson_interval(data_endcap_ratio, data_endcap_ratio_variance)
+            - data_endcap_ratio
+        )
+
+        data_wz_barrel_den = data_wz_barrel[{"is_passing_lepton": sum}].values()
+        data_wz_barrel_num_variances = data_wz_barrel[
+            {"is_passing_lepton": True}
+        ].variances()
+        data_wz_barrel_ratio_variance = data_wz_barrel_num_variances * np.power(
+            data_wz_barrel_den, -2
+        )
+        data_wz_barrel_ratio_uncert = np.abs(
+            poisson_interval(data_wz_barrel_ratio, data_wz_barrel_ratio_variance)
+            - data_wz_barrel_ratio
+        )
+
+        data_wz_endcap_den = data_wz_endcap[{"is_passing_lepton": sum}].values()
+        data_wz_endcap_num_variances = data_wz_endcap[
+            {"is_passing_lepton": True}
+        ].variances()
+        data_wz_endcap_ratio_variance = data_wz_endcap_num_variances * np.power(
+            data_wz_endcap_den, -2
+        )
+        data_wz_endcap_ratio_uncert = np.abs(
+            poisson_interval(data_wz_endcap_ratio, data_wz_endcap_ratio_variance)
+            - data_wz_endcap_ratio
+        )
+
+        fig, ax = plt.subplots(figsize=(8, 7))
+        errorbar_container1 = ax.errorbar(
+            centers,
+            data_barrel_ratio,
+            xerr=xerr / 2,
+            yerr=data_barrel_ratio_uncert,
+            fmt="bo",
+            elinewidth=1,
+            linestyle="solid",
+            linewidth=0,
+            markersize=6,
+        )
+        errorbar_container2 = ax.errorbar(
+            centers,
+            data_endcap_ratio,
+            xerr=xerr / 2,
+            yerr=data_endcap_ratio_uncert,
+            fmt="ro",
+            elinewidth=1,
+            linestyle="solid",
+            linewidth=0,
+            markersize=6,
+        )
+        for bar in errorbar_container1[2]:
+            bar.set_linestyle("-")
+            bar.set_color("b")
+            bar.set_linewidth(2)
+        for bar in errorbar_container2[2]:
+            bar.set_linestyle("-")
+            bar.set_color("r")
+            bar.set_linewidth(2)
+
+        errorbar_container3 = ax.errorbar(
+            centers,
+            data_wz_barrel_ratio,
+            xerr=xerr / 2,
+            yerr=data_wz_barrel_ratio_uncert,
+            fmt="bo",
+            elinewidth=1,
+            linestyle="solid",
+            linewidth=0,
+            markersize=6,
+        )
+        errorbar_container4 = ax.errorbar(
+            centers,
+            data_wz_endcap_ratio,
+            xerr=xerr / 2,
+            yerr=data_wz_endcap_ratio_uncert,
+            fmt="ro",
+            elinewidth=1,
+            linestyle="solid",
+            linewidth=0,
+            markersize=6,
+        )
+        for bar in errorbar_container3[2]:
+            bar.set_linestyle(":")
+            bar.set_color("b")
+            bar.set_linewidth(2)
+        for bar in errorbar_container4[2]:
+            bar.set_linestyle(":")
+            bar.set_color("r")
+            bar.set_linewidth(2)
+
+        legend_elements = [
+            Line2D(
+                [0],
+                [0],
+                color="blue",
+                linewidth=2,
+                linestyle="-",
+                label="Data (barrel)",
+            ),
+            Line2D(
+                [0], [0], color="red", linewidth=2, linestyle="-", label="Data (endcap)"
+            ),
+            Line2D(
+                [0],
+                [0],
+                color="blue",
+                linewidth=2,
+                linestyle=":",
+                label="Data - WZ (barrel)",
+            ),
+            Line2D(
+                [0],
+                [0],
+                color="red",
+                linewidth=2,
+                linestyle=":",
+                label="Data - WZ (endcap)",
+            ),
+        ]
+        ax.legend(
+            handles=legend_elements,
+            loc="upper center",
+            handlelength=3,
+            handleheight=2,
+            fontsize=15,
+            ncols=2,
+        )
+        hep.cms.text("Preliminary", ax=ax)
+        hep.cms.lumitext(
+            f"{self.luminosities[self.year] * 1e-3:.1f} fb$^{{-1}}$ ({self.year}, 13.6 TeV)",
+            ax=ax,
+        )
+        xlabel = "$p_T(e)$ [GeV]" if category == "electron" else "$p_T(\mu)$ [GeV]"
+        ax.set(ylim=ylim, xlabel=xlabel)
+        ax.set_ylabel("Fake rate")
+        output_path = Path(f"{self.output_dir}/{category}")
+        if not output_path.exists():
+            output_path.mkdir(parents=True, exist_ok=True)
+        fig.savefig(
+            f"{output_path}/{self.workflow}_{category}_FR_{self.year}.{extension}"
+        )
