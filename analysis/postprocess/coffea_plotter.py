@@ -367,32 +367,36 @@ class CoffeaPlotter:
             ylabel="Data / Pred",
             facecolor="white",
         )
-        zplusl_method = {
-            "zplusl_os": "(OS)",
-            "zplusl_ss": "(SS)",
-        }
-        zplusl_text = {
-            "electron": rf"$Z+e$ {zplusl_method[self.workflow]} events",
-            "muon": rf"$Z+\mu$ {zplusl_method[self.workflow]} events",
-        }
-        if self.pass_axis:
-            zplusl_text = {
-                "electron": f"$Z+e$ {zplusl_method[self.workflow]} events with $e$ passing selection",
-                "muon": f"$Z+\mu$ {zplusl_method[self.workflow]} events with $\mu$ passing selection",
-            }
         text_map = {
             "ztoee": rf"$ Z \rightarrow ee$ events",
             "ztomumu": rf"$ Z \rightarrow \mu\mu$ events",
-            "zplusl_os": zplusl_text[category],
-            "zplusl_ss": zplusl_text[category],
         }
+        if self.workflow in ["zplusl_os", "zplusl_ss"]:
+            zplusl_method = {
+                "zplusl_os": "(OS)",
+                "zplusl_ss": "(SS)",
+            }
+            zplusl_text = {
+                "electron": rf"$Z+e$ {zplusl_method[self.workflow]} events",
+                "muon": rf"$Z+\mu$ {zplusl_method[self.workflow]} events",
+            }
+            if self.pass_axis:
+                zplusl_text = {
+                    "electron": f"$Z+e$ {zplusl_method[self.workflow]} events with $e$ passing selection",
+                    "muon": f"$Z+\mu$ {zplusl_method[self.workflow]} events with $\mu$ passing selection",
+                }
+            zplusl_text_map = {
+                "zplusl_os": zplusl_text[category],
+                "zplusl_ss": zplusl_text[category],
+            }
+            text_map = {**text_map, **zplusl_text_map}
         at = AnchoredText(
             text_map.get(self.workflow, f"{self.workflow} events") + "\n",
             loc="upper left",
             frameon=False,
         )
         ax.add_artist(at)
-
+        # set log scale
         if log:
             ax.set_yscale("log")
             ax.set_ylim(top=np.max(data_histogram.values()) * 100)
@@ -442,6 +446,7 @@ class CoffeaPlotter:
             .project("loose_lepton_pt")
             .axes.centers[0]
         )
+
         data_barrel = self.processed_histograms["Data"]["loose_lepton"][
             {"variation": "nominal", "category": category, "is_barrel_lepton": True}
         ].project("loose_lepton_pt", "is_passing_lepton")
@@ -541,6 +546,7 @@ class CoffeaPlotter:
             linewidth=0,
             markersize=6,
         )
+        # Customizing error lines after creation (optional for full control)
         for bar in errorbar_container1[2]:
             bar.set_linestyle("-")
             bar.set_color("b")
@@ -572,6 +578,7 @@ class CoffeaPlotter:
             linewidth=0,
             markersize=6,
         )
+        # Customizing error lines after creation (optional for full control)
         for bar in errorbar_container3[2]:
             bar.set_linestyle(":")
             bar.set_color("b")
