@@ -26,7 +26,7 @@ from analysis.postprocess.coffea_postprocessor import (
     save_process_histograms_by_sample,
     load_processed_histograms,
     get_results_report,
-    get_results_report_zplusl,
+    # get_results_report_zplusl,
 )
 
 OUTPUT_DIR = Path.cwd() / "outputs"
@@ -38,7 +38,17 @@ def parse_arguments():
         "-w",
         "--workflow",
         required=True,
-        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl_os", "zplusl_ss", "zplusll_os", "zplusll_ss"],
+        choices=[
+            "ztomumu",
+            "ztoee",
+            "zzto4l",
+            "hww",
+            "zplusl_os",
+            "zplusl_ss",
+            "zplusll_os",
+            "zplusll_ss",
+            "zplusll_maximal",
+        ],
         help="Workflow config to run",
     )
     parser.add_argument(

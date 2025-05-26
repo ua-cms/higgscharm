@@ -175,7 +175,7 @@ class ObjectSelector:
                 "is_loose": leptons.is_loose,
                 "is_relaxed": leptons.is_relaxed,
                 "is_tight": leptons.is_tight,
-                "lostHits": helper_leptons.lostHits,
+                "lostHits": leptons.lostHits,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -263,7 +263,6 @@ class ObjectSelector:
             best_zcand_idx == self.objects["zcandidates"].idx
         ]
         self.objects[obj_name] = best_zcand
-        
 
     def select_other_relaxed_leptons(self, obj_name):
         """
@@ -337,6 +336,13 @@ class ObjectSelector:
 
         # add relaxed leptons to objects
         self.objects[obj_name] = relaxed_leptons
+
+    def select_trilepton(self, obj_name):
+        self.objects[obj_name] = (
+            self.objects["best_zcandidates"].l1
+            + self.objects["best_zcandidates"].l2
+            + ak.firsts(self.objects["other_relaxed_leptons"])
+        )
 
     def select_zzcandidates(self, obj_name):
         """selects ZZ candidates for SR and CRs"""

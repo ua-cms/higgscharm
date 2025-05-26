@@ -31,7 +31,17 @@ if __name__ == "__main__":
         "--workflow",
         dest="workflow",
         type=str,
-        choices=["ztomumu", "ztoee", "zzto4l", "hww", "zplusl_os", "zplusl_ss", "zplusll_os", "zplusll_ss"],
+        choices=[
+            "ztomumu",
+            "ztoee",
+            "zzto4l",
+            "hww",
+            "zplusl_os",
+            "zplusl_ss",
+            "zplusll_os",
+            "zplusll_ss",
+            "zplusll_maximal",
+        ],
         help="workflow config to run",
     )
     parser.add_argument(
