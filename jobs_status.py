@@ -26,9 +26,9 @@ def parse_args():
             "hww",
             "zplusl_os",
             "zplusl_ss",
+            "zplusl_maximal",
             "zplusll_os",
             "zplusll_ss",
-            "zplusll_maximal",
         ],
         help="workflow config to run",
     )

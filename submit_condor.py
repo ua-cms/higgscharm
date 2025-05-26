@@ -110,9 +110,9 @@ if __name__ == "__main__":
             "hww",
             "zplusl_os",
             "zplusl_ss",
+            "zplusl_maximal",
             "zplusll_os",
             "zplusll_ss",
-            "zplusll_maximal",
         ],
         help="workflow config to run",
     )

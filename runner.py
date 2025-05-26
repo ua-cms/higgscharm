@@ -114,6 +114,10 @@ DATASETS = {
         "mc": ["wz", "dyjets", "semilep_ttbar"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
     },
+    "zplusl_maximal": {
+        "mc": ["wz", "dyjets", "semilep_ttbar"],
+        "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
+    },
     "zplusll_os": {
         "mc": ["wz", "dyjets", "semilep_ttbar"],
         "data": ["SingleMuon", "DoubleMuon", "Muon", "MuonEG", "EGamma"],
@@ -139,9 +143,9 @@ if __name__ == "__main__":
             "hww",
             "zplusl_os",
             "zplusl_ss",
+            "zplusl_maximal",
             "zplusll_os",
             "zplusll_ss",
-            "zplusll_maximal",
         ],
         help="workflow config to run",
     )
