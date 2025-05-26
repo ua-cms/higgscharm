@@ -113,62 +113,6 @@ corrections:
       - trigger: false
 histogram_config:
   axes:
-    z_mass:
-      type: Regular
-      bins: 54
-      start: 12
-      stop: 120
-      label: $m(Z)$ [GeV]
-      expression: objects['zllcandidates'].z1.p4.mass
-    ll_mass:
-      type: Regular
-      bins: 54
-      start: 12
-      stop: 120
-      label: $m(\ell\ell)$ [GeV]
-      expression: objects['zllcandidates'].z2.p4.mass
-    z_pt:
-      type: Regular
-      bins: 100
-      start: 0
-      stop: 500
-      label: $p_T(Z)$ [GeV]
-      expression: objects['zllcandidates'].z1.p4.pt
-    ll_pt:
-      type: Regular
-      bins: 100
-      start: 0
-      stop: 500
-      label: $p_T(\ell\ell)$ [GeV]
-      expression: objects['zllcandidates'].z2.p4.pt
-    zll_mass:
-      type: Regular
-      bins: 66
-      start: 70
-      stop: 400
-      label: $m(Z\ell\ell)$ [GeV]
-      expression: objects['zllcandidates'].p4.mass
-    zll_pt:
-      type: Regular
-      bins: 40
-      start: 0
-      stop: 400
-      label: $p_T(Z\ell\ell)$ [GeV]
-      expression: objects['zllcandidates'].p4.pt
-    z_flavor:
-      type: IntCategory
-      categories:
-        - 22
-        - 26
-      label: Zflavor
-      expression: np.abs(objects['zllcandidates'].z1.l1.pdgId) + np.abs(objects['zllcandidates'].z1.l2.pdgId)
-    ll_flavor:
-      type: IntCategory
-      categories:
-        - 22
-        - 26
-      label: LLflavor
-      expression: np.abs(objects['zllcandidates'].z2.l1.pdgId) + np.abs(objects['zllcandidates'].z2.l2.pdgId)
     z_mass_1fcr:
       type: Regular
       bins: 54
@@ -183,20 +127,6 @@ histogram_config:
       stop: 120
       label: $m(\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_1fcr'].z2.p4.mass
-    z_pt_1fcr:
-      type: Regular
-      bins: 100
-      start: 0
-      stop: 500
-      label: $p_T(Z)$ [GeV]
-      expression: objects['best_zllcandidate_1fcr'].z1.p4.pt
-    ll_pt_1fcr:
-      type: Regular
-      bins: 100
-      start: 0
-      stop: 500
-      label: $p_T(\ell\ell)$ [GeV]
-      expression: objects['best_zllcandidate_1fcr'].z2.p4.pt
     zll_mass_1fcr:
       type: Regular
       bins: 66
@@ -239,20 +169,6 @@ histogram_config:
       stop: 120
       label: $m(\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_2fcr'].z2.p4.mass
-    z_pt_2fcr:
-      type: Regular
-      bins: 100
-      start: 0
-      stop: 500
-      label: $p_T(Z)$ [GeV]
-      expression: objects['best_zllcandidate_2fcr'].z1.p4.pt
-    ll_pt_2fcr:
-      type: Regular
-      bins: 100
-      start: 0
-      stop: 500
-      label: $p_T(\ell\ell)$ [GeV]
-      expression: objects['best_zllcandidate_2fcr'].z2.p4.pt
     zll_mass_2fcr:
       type: Regular
       bins: 66
@@ -260,13 +176,6 @@ histogram_config:
       stop: 400
       label: $m(Z\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_2fcr'].p4.mass
-    zll_pt_2fcr:
-      type: Regular
-      bins: 40
-      start: 0
-      stop: 400
-      label: $p_T(Z\ell\ell)$ [GeV]
-      expression: objects['best_zllcandidate_2fcr'].p4.pt
     z_flavor_2fcr:
       type: IntCategory
       categories:
@@ -282,19 +191,12 @@ histogram_config:
       label: LLflavor
       expression: np.abs(objects['best_zllcandidate_2fcr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_2fcr'].z2.l2.pdgId)
   layout:
-    zll:
-      - zll_mass
-      - zll_pt
-      - z_flavor
-      - ll_flavor
     zll_1fcr:
       - zll_mass_1fcr
-      - zll_pt_1fcr
       - z_flavor_1fcr
       - ll_flavor_1fcr
     zll_2fcr:
       - zll_mass_2fcr
-      - zll_pt_2fcr
       - z_flavor_2fcr
       - ll_flavor_2fcr
   add_syst_axis: true
