@@ -78,6 +78,7 @@ class ObjectSelector:
     # --------------------------------------------------------------------------------
     def select_zzto4l_leptons(self, obj_name):
         muons = self.objects["muons"]
+        muons["lostHits"] = ak.zeros_like(muons.pt)
         electrons = self.objects["electrons"]
         # leptons before FSR recovery/iso correction
         helper_leptons = ak.concatenate([muons, electrons], axis=1)
@@ -94,6 +95,7 @@ class ObjectSelector:
                 "is_loose": helper_leptons.is_loose,
                 "is_relaxed": helper_leptons.is_relaxed,
                 "is_tight": helper_leptons.is_tight,
+                "lostHits": helper_leptons.lostHits,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -173,6 +175,7 @@ class ObjectSelector:
                 "is_loose": leptons.is_loose,
                 "is_relaxed": leptons.is_relaxed,
                 "is_tight": leptons.is_tight,
+                "lostHits": helper_leptons.lostHits,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -207,6 +210,7 @@ class ObjectSelector:
                 "charge": (
                     leptons_with_matched_fsrphotons + fsr_with_matched_leptons
                 ).charge,
+                "lostHits": leptons_with_matched_fsrphotons.lostHits,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -218,6 +222,7 @@ class ObjectSelector:
                 "phi": leptons_without_matched_fsrphotons.phi,
                 "mass": leptons_without_matched_fsrphotons.mass,
                 "charge": leptons_without_matched_fsrphotons.charge,
+                "lostHits": leptons_without_matched_fsrphotons.lostHits,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -258,6 +263,7 @@ class ObjectSelector:
             best_zcand_idx == self.objects["zcandidates"].idx
         ]
         self.objects[obj_name] = best_zcand
+        
 
     def select_other_relaxed_leptons(self, obj_name):
         """

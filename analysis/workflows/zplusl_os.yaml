@@ -204,20 +204,18 @@ histogram_config:
       stop: 120
       label: $m(Z)$ [GeV]
       expression: objects['best_zcandidates'].p4.mass
+    n_missing_hits:
+      type: Integer
+      start: 0
+      stop: 10
+      label: n_missing_hits
+      expression: objects['other_relaxed_leptons'].lostHits
   layout:
     loose_lepton:
       - loose_lepton_pt
       - loose_lepton_eta
+      - n_missing_hits
       - is_passing_lepton
       - is_barrel_lepton
-    zcand:
-      - z_mass
-      - z_pt
-    zcand_l1:
-      - z_lepton1_pt
-      - z_lepton2_eta
-    zcand_l2:
-      - z_lepton2_pt
-      - z_lepton2_eta
   add_syst_axis: true
   add_weight: true
