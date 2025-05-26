@@ -24,6 +24,7 @@ xroot_to_site =  {
     "root://xrootd.cmsaf.mit.edu:1094": "T2_US_MIT",
     "root://ruhex-osgce.rutgers.edu": "T3_US_Rutgers",
     "root://se.cis.gov.pl:1094": "T2_PL_Swierk",
+    "root://hactar01.crc.nd.edu": "T3_US_NotreDame",
     "root://skynet013.crc.nd.edu": "T3_US_NotreDame",
     "root://xrootd-cms.infn.it:1194": "T1_IT_CNAF_Disk",
     "root://osg-se.sprace.org.br:1094": "T2_BR_SPRACE",
