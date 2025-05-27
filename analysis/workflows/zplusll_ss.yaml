@@ -109,9 +109,9 @@ histogram_config:
   axes:
     zll_mass_sscr:
       type: Regular
-      bins: 66
+      bins: 40
       start: 70
-      stop: 400
+      stop: 870
       label: $m(Z\ell\ell)$ [GeV]
       expression: objects['best_zllcandidate_sscr'].p4.mass
     z_flavor_sscr:
