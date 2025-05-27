@@ -62,7 +62,7 @@ object_selection:
       - objects['zzcandidates'].z1.is_sr & objects['zzcandidates'].z2.is_sr
       - (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70    
   zllcandidates:
-    field: select_zllcandidates_ss
+    field: select_zllcandidates_os
     cuts:
       - objects['zllcandidates'].z1.is_sr & objects['zllcandidates'].z2.is_sscr
       - (objects['zllcandidates'].z1.p4 + objects['zllcandidates'].z2.p4).mass > 100
@@ -128,10 +128,86 @@ histogram_config:
         - 26
       label: LLflavor
       expression: np.abs(objects['best_zllcandidate_sscr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_sscr'].z2.l2.pdgId)
+    lepton1_pt:
+      type: Variable
+      edges:
+        - 5
+        - 7
+        - 10
+        - 20
+        - 30
+        - 40
+        - 50
+        - 80
+      label: $p_T(\ell_3)$ [GeV]
+      expression: objects['best_zllcandidate_sscr'].z2.l1.pt
+    lepton1_eta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 2.5
+      label: $|\eta(\ell_3)|$
+      expression: np.abs(objects['best_zllcandidate_sscr'].z2.l1.eta)
+    l1_flavor:
+      type: IntCategory
+      categories:
+        - 11
+        - 13
+      label: $\ell_3$ flavor
+      expression: np.abs(objects['best_zllcandidate_sscr'].z2.l1.pdgId)
+    n_missing_hits_l1:
+      type: Integer
+      start: 0
+      stop: 10
+      label: $\ell_3$ n_missing_hits
+      expression: objects['best_zllcandidate_sscr'].z2.l1.lostHits
+    lepton2_pt:
+      type: Variable
+      edges:
+        - 5
+        - 7
+        - 10
+        - 20
+        - 30
+        - 40
+        - 50
+        - 80
+      label: $p_T(\ell_4)$ [GeV]
+      expression: objects['best_zllcandidate_sscr'].z2.l2.pt
+    lepton2_eta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 2.5
+      label: $|\eta(\ell_4)|$
+      expression: np.abs(objects['best_zllcandidate_sscr'].z2.l2.eta)
+    l2_flavor:
+      type: IntCategory
+      categories:
+        - 11
+        - 13
+      label: $\ell_4$ flavor
+      expression: np.abs(objects['best_zllcandidate_sscr'].z2.l2.pdgId)
+    n_missing_hits_l2:
+      type: Integer
+      start: 0
+      stop: 10
+      label: $\ell_4$ n_missing_hits
+      expression: objects['best_zllcandidate_sscr'].z2.l2.lostHits
   layout:
     zll_sscr:
       - zll_mass_sscr
       - z_flavor_sscr
       - ll_flavor_sscr
+    l3:
+      - lepton1_pt
+      - lepton1_eta
+      - l1_flavor
+      - n_missing_hits_l1
+    l4:
+      - lepton2_pt
+      - lepton2_eta
+      - l2_flavor
+      - n_missing_hits_l2
   add_syst_axis: true
   add_weight: true
