@@ -188,7 +188,7 @@ histogram_config:
       categories:
         - 22
         - 26
-      label: LLflavor
+      label: LL flavor
       expression: np.abs(objects['best_zllcandidate_2fcr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_2fcr'].z2.l2.pdgId)
   layout:
     zll_1fcr:

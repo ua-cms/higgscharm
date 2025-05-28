@@ -126,7 +126,7 @@ histogram_config:
       categories:
         - 22
         - 26
-      label: LLflavor
+      label: LL pdgId
       expression: np.abs(objects['best_zllcandidate_sscr'].z2.l1.pdgId) + np.abs(objects['best_zllcandidate_sscr'].z2.l2.pdgId)
     lepton1_pt:
       type: Variable
@@ -153,7 +153,7 @@ histogram_config:
       categories:
         - 11
         - 13
-      label: $\ell_3$ flavor
+      label: $\ell_3$ pdgId
       expression: np.abs(objects['best_zllcandidate_sscr'].z2.l1.pdgId)
     n_missing_hits_l1:
       type: Integer
@@ -186,7 +186,7 @@ histogram_config:
       categories:
         - 11
         - 13
-      label: $\ell_4$ flavor
+      label: $\ell_4$ pdgId
       expression: np.abs(objects['best_zllcandidate_sscr'].z2.l2.pdgId)
     n_missing_hits_l2:
       type: Integer
