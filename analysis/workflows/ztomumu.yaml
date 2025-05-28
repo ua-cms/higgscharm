@@ -65,8 +65,8 @@ corrections:
     genWeight: true
     pileupWeight: true
     partonshowerWeight: true
-    lhepdfWeight: false
-    lhescaleWeight: false
+    lhepdfWeight: true
+    lhescaleWeight: true
     nnlopsWeight: false
     electron:
       - id: false
