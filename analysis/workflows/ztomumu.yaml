@@ -65,8 +65,8 @@ corrections:
     genWeight: true
     pileupWeight: true
     partonshowerWeight: true
-    lhepdfWeight: true
-    lhescaleWeight: true
+    lhepdfWeight: false
+    lhescaleWeight: false
     nnlopsWeight: false
     electron:
       - id: false
@@ -117,6 +117,20 @@ histogram_config:
         - 1000
       label: $p_T(\mu\mu)$ [GeV]
       expression: objects['dimuons'].p4.pt
+    dimuon_eta:
+      type: Regular
+      bins: 50
+      start: -10
+      stop: 10
+      label: $\eta(\mu\mu)$
+      expression: objects['dimuons'].p4.eta
+    dimuon_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\mu\mu)$
+      expression: objects['dimuons'].p4.phi
     dimuon_dr:
       type: Regular
       bins: 50
@@ -175,35 +189,20 @@ histogram_config:
       stop: 2.5
       label: $\eta(\mu_2)$
       expression: objects['dimuons'].l2.eta
-    muon_pt:
-      type: Variable
-      edges:
-        - 30
-        - 60
-        - 90
-        - 120
-        - 150
-        - 180
-        - 210
-        - 240
-        - 300
-        - 500
-      label: $p_T(\mu)$ [GeV]
-      expression: objects['muons'].pt
-    muon_eta:
-      type: Regular
-      bins: 50
-      start: -2.5
-      stop: 2.5
-      label: $\eta(\mu)$
-      expression: objects['muons'].eta
-    muon_phi:
+    leading_muon_phi:
       type: Regular
       bins: 50
       start: -3.14159
       stop: 3.14159
-      label: $\phi(\mu)$
-      expression: objects['muons'].phi
+      label: $\phi(\mu_1)$
+      expression: objects['dimuons'].l1.phi
+    subleading_muon_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\mu_2)$
+      expression: objects['dimuons'].l2.phi
     jet_pt:
       type: Variable
       edges:
@@ -307,6 +306,10 @@ histogram_config:
       - dimuon_mass
     dimuon_pt:
       - dimuon_pt
+    dimuon_eta:
+      - dimuon_eta
+    dimuon_phi:
+      - dimuon_phi
     dimuon_dr:
       - dimuon_dr
     dimuon_deta:
@@ -315,16 +318,12 @@ histogram_config:
       - leading_muon_pt
     leading_muon_eta:
       - leading_muon_eta
+    leading_muon_phi:
+      - leading_muon_phi
     subleading_muon_pt:
       - subleading_muon_pt
     subleading_muon_eta:
       - subleading_muon_eta
-    muon_pt:
-      - muon_pt
-    muon_eta:
-      - muon_eta
-    muon_phi:
-      - muon_phi
     jet_pt:
       - jet_pt
     jet_phi:

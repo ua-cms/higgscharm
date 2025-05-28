@@ -113,6 +113,20 @@ histogram_config:
         - 1000
       label: $p_T(ee)$ [GeV]
       expression: objects['dielectrons'].p4.pt
+    dielectron_eta:
+      type: Regular
+      bins: 50
+      start: -10
+      stop: 10
+      label: $\eta(e)$
+      expression: objects['dielectrons'].p4.eta
+    dielectron_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(e)$
+      expression: objects['dielectrons'].p4.phi
     dielectron_dr:
       type: Regular
       bins: 50
@@ -171,35 +185,20 @@ histogram_config:
       stop: 2.5
       label: $\eta(e_2)$
       expression: objects['dielectrons'].l2.eta
-    electron_pt:
-      type: Variable
-      edges:
-        - 30
-        - 60
-        - 90
-        - 120
-        - 150
-        - 180
-        - 210
-        - 240
-        - 300
-        - 500
-      label: $p_T(e)$ [GeV]
-      expression: objects['electrons'].pt
-    electron_eta:
-      type: Regular
-      bins: 50
-      start: -2.5
-      stop: 2.5
-      label: $\eta(e)$
-      expression: objects['electrons'].eta
-    electron_phi:
+    leading_electron_phi:
       type: Regular
       bins: 50
       start: -3.14159
       stop: 3.14159
-      label: $\phi(e)$
-      expression: objects['electrons'].phi
+      label: $\phi(e_1)$
+      expression: objects['dielectrons'].l1.phi
+    subleading_electron_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(e_2)$
+      expression: objects['dielectrons'].l2.phi
     jet_pt:
       type: Variable
       edges:
@@ -304,6 +303,10 @@ histogram_config:
       - dielectron_mass
     dielectron_pt: 
       - dielectron_pt
+    dielectron_eta: 
+      - dielectron_eta
+    dielectron_phi: 
+      - dielectron_phi
     dielectron_dr: 
       - dielectron_dr
     dielectron_deta: 
@@ -312,16 +315,14 @@ histogram_config:
       - leading_electron_pt
     leading_electron_eta: 
       - leading_electron_eta
+    leading_electron_phi: 
+      - leading_electron_phi
     subleading_electron_pt: 
       - subleading_electron_pt
     subleading_electron_eta: 
       - subleading_electron_eta
-    electron_pt: 
-      - electron_pt
-    electron_eta: 
-      - electron_eta
-    electron_phi: 
-      - electron_phi
+    subleading_electron_phi: 
+      - subleading_electron_phi
     jet_pt: 
       - jet_pt
     jet_eta: 
