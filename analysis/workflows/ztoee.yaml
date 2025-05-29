@@ -118,14 +118,14 @@ histogram_config:
       bins: 50
       start: -10
       stop: 10
-      label: $\eta(e)$
+      label: $\eta(ee)$
       expression: objects['dielectrons'].p4.eta
     dielectron_phi:
       type: Regular
       bins: 50
       start: -3.14159
       stop: 3.14159
-      label: $\phi(e)$
+      label: $\phi(ee)$
       expression: objects['dielectrons'].p4.phi
     dielectron_dr:
       type: Regular
