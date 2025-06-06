@@ -1,0 +1,350 @@
+object_selection:
+  muons:
+    field: events.Muon
+    cuts:
+      - events.Muon.pt > 10
+      - np.abs(events.Muon.eta) < 2.4
+      - np.abs(events.Muon.dxy) < 0.5
+      - np.abs(events.Muon.dz) < 1
+      - working_points.muon_iso(events, 'tight')
+      - working_points.muon_id(events, 'tight')
+  electrons:
+    field: events.Electron
+    cuts:
+      - events.Electron.pt > 10
+      - np.abs(events.Electron.eta) < 2.4
+      - events.Electron.dxy < 0.5
+      - events.Electron.dz < 1
+      - working_points.electron_id(events, 'wp80iso')
+      - delta_r_higher(events.Electron, objects['muons'], 0.4)
+  jets:
+    field: events.Jet
+    cuts:
+      - events.Jet.pt > 20
+      - np.abs(events.Jet.eta) < 2.5
+      - working_points.jet_id(events, 'tightlepveto')
+      - delta_r_higher(events.Jet, objects['muons'], 0.4)
+      - delta_r_higher(events.Jet, objects['electrons'], 0.4)
+  dimuons:
+    field: select_dimuons
+    cuts:
+      - objects['dimuons'].l1.delta_r(objects['dimuons'].l2) > 0.3
+      - objects['dimuons'].l1.charge * objects['dimuons'].l2.charge < 0
+      - (objects['dimuons'].p4.mass > 60.0) & (objects['dimuons'].p4.mass < 120.0)
+event_selection:
+  hlt_paths:
+    Muon:
+      - SingleMu
+  selections:
+    trigger: get_trigger_mask(events, hlt_paths, dataset, year)
+    trigger_match: get_trigger_match_mask(events, hlt_paths, year, events.Muon)
+    lumimask: get_lumi_mask(events, year)
+    atleast_one_goodvertex: events.PV.npvsGood > 0
+    leading_muon_pt: ak.firsts(objects['muons'].pt) > 27
+    subleading_muon_pt: ak.pad_none(objects['muons'], target=2)[:, 1].pt > 15
+    electron_veto: ak.num(objects['electrons']) == 0
+    two_muons: ak.num(objects['muons']) == 2
+    one_dimuon: ak.num(objects['dimuons']) == 1
+  categories:
+    base:
+      - trigger
+      - trigger_match
+      - lumimask
+      - atleast_one_goodvertex
+      - leading_muon_pt
+      - subleading_muon_pt
+      - two_muons
+      - one_dimuon
+      - electron_veto
+corrections:
+  objects:
+    - jets
+    - muons
+    - electrons
+  event_weights:
+    genWeight: true
+    pileupWeight: true
+    partonshowerWeight: true
+    lhepdfWeight: true
+    lhescaleWeight: true
+    nnlopsWeight: false
+    electron:
+      - id: false
+      - reco: false
+      - trigger: false
+    muon:
+      - id: tight
+      - iso: tight
+      - trigger: true
+histogram_config:
+  add_syst_axis: true
+  add_weight: true
+  axes:
+    dimuon_mass:
+      type: Regular
+      bins: 24
+      start: 60
+      stop: 120
+      label: $m(\mu\mu)$ [GeV]
+      expression: objects['dimuons'].p4.mass
+    dimuon_pt:
+      type: Variable
+      edges:
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 225
+        - 250
+        - 275
+        - 300
+        - 325
+        - 350
+        - 375
+        - 400
+        - 450
+        - 500
+        - 550
+        - 600
+        - 700
+        - 800
+        - 1000
+      label: $p_T(\mu\mu)$ [GeV]
+      expression: objects['dimuons'].p4.pt
+    dimuon_eta:
+      type: Regular
+      bins: 50
+      start: -10
+      stop: 10
+      label: $\eta(\mu\mu)$
+      expression: objects['dimuons'].p4.eta
+    dimuon_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\mu\mu)$
+      expression: objects['dimuons'].p4.phi
+    dimuon_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(\mu_1, \mu_2)$
+      expression: objects['dimuons'].l1.delta_r(objects['dimuons'].l2)
+    dimuon_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(\mu_1, \mu_2)|$
+      expression: np.abs(objects['dimuons'].l1.eta - objects['dimuons'].l2.eta)
+    leading_muon_pt:
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(\mu_1)$ [GeV]
+      expression: objects['dimuons'].l1.pt
+    subleading_muon_pt:
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(\mu_2)$ [GeV]
+      expression: objects['dimuons'].l2.pt
+    leading_muon_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\mu_1)$
+      expression: objects['dimuons'].l1.eta
+    subleading_muon_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\mu_2)$
+      expression: objects['dimuons'].l2.eta
+    leading_muon_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\mu_1)$
+      expression: objects['dimuons'].l1.phi
+    subleading_muon_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\mu_2)$
+      expression: objects['dimuons'].l2.phi
+    jet_pt:
+      type: Variable
+      edges:
+        - 20
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(j)$ [GeV]
+      expression: objects['jets'].pt
+    jet_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(j)$
+      expression: objects['jets'].phi
+    jet_multiplicity:
+      type: Integer
+      start: 0
+      stop: 14
+      label: $N(j)$
+      expression: ak.num(objects['jets'])
+    jet_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(j_1, j_2)$
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].delta_r(ak.pad_none(objects['jets'], target=2)[:, 1])
+    jet_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(j_1, j_2)|$
+      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta - ak.pad_none(objects['jets'], target=2)[:, 1].eta)
+    leadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
+    leadingjet_cvsl_pnet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsL (PNet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
+    leadingjet_cvsb_pnet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsB (PNet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
+    leadingjet_cvsb_deepjet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsB (DeepJet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagDeepFlavCvB
+    leadingjet_cvsl_deepjet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet Cvsl (DeepJet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagDeepFlavCvL
+    leadingjet_cvsb_partb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet btagRobustParTAK4CvB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagRobustParTAK4CvB
+    leadingjet_cvsl_partb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet btagRobustParTAK4CvL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagRobustParTAK4CvL
+    npvs:
+      type: Integer
+      start: 0
+      stop: 60
+      label: vertex multiplicity
+      expression: events.PV.npvsGood
+  layout:
+    dimuon_mass:
+      - dimuon_mass
+    dimuon_pt:
+      - dimuon_pt
+    dimuon_eta:
+      - dimuon_eta
+    dimuon_phi:
+      - dimuon_phi
+    dimuon_dr:
+      - dimuon_dr
+    dimuon_deta:
+      - dimuon_deta
+    leading_muon_pt:
+      - leading_muon_pt
+    leading_muon_eta:
+      - leading_muon_eta
+    leading_muon_phi:
+      - leading_muon_phi
+    subleading_muon_pt:
+      - subleading_muon_pt
+    subleading_muon_eta:
+      - subleading_muon_eta
+    jet_pt:
+      - jet_pt
+    jet_phi:
+      - jet_phi
+    jet_multiplicity:
+      - jet_multiplicity
+    jet_dr: 
+      - jet_dr
+    jet_deta: 
+      - jet_deta
+    leading_jet_pnet:
+      - leadingjet_flavour
+      - leadingjet_cvsb_pnet
+      - leadingjet_cvsl_pnet
+    leading_jet_deepjet:
+      - leadingjet_flavour
+      - leadingjet_cvsb_deepjet
+      - leadingjet_cvsl_deepjet
+    leading_jet_partb:
+      - leadingjet_flavour
+      - leadingjet_cvsb_partb
+      - leadingjet_cvsl_partb
+    vertex:
+      - npvs

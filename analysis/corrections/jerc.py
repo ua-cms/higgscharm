@@ -1,70 +1,21 @@
 # tools to apply JEC/JER and compute their uncertainties (https://cms-jerc.web.cern.ch/Recommendations/)
 # copied from https://github.com/green-cabbage/copperheadV2/blob/main/corrections/jet.py
+import yaml
 import contextlib
 import numpy as np
 import awkward as ak
 import importlib.resources
 from pathlib import Path
+from analysis.filesets.utils import get_dataset_era
 from coffea.lookup_tools import extractor
 from coffea.jetmet_tools import JECStack, CorrectedJetsFactory
 
 
-JEC_PARAMS = {
-    "runs": {
-        "2022EE": ["E", "F", "G"],
-    },
-    "jec_levels_mc": {
-        "2022EE": ["L1FastJet", "L2Relative", "L3Absolute"],
-    },
-    "jec_levels_data": {
-        "2022EE": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
-    },
-    # I modified the original names since coffea jetmet_tools requires file names
-    # of "5 words in length" ('Summer22EE22Sep2023_V2_MC_L1FastJet_AK4PFPuppi.jec')
-    "jec_tags": {
-        "2022EE": "Summer22EE22Sep2023_V2_MC",
-    },
-    "jer_tags": {
-        "2022EE": "Summer22EE22Sep2023_JRV1_MC",
-    },
-    "jec_data_tags": {
-        "2022EE": {
-            "Summer22EE22Sep2023_RunE_V2_DATA": ["E", "F", "G"],
-        },
-    },
-    "jec_variations": {
-        "2022EE": [
-            "AbsoluteMPFBias",
-            "AbsoluteScale",
-            "AbsoluteStat",
-            "FlavorQCD",
-            "Fragmentation",
-            "PileUpDataMC",
-            "PileUpPtBB",
-            "PileUpPtEC1",
-            "PileUpPtEC2",
-            "PileUpPtHF",
-            "PileUpPtRef",
-            "RelativeFSR",
-            "RelativeJEREC1",
-            "RelativeJEREC2",
-            "RelativeJERHF",
-            "RelativePtBB",
-            "RelativePtEC1",
-            "RelativePtEC2",
-            "RelativePtHF",
-            "RelativeBal",
-            "RelativeSample",
-            "RelativeStatEC",
-            "RelativeStatFSR",
-            "RelativeStatHF",
-            "SinglePionECAL",
-            "SinglePionHCAL",
-            "TimePtEta",
-            "Total",
-        ],
-    },
-}
+# Run3 recommendations: # https://cms-jerc.web.cern.ch/JEC/
+with importlib.resources.open_text(
+    f"analysis.corrections", f"jerc_params.yaml"
+) as file:
+    JEC_PARAMS = yaml.safe_load(file)
 
 
 def jec_names_and_sources(year):
@@ -136,7 +87,7 @@ def get_jet_evaluator(year):
                 for name in data
             ]
             jec_ext.add_weight_sets([f"* * {file}" for file in jec_data_files])
-            
+
     jec_ext.finalize()
     jet_evaluator = jec_ext.make_evaluator()
     return jet_evaluator
@@ -144,12 +95,13 @@ def get_jet_evaluator(year):
 
 def apply_jerc_corrections(
     events,
-    era="MC",
-    year="2022EE",
-    apply_jec=True,
-    apply_jer=False,
-    apply_junc=False,
+    year,
+    dataset,
+    apply_jec,
+    apply_jer,
+    apply_junc,
 ):
+    era = get_dataset_era(dataset, year)
     # add requiered variables to Jet collection
     jets = events.Jet
     if apply_jec:
@@ -166,7 +118,7 @@ def apply_jerc_corrections(
             ak.fill_none(jets.matched_gen.pt, 0), np.float32
         )
     events["Jet", "rho"] = ak.ones_like(jets.pt) * events.Rho.fixedGridRhoFastjetAll
-    
+
     # set inputs for jec, jer and junc stack
     names = jec_names_and_sources(year)
     jet_evaluator = get_jet_evaluator(year)
@@ -198,7 +150,7 @@ def apply_jerc_corrections(
         jec_options.update(jec_input_options["jer"])
     if apply_junc:
         jec_options.update(jec_input_options["junc"])
-    
+
     # set jerc name map (I don't use JECStack.blank_name_map since it includes 'ptRaw' and 'massRaw' by default)
     jec_name_map = {
         "JetPt": "pt",
@@ -237,6 +189,6 @@ def apply_jerc_corrections(
                     jec_inputs_data[key] = jet_evaluator[key]
         jec_stack_data = JECStack(jec_inputs_data)
         jec_factory = CorrectedJetsFactory(jec_name_map, jec_stack_data)
-        
+
     # update Jet collection
-    events["Jet"] = jec_factory.build(events.Jet)
+    events["Jet"] = jec_factory.build(events.Jet, events.caches[0])

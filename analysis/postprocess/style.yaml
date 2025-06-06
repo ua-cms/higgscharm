@@ -1,0 +1,55 @@
+rcParams:
+  font.size: 18
+  axes.titlesize: 28
+  axes.labelsize: 23
+  xtick.labelsize: 13
+  ytick.labelsize: 13
+  lines.markersize: 30
+  legend.fontsize: 16
+  xtick.minor.width: 1
+  xtick.minor.size: 4
+  xtick.major.width: 1
+  xtick.major.size: 6
+  ytick.minor.width: 1
+  ytick.minor.size: 4
+  ytick.major.width: 1
+  ytick.major.size: 6
+mc_hist_kwargs:
+  histtype: fill
+  stack: true
+  sort: yield
+  linewidth: 0.7
+  edgecolor: k
+data_hist_kwargs:
+  histtype: errorbar
+  color: k
+  linestyle: none
+  marker: .
+  markersize: 13
+  elinewidth: 1
+  yerr: true
+  xerr: true
+ratio_error_kwargs:
+  fmt: ko
+  elinewidth: 1
+  linestyle: solid
+  linewidth: 0
+  markersize: 6
+uncert_band_kwargs:
+  color: lightgray
+  alpha: 0.6
+  edgecolor: k
+  hatch: ////
+  linewidth: 0
+  label: Stat + Syst unc.
+colors:
+  - "#3f90da"
+  - "#ffa90e"
+  - "#bd1f01"
+  - "#94a4a2"
+  - "#832db6"
+  - "#a96b59"
+  - "#e76300"
+  - "#b9ac70"
+  - "#717581"
+  - "#92dadd"

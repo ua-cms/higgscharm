@@ -1,87 +1,423 @@
+import gc
+import yaml
+import json
+import glob
+import logging
 import argparse
-from analysis.configs import load_config
-from analysis.postprocess.plotter import Plotter
-from analysis.postprocess.utils import print_header
-from analysis.postprocess.postprocessor import Postprocessor
+import subprocess
+import pandas as pd
+from pathlib import Path
+from collections import defaultdict
+from coffea.util import load
+from coffea.processor import accumulate
+from analysis.workflows.config import WorkflowConfigBuilder
+from analysis.postprocess.coffea_plotter import CoffeaPlotter
+from analysis.postprocess.utils import (
+    print_header,
+    setup_logger,
+    clear_output_directory,
+    df_to_latex,
+    combine_event_tables,
+    combine_cutflows,
+    format_cutflow_with_efficiency,
+)
+from analysis.postprocess.coffea_postprocessor import (
+    save_process_histograms_by_process,
+    save_process_histograms_by_sample,
+    load_processed_histograms,
+    get_results_report,
+    # get_results_report_zplusl,
+)
+
+OUTPUT_DIR = Path.cwd() / "outputs"
 
 
-def main(args):
-    # process output histograms
-    postprocessor = Postprocessor(
-        processor=args.processor,
-        tagger=args.tagger,
-        flavor=args.flavor,
-        wp=args.wp,
-        year=args.year,
-        output_dir=args.output_dir,
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-w",
+        "--workflow",
+        required=True,
+        choices=[
+            "ztomumu",
+            "ztoee",
+            "zzto4l",
+            "hww",
+            "zplusl_os",
+            "zplusl_ss",
+            "zplusl_maximal",
+            "zplusll_os",
+            "zplusll_ss",
+        ],
+        help="Workflow config to run",
     )
-    processed_histograms = postprocessor.process_histograms()
-    # plot histograms
-    plotter = Plotter(
-        processor=args.processor,
-        processed_histograms=processed_histograms,
-        tagger=args.tagger,
-        flavor=args.flavor,
-        wp=args.wp,
-        year=args.year,
-        lumi=postprocessor.lumi,
+    parser.add_argument(
+        "-y",
+        "--year",
+        required=True,
+        choices=[
+            "2022",
+            "2023",
+            "2022preEE",
+            "2022postEE",
+            "2023preBPix",
+            "2023postBPix",
+        ],
+        help="Year of the data",
     )
-    histograms_config = load_config(config_type="histogram", config_name=args.processor)
-    print_header("plotting histograms")
-    for key, features in histograms_config.layout.items():
-        for feature in features:
-            print(feature)
-            plotter.plot_feature_hist(
-                feature=feature,
-                feature_label=histograms_config.axes[feature]["label"],
-                yratio_limits=(0, 2),
-                savefig=True,
-            )
+    parser.add_argument(
+        "--log", action="store_true", help="Enable log scale for y-axis"
+    )
+    parser.add_argument(
+        "--postprocess", action="store_true", help="Enable postprocessing"
+    )
+    parser.add_argument("--plot", action="store_true", help="Enable plotting")
+    parser.add_argument(
+        "--yratio_limits",
+        type=float,
+        nargs=2,
+        default=(0.5, 1.5),
+        help="Set y-axis ratio limits",
+    )
+    parser.add_argument(
+        "--extension",
+        type=str,
+        default="pdf",
+        choices=["pdf", "png"],
+        help="Output file extension for plots",
+    )
+    parser.add_argument(
+        "--output_format",
+        type=str,
+        default="coffea",
+        choices=["coffea", "root"],
+        help="Format of output histograms",
+    )
+    parser.add_argument(
+        "--group_by",
+        type=str,
+        default="process",
+        help="Axis to group by (e.g., 'process', or a JSON dict)",
+    )
+    parser.add_argument(
+        "--pass_axis",
+        type=str,
+        default="",
+        help="Binary axis (e.g., 'is_passing_lepton')",
+    )
+    return parser.parse_args()
+
+
+def get_sample_name(filename: str, year: str) -> str:
+    """return sample name from filename"""
+    sample_name = Path(filename).stem
+    if sample_name.rsplit("_")[-1].isdigit():
+        sample_name = "_".join(sample_name.rsplit("_")[:-1])
+    return sample_name.replace(f"{year}_", "")
+
+
+def build_process_sample_map(datasets: list[str], year: str) -> dict[str, list[str]]:
+    """map processes to their corresponding samples based on dataset config"""
+    fileset_path = Path.cwd() / "analysis/filesets" / f"{year}_nanov12.yaml"
+    with open(fileset_path, "r") as f:
+        dataset_configs = yaml.safe_load(f)
+
+    process_map = defaultdict(list)
+    for sample in datasets:
+        config = dataset_configs[sample]
+        process_map[config["process"]].append(sample)
+    return process_map
+
+
+def load_year_histograms(workflow: str, year: str, output_format: str):
+    """load and merge histograms from pre/post campaigns"""
+    aux_map = {
+        "2022": ["2022preEE", "2022postEE"],
+        "2023": ["2023preBPix", "2023postBPix"],
+    }
+    pre_year, post_year = aux_map[year]
+    base_path = OUTPUT_DIR / workflow
+    pre_file = base_path / pre_year / f"{pre_year}_processed_histograms.{output_format}"
+    post_file = (
+        base_path / post_year / f"{post_year}_processed_histograms.{output_format}"
+    )
+    return accumulate([load(pre_file), load(post_file)])
+
+
+def load_histogram_file(path: Path):
+    return load(path) if path.exists() else None
+
+
+def plot_variable(variable: str, group_by, histogram_config) -> bool:
+    """decide whether to plot a given variable under group_by mode"""
+    if isinstance(group_by, str) and group_by == "process":
+        return True
+    for hist_key, variables in histogram_config.layout.items():
+        if variable in variables and group_by["name"] in variables:
+            return group_by["name"] != variable
+    return False
+
+
+def save_cutflow_report(
+    category: str, category_dir: Path, event_selection: dict, process_samples_map: dict
+):
+    """generate and save the cutflow table for a given category"""
+    print_header("Cutflow")
+    cutflow_df = pd.DataFrame()
+
+    for process in process_samples_map:
+        cutflow_file = category_dir / f"cutflow_{category}_{process}.csv"
+        if cutflow_file.exists():
+            df = pd.read_csv(cutflow_file, index_col=0)
+            cutflow_df = pd.concat([cutflow_df, df], axis=1)
+        else:
+            logging.warning(f"Missing cutflow file: {cutflow_file}")
+
+    if "Data" in cutflow_df.columns:
+        cutflow_df["Total Background"] = cutflow_df.drop(columns="Data").sum(axis=1)
+    else:
+        cutflow_df["Total Background"] = cutflow_df.sum(axis=1)
+
+    cutflow_index = ["initial"] + event_selection["categories"][category]
+    cutflow_df = cutflow_df.loc[cutflow_index]
+
+    ordered_cols = ["Data", "Total Background"] + [
+        col for col in cutflow_df.columns if col not in ["Data", "Total Background"]
+    ]
+    cutflow_df = cutflow_df[ordered_cols]
+
+    logging.info(
+        f'{cutflow_df.applymap(lambda x: f"{x:.3f}" if pd.notnull(x) else "")}\n'
+    )
+    cutflow_df.to_csv(category_dir / f"cutflow_{category}.csv")
+
+
+def save_results_report(
+    workflow: str, category: str, category_dir: Path, processed_histograms: dict
+):
+    """generate and save the results summary table for a given category"""
+    print_header("Results")
+    if workflow in ["zplusl_os", "zplusl_ss"]:
+        results_df = get_results_report_zplusl(processed_histograms, category)
+        logging.info(results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
+        logging.info("\n")
+        results_df.to_csv(category_dir / f"results_{category}.csv")
+    else:
+        results_df = get_results_report(processed_histograms, category)
+        logging.info(results_df.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else ""))
+        logging.info("\n")
+        results_df.to_csv(category_dir / f"results_{category}.csv")
+
+        latex_table = df_to_latex(results_df)
+        with open(category_dir / f"results_{category}.txt", "w") as f:
+            f.write(latex_table)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--processor",
-        dest="processor",
-        type=str,
-        default="ztomumu",
-        help="processor to be used {signal, tag_eff, taggers, zplusjet}",
-    )
-    parser.add_argument(
-        "--year",
-        dest="year",
-        type=str,
-        default="2022EE",
-        help="year of the data {2022EE}",
-    )
-    parser.add_argument(
-        "--tagger",
-        dest="tagger",
-        type=str,
-        default=None,
-        help="tagger {pnet, part, deepjet}",
-    )
-    parser.add_argument(
-        "--wp",
-        dest="wp",
-        type=str,
-        default=None,
-        help="working point {loose, medium, tight}",
-    )
-    parser.add_argument(
-        "--flavor",
-        dest="flavor",
-        type=str,
-        default=None,
-        help="Hadron flavor {c, b}",
-    )
-    parser.add_argument(
-        "--output_dir",
-        dest="output_dir",
-        type=str,
-        default=None,
-        help="Path to the outputs directory",
-    )
-    args = parser.parse_args()
-    main(args)
+    args = parse_arguments()
+
+    try:
+        group_by = json.loads(args.group_by)
+    except json.JSONDecodeError:
+        group_by = args.group_by
+
+    output_dir = OUTPUT_DIR / args.workflow / args.year
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    clear_output_directory(output_dir, "txt")
+    setup_logger(output_dir)
+
+    config_builder = WorkflowConfigBuilder(workflow=args.workflow)
+    workflow_config = config_builder.build_workflow_config()
+    histogram_config = workflow_config.histogram_config
+    event_selection = workflow_config.event_selection
+    categories = event_selection["categories"]
+    processed_histograms = None
+
+    if args.year in ["2022", "2023"]:
+        # load and accumulate processed histograms
+        processed_histograms = load_year_histograms(
+            args.workflow, args.year, args.output_format
+        )
+        identifier = "EE" if args.year == "2022" else "BPix"
+        for category in categories:
+            logging.info(f"category: {category}")
+            # load and combine results tables
+            results_pre = pd.read_csv(
+                OUTPUT_DIR
+                / args.workflow
+                / f"{args.year}pre{identifier}"
+                / category
+                / f"results_{category}.csv",
+                index_col=0,
+            )
+            results_post = pd.read_csv(
+                OUTPUT_DIR
+                / args.workflow
+                / f"{args.year}post{identifier}"
+                / category
+                / f"results_{category}.csv",
+                index_col=0,
+            )
+            combined_results = combine_event_tables(results_pre, results_post)
+
+            print_header(f"Results")
+            logging.info(
+                combined_results.applymap(lambda x: f"{x:.5f}" if pd.notnull(x) else "")
+            )
+            logging.info("\n")
+
+            category_dir = OUTPUT_DIR / args.workflow / args.year / category
+            combined_results.to_csv(category_dir / f"results_{category}.csv")
+
+            # save latex table
+            latex_table = df_to_latex(combined_results)
+            with open(category_dir / f"results_{category}.txt", "w") as f:
+                f.write(latex_table)
+
+            # load and combine cutflow tables
+            print_header(f"Cutflow")
+            cutflow_pre = pd.read_csv(
+                OUTPUT_DIR
+                / args.workflow
+                / f"{args.year}pre{identifier}"
+                / category
+                / f"cutflow_{category}.csv",
+                index_col=0,
+            )
+            cutflow_post = pd.read_csv(
+                OUTPUT_DIR
+                / args.workflow
+                / f"{args.year}post{identifier}"
+                / category
+                / f"cutflow_{category}.csv",
+                index_col=0,
+            )
+            combined_cutflow = combine_cutflows(cutflow_pre, cutflow_post)
+            combined_cutflow.to_csv(category_dir / f"cutflow_{category}.csv")
+            logging.info(
+                combined_cutflow.applymap(lambda x: f"{x:.2f}" if pd.notnull(x) else "")
+            )
+            logging.info("\n")
+
+            # compute efficiencies
+            print_header(f"Efficiency")
+            eff_df = pd.DataFrame(index=combined_cutflow.index)
+            for col in combined_cutflow.columns:
+                eff_df[col] = (
+                    combined_cutflow[col] / combined_cutflow[col].iloc[0] * 100
+                )
+            eff_df.to_csv(category_dir / f"eff_{category}.csv")
+            logging.info(eff_df)
+            logging.info("\n")
+
+            cutflow_eff = format_cutflow_with_efficiency(combined_cutflow, eff_df)
+            cutflow_eff.to_csv(category_dir / f"cutflow_eff_{category}.csv")
+
+    if args.postprocess:
+        logging.info(workflow_config.to_yaml())
+        print_header(f"Reading outputs from: {output_dir}")
+
+        output_files = [
+            f
+            for f in glob.glob(f"{output_dir}/*/*{args.output_format}", recursive=True)
+            if not Path(f).stem.startswith("cutflow")
+        ]
+
+        grouped_outputs = defaultdict(list)
+        for output_file in output_files:
+            sample_name = get_sample_name(output_file, args.year)
+            grouped_outputs[sample_name].append(output_file)
+
+        process_samples_map = build_process_sample_map(
+            grouped_outputs.keys(), args.year
+        )
+
+        for sample in grouped_outputs:
+            save_process_histograms_by_sample(
+                year=args.year,
+                output_dir=output_dir,
+                sample=sample,
+                grouped_outputs=grouped_outputs,
+                categories=categories,
+            )
+            gc.collect()
+
+        for process in process_samples_map:
+            save_process_histograms_by_process(
+                year=args.year,
+                output_dir=output_dir,
+                process_samples_map=process_samples_map,
+                process=process,
+                categories=categories,
+            )
+            gc.collect()
+
+        processed_histograms = load_processed_histograms(
+            year=args.year,
+            output_dir=output_dir,
+            process_samples_map=process_samples_map,
+        )
+
+        for category in categories:
+            logging.info(f"category: {category}")
+            category_dir = output_dir / category
+            save_cutflow_report(
+                category, category_dir, event_selection, process_samples_map
+            )
+            save_results_report(
+                args.workflow, category, category_dir, processed_histograms
+            )
+
+    if args.plot:
+        if not args.postprocess and args.year not in ["2022", "2023"]:
+            postprocess_file = (
+                output_dir / f"{args.year}_processed_histograms.{args.output_format}"
+            )
+            processed_histograms = load_histogram_file(postprocess_file)
+            if processed_histograms is None:
+                raise ValueError(
+                    f"Postprocess file not found. Please run:\n"
+                    f"  'python3 run_postprocess.py -w {args.workflow} -y {args.year} --postprocess'"
+                )
+
+        print_header("Plots")
+        plotter = CoffeaPlotter(
+            workflow=args.workflow,
+            processed_histograms=processed_histograms,
+            year=args.year,
+            output_dir=output_dir,
+            group_by=group_by,
+            pass_axis=args.pass_axis,
+        )
+        for category in categories:
+            logging.info(f"Plotting histograms for category: {category}")
+            for variable in workflow_config.histogram_config.variables:
+                if args.pass_axis:
+                    if variable == args.pass_axis:
+                        continue
+                    if histogram_config.layout == "individual":
+                        print("There's only individual axes!")
+                        break
+                    proceed = False
+                    for key, variables in histogram_config.layout.items():
+                        if (variable in variables) and (args.pass_axis in variables):
+                            proceed = True
+                            break
+                    if not proceed:
+                        continue
+                if plot_variable(variable, group_by, workflow_config.histogram_config):
+                    logging.info(variable)
+                    plotter.plot_histograms(
+                        variable=variable,
+                        category=category,
+                        yratio_limits=args.yratio_limits,
+                        log=args.log,
+                        extension=args.extension,
+                    )
+            if args.workflow in ["zplusl_os", "zplusl_ss"]:
+                plotter.plot_fake_rate(category)
+            subprocess.run(
+                f"tar -zcvf {output_dir}/{category}/{args.workflow}_{args.year}_plots.tar.gz {output_dir}/{category}/*.{args.extension}",
+                shell=True,
+            )

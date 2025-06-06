@@ -1,0 +1,347 @@
+object_selection:
+  electrons:
+    field: events.Electron
+    cuts:
+      - events.Electron.pt > 10
+      - np.abs(events.Electron.eta) < 2.4
+      - working_points.electron_id(events, 'wp80iso')
+  muons:
+    field: events.Muon
+    cuts:
+      - events.Muon.pt > 10
+      - np.abs(events.Muon.eta) < 2.4
+      - working_points.muon_iso(events, 'tight')
+      - working_points.muon_id(events, 'tight')
+      - delta_r_higher(events.Muon, objects['electrons'], 0.4)
+  jets:
+    field: events.Jet
+    cuts:
+      - events.Jet.pt > 20
+      - np.abs(events.Jet.eta) < 2.5
+      - working_points.jet_id(events, 'tightlepveto')
+      - delta_r_higher(events.Jet, objects['muons'], 0.4)
+      - delta_r_higher(events.Jet, objects['electrons'], 0.4)
+  dielectrons:
+    field: select_dielectrons
+    cuts:
+      - objects['dielectrons'].l1.delta_r(objects['dielectrons'].l2) > 0.3
+      - objects['dielectrons'].l1.charge * objects['dielectrons'].l2.charge < 0
+      - (objects['dielectrons'].p4.mass > 60.0) & (objects['dielectrons'].p4.mass < 120.0)
+event_selection:
+  hlt_paths:
+    EGamma:
+      - SingleEle
+  selections:
+    trigger: get_trigger_mask(events, hlt_paths, dataset, year)
+    trigger_match: get_trigger_match_mask(events, hlt_paths, year, events.Electron) 
+    lumimask: get_lumi_mask(events, year)
+    atleast_one_goodvertex: events.PV.npvsGood > 0
+    leading_electron_pt: ak.firsts(objects['electrons'].pt) > 33
+    subleading_electron_pt: ak.pad_none(objects['electrons'], target=2)[:, 1].pt > 20
+    muon_veto: ak.num(objects["muons"]) == 0
+    two_electrons: ak.num(objects['electrons']) == 2
+    one_dielectron: ak.num(objects['dielectrons']) == 1
+  categories:
+    base:
+      - trigger
+      - trigger_match
+      - lumimask
+      - atleast_one_goodvertex
+      - leading_electron_pt
+      - subleading_electron_pt
+      - two_electrons
+      - one_dielectron
+      - muon_veto
+corrections:
+  objects:
+    - jets
+    - muons
+    - electrons
+  event_weights:
+    genWeight: true
+    pileupWeight: true
+    partonshowerWeight: true
+    lhepdfWeight: true
+    lhescaleWeight: true
+    nnlopsWeight: false
+    electron:
+      - id: wp80iso
+      - reco: true
+      - trigger: true
+    muon:
+      - id: false
+      - iso: false
+      - trigger: false
+histogram_config:
+  add_syst_axis: true
+  add_weight: true
+  axes:
+    dielectron_mass:
+      type: Regular
+      bins: 24
+      start: 60
+      stop: 120
+      label: $m(ee)$ [GeV]
+      expression: objects['dielectrons'].p4.mass
+    dielectron_pt:
+      type: Variable
+      edges:
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 225
+        - 250
+        - 275
+        - 300
+        - 325
+        - 350
+        - 375
+        - 400
+        - 450
+        - 500
+        - 550
+        - 600
+        - 700
+        - 800
+        - 1000
+      label: $p_T(ee)$ [GeV]
+      expression: objects['dielectrons'].p4.pt
+    dielectron_eta:
+      type: Regular
+      bins: 50
+      start: -10
+      stop: 10
+      label: $\eta(ee)$
+      expression: objects['dielectrons'].p4.eta
+    dielectron_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(ee)$
+      expression: objects['dielectrons'].p4.phi
+    dielectron_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(e_1, e_2)$
+      expression: objects['dielectrons'].l1.delta_r(objects['dielectrons'].l2)
+    dielectron_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(e_1, e_2)|$
+      expression: np.abs(objects['dielectrons'].l1.eta - objects['dielectrons'].l2.eta)
+    leading_electron_pt:
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(e_1)$ [GeV]
+      expression: objects['dielectrons'].l1.pt
+    subleading_electron_pt:
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(e_2)$ [GeV]
+      expression: objects['dielectrons'].l2.pt
+    leading_electron_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(e_1)$
+      expression: objects['dielectrons'].l1.eta
+    subleading_electron_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(e_2)$
+      expression: objects['dielectrons'].l2.eta
+    leading_electron_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(e_1)$
+      expression: objects['dielectrons'].l1.phi
+    subleading_electron_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(e_2)$
+      expression: objects['dielectrons'].l2.phi
+    jet_pt:
+      type: Variable
+      edges:
+        - 20
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(j)$ [GeV]
+      expression: objects['jets'].pt
+    jet_eta:
+      type: Regular
+      bins: 50
+      start: -2.4
+      stop: 2.4
+      label: $\eta(j)$
+      expression: objects['jets'].eta
+    jet_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(j)$
+      expression: objects['jets'].phi
+    jet_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(j_1, j_2)$
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].delta_r(ak.pad_none(objects['jets'], target=2)[:, 1])
+    jet_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(j_1, j_2)|$
+      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta -ak.pad_none(objects['jets'], target=2)[:, 1].eta)
+    jet_multiplicity:
+      type: Integer
+      start: 0
+      stop: 14
+      label: $N(j)$
+      expression: ak.num(objects['jets'])
+    leadingjet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
+    leadingjet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
+    leadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
+    subleadingjet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
+    subleadingjet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Subleading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
+    subleadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
+    npvs:
+      type: Integer
+      start: 0
+      stop: 60
+      label: npvs
+      expression: events.PV.npvsGood
+  layout: 
+    dielectron_mass: 
+      - dielectron_mass
+    dielectron_pt: 
+      - dielectron_pt
+    dielectron_eta: 
+      - dielectron_eta
+    dielectron_phi: 
+      - dielectron_phi
+    dielectron_dr: 
+      - dielectron_dr
+    dielectron_deta: 
+      - dielectron_deta
+    leading_electron_pt: 
+      - leading_electron_pt
+    leading_electron_eta: 
+      - leading_electron_eta
+    leading_electron_phi: 
+      - leading_electron_phi
+    subleading_electron_pt: 
+      - subleading_electron_pt
+    subleading_electron_eta: 
+      - subleading_electron_eta
+    subleading_electron_phi: 
+      - subleading_electron_phi
+    jet_pt: 
+      - jet_pt
+    jet_eta: 
+      - jet_eta
+    jet_phi: 
+      - jet_phi
+    jet_dr: 
+      - jet_dr
+    jet_deta: 
+      - jet_deta
+    jet_multiplicity: 
+      - jet_multiplicity
+    leading_jet:
+      - leadingjet_flavour
+      - leadingjet_cvsb
+      - leadingjet_cvsl
+    subleading_jet:
+      - subleadingjet_flavour
+      - subleadingjet_cvsb
+      - subleadingjet_cvsl
+    vertex:
+      - npvs

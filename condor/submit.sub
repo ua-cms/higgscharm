@@ -1,9 +1,13 @@
-executable            = EXECUTABLEPATH/JOBNAME.sh
-arguments             = $(ClusterId)$(ProcId)
-output                = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).out
-error                 = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).err
-log                   = LOGPATH/JOBNAME.$(ClusterId).$(ProcId).log
+executable            = CONDORDIR/submit.sh
+arguments             = $(JOBNUM) BASEDIR X509PATH
+output                = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).out
+error                 = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).err
+log                   = LOGDIR/JOBNAME.$(ClusterId).$(ProcId).log
 
-+JobFlavour           = JOBFLAVOR
-+SingularityImage     = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.10"
-queue 1
+should_transfer_files = YES
+transfer_input_files  = INPUTFILES
+
++JobFlavour           = "longlunch"
++SingularityImage     = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.9"
+
+Queue JOBNUM from JOBNUM_FILE
