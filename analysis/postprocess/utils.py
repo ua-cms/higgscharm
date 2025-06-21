@@ -141,3 +141,14 @@ def get_variations_keys(processed_histograms):
         set([var.replace("Up", "").replace("Down", "") for var in variations])
     )
     return variations
+
+
+def find_kin_and_axis(processed_histograms, name="multiplicity"):
+    for process, histogram_dict in processed_histograms.items():
+        if process == "Data":
+            continue
+        for kin, hist in histogram_dict.items():
+            for axis_name in hist.axes.name:
+                if axis_name != "variation" and name in axis_name:
+                    return kin, axis_name
+    raise ValueError(f"No histogram with a '{name}' axis found.")
