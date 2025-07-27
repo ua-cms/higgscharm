@@ -6,7 +6,11 @@ import pandas as pd
 from pathlib import Path
 from coffea.util import load, save
 from coffea.processor import accumulate
-from analysis.postprocess.utils import print_header, get_variations_keys
+from analysis.postprocess.utils import (
+    print_header,
+    get_variations_keys,
+    find_kin_and_axis,
+)
 
 
 def save_process_histograms_by_sample(
@@ -142,40 +146,44 @@ def load_processed_histograms(
 
 
 def get_results_report(processed_histograms, category):
+    kin, aux_var = find_kin_and_axis(processed_histograms)
     nominal = {}
-    for process in processed_histograms:
-        for kin in processed_histograms[process]:
-            aux_hist = processed_histograms[process][kin]
-            for aux_var in aux_hist.axes.name:
-                nominal[process] = aux_hist[{"variation": "nominal"}].project(aux_var)
-                break
-            break
-
     variations = {}
     mcstat_err = {}
     bin_error_up = {}
     bin_error_down = {}
     for process in processed_histograms:
-        if process == "Data":
-            continue
+        aux_hist = processed_histograms[process][kin]
+        nominal_selector = {"variation": "nominal"}
+        if "category" in aux_hist.axes.name:
+            nominal_selector["category"] = category
+        nominal_hist = aux_hist[nominal_selector].project(aux_var)
+        nominal[process] = nominal_hist
+
         mcstat_err[process] = {}
         bin_error_up[process] = {}
         bin_error_down[process] = {}
-        nom = nominal[process].values()
-        mcstat_err2 = nominal[process].variances()
+        mcstat_err2 = nominal_hist.variances()
         mcstat_err[process] = np.sum(np.sqrt(mcstat_err2))
         err2_up = mcstat_err2
         err2_down = mcstat_err2
+
+        if process == "Data":
+            continue
+
         for variation in get_variations_keys(processed_histograms):
             if f"{variation}Up" not in aux_hist.axes["variation"]:
                 continue
-            var_up = aux_hist[{"variation": f"{variation}Up"}].project(aux_var).values()
-            var_down = (
-                aux_hist[{"variation": f"{variation}Down"}].project(aux_var).values()
-            )
+            selectorup = {"variation": f"{variation}Up"}
+            selectordown = {"variation": f"{variation}Down"}
+            if "category" in aux_hist.axes.name:
+                selectorup["category"] = category
+                selectordown["category"] = category
+            var_up = aux_hist[selectorup].project(aux_var).values()
+            var_down = aux_hist[selectordown].project(aux_var).values()
             # Compute the uncertainties corresponding to the up/down variations
-            err_up = var_up - nom
-            err_down = var_down - nom
+            err_up = var_up - nominal_hist.values()
+            err_down = var_down - nominal_hist.values()
             # Compute the flags to check which of the two variations (up and down) are pushing the nominal value up and down
             up_is_up = err_up > 0
             down_is_down = err_down < 0
@@ -209,16 +217,18 @@ def get_results_report(processed_histograms, category):
         else:
             mcs.append(process)
             results[process]["stat err"] = mcstat_err[process]
-            results[process]["syst err"] = (
-                bin_error_up[process] + bin_error_down[process]
-            ) / 2
+            results[process]["syst err up"] = bin_error_up[process]
+            results[process]["syst err down"] = bin_error_down[process]
     df = pd.DataFrame(results)
     df["Total background"] = df.loc[["events"], mcs].sum(axis=1)
     df.loc["stat err", "Total background"] = np.sqrt(
         np.sum(df.loc["stat err", mcs] ** 2)
     )
-    df.loc["syst err", "Total background"] = np.sqrt(
-        np.sum(df.loc["syst err", mcs] ** 2)
+    df.loc["syst err up", "Total background"] = np.sqrt(
+        np.sum(df.loc["syst err up", mcs] ** 2)
+    )
+    df.loc["syst err down", "Total background"] = np.sqrt(
+        np.sum(df.loc["syst err down", mcs] ** 2)
     )
     df = df.T
     df.loc["Data/Total background"] = (
