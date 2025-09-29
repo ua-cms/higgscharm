@@ -6,6 +6,7 @@ from pathlib import Path
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "-y",
         "--year",
         dest="year",
         type=str,
@@ -23,6 +24,16 @@ if __name__ == "__main__":
         type=str,
         help="(Optional) List of samples to use. If omitted, all available samples will be used",
     )
+    parser.add_argument(
+        "--site",
+        dest="site",
+        default="root://maite.iihe.ac.be:1094",
+        type=str,
+        help="site from which to read the signal samples",
+    )
+    parser.add_argument(
+        "--onlysignal", action="store_true", help="Build only signal input filesets"
+    )
     args = parser.parse_args()
 
     try:
@@ -32,11 +43,16 @@ if __name__ == "__main__":
             "VOMS proxy expired or non-existing: please run 'voms-proxy-init --voms cms'"
         )
 
-    sites_file = Path.cwd() / "analysis" / "filesets" / f"{args.year}_sites.yaml"
-    if not sites_file.exists():
-        cmd = f"python3 analysis/filesets/build_sites.py --year {args.year}"
+    if not args.onlysignal:
+        sites_file = Path.cwd() / "analysis" / "filesets" / f"{args.year}_sites.yaml"
+        if not sites_file.exists():
+            cmd = f"python3 analysis/filesets/build_sites.py --year {args.year}"
+            subprocess.run(cmd, shell=True)
+
+        samples_str = " ".join(args.samples) if args.samples else ""
+        cmd = f"singularity exec -B /afs -B /cvmfs {args.image} python3 analysis/filesets/make_filesets.py --year {args.year} --samples {samples_str}"
         subprocess.run(cmd, shell=True)
 
-    samples_str = " ".join(args.samples) if args.samples else ""
-    cmd = f"singularity exec -B /afs -B /cvmfs {args.image} python3 analysis/filesets/make_filesets.py --year {args.year} --samples {samples_str}"
-    subprocess.run(cmd, shell=True)
+    # add signal samples
+    signal_cmd = f"python3 -m analysis.filesets.make_signal_filesets --year {args.year} --site {args.site}"
+    subprocess.run(signal_cmd, shell=True)
