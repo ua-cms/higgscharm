@@ -1,14 +1,29 @@
 import numpy as np
+from analysis.utils.JetId import compute_jetid_bits
 
 
 class WorkingPoints:
 
     def jet_id(self, events, wp):
+        """
+        Get jet ID mask for specified working point.
+        Uses compute_jetid_bits to handle both old NanoAOD (with jetId) 
+        and new NanoAOD v15+ (without jetId, computed on-the-fly).
+        
+        Bit encoding: bit0 (value 1) = loose, bit1 (value 2) = tight, bit2 (value 4) = tightLepVeto
+        jetId = 2 means ONLY tight (tight without lepVeto)
+        jetId = 6 means tight + tightLepVeto (bits 1 and 2 set)
+        """
+        # Get jetId bits (either from NanoAOD or computed on-the-fly)
+        jetid_bits = compute_jetid_bits(events)
+        
+        # Extract the working point - must match EXACT values from original framework
         wps = {
-            "tightlepveto": events.Jet.jetId == 6,
-            "tight": events.Jet.jetId == 2,
+            "tight": jetid_bits == 2,           # jetId must be exactly 2 (tight only)
+            "tightlepveto": jetid_bits == 6,    # jetId must be exactly 6 (tight + lepVeto)
         }
         return wps[wp]
+
 
     def electron_id(self, events, wp):
         wps = {
@@ -162,7 +177,6 @@ class WorkingPoints:
             ),
         }
         return wps[wp]
-
     def jet_particlenet_c(self, events, wp, year):
         # https://indico.cern.ch/event/1304360/contributions/5518916/attachments/2692786/4673101/230731_BTV.pdf
         wps = {
