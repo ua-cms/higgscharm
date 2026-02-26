@@ -7,8 +7,11 @@ datasets:
     - muon_electron
   mc:
     - higgs
+    - hb
     - qqtozz
     - ggtozz
+  signal:
+    - smsignal
 object_selection:
   muons:
     field: events.Muon
@@ -159,6 +162,78 @@ histogram_config:
       stop: 400
       label: $p_T(4\ell)$ [GeV]
       expression: objects['best_zzcandidate'].p4.pt
+    zz_eta_inclusive:
+      type: Regular
+      bins: 50
+      start: -5
+      stop: 5
+      label: $\eta(4\ell)$
+      expression: (objects['best_zzcandidate'].z1.p4 + objects['best_zzcandidate'].z2.p4).eta
+    zz_phi_inclusive:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(4\ell)$
+      expression: (objects['best_zzcandidate'].z1.p4 + objects['best_zzcandidate'].z2.p4).phi
+    # Z1 kinematics
+    z1_pt:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 500
+      label: $p_T(Z_1)$ [GeV]
+      expression: objects['best_zzcandidate'].z1.p4.pt
+    z1_eta:
+      type: Regular
+      bins: 50
+      start: -5
+      stop: 5
+      label: $\eta(Z_1)$
+      expression: objects['best_zzcandidate'].z1.p4.eta
+    z1_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(Z_1)$
+      expression: objects['best_zzcandidate'].z1.p4.phi
+    z1_mass:
+      type: Regular
+      bins: 54
+      start: 12
+      stop: 120
+      label: $m(Z_1)$ [GeV]
+      expression: objects['best_zzcandidate'].z1.p4.mass
+    # Z2 kinematics
+    z2_pt:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 500
+      label: $p_T(Z_2)$ [GeV]
+      expression: objects['best_zzcandidate'].z2.p4.pt
+    z2_eta:
+      type: Regular
+      bins: 50
+      start: -5
+      stop: 5
+      label: $\eta(Z_2)$
+      expression: objects['best_zzcandidate'].z2.p4.eta
+    z2_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(Z_2)$
+      expression: objects['best_zzcandidate'].z2.p4.phi
+    z2_mass:
+      type: Regular
+      bins: 54
+      start: 12
+      stop: 120
+      label: $m(Z_2)$ [GeV]
+      expression: objects['best_zzcandidate'].z2.p4.mass
     zz_mass_4mu:
       type: Regular
       bins: 66
@@ -314,6 +389,210 @@ histogram_config:
       stop: 3.14159
       label: $|\Delta \phi(\text{c-Jet}, H_{2e2\mu})|$
       expression: np.abs(objects['zzcandidate_cjet_dphi_2e2mu'])
+    # Z1 lepton 1 kinematics
+    z1_l1_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_1^{Z_1})$ [GeV]
+      expression: objects['best_zzcandidate'].z1.l1.pt
+    z1_l1_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_1^{Z_1})$
+      expression: objects['best_zzcandidate'].z1.l1.eta
+    z1_l1_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_1^{Z_1})$
+      expression: objects['best_zzcandidate'].z1.l1.phi
+    # Z1 lepton 1 IDs
+    z1_l1_is_tight:
+      type: Boolean
+      label: $Z_1 \ell_1$ is_tight
+      expression: objects['best_zzcandidate'].z1.l1.is_tight
+    z1_l1_mvaHZZIso:
+      type: Regular
+      bins: 50
+      start: -1
+      stop: 1
+      label: $Z_1 \ell_1$ mvaHZZIso
+      expression: objects['best_zzcandidate'].z1.l1.mvaHZZIso
+    z1_l1_isPFcand:
+      type: Boolean
+      label: $Z_1 \ell_1$ isPFcand
+      expression: objects['best_zzcandidate'].z1.l1.isPFcand
+    z1_l1_highPtId:
+      type: Integer
+      start: 0
+      stop: 3
+      label: $Z_1 \ell_1$ highPtId
+      expression: objects['best_zzcandidate'].z1.l1.highPtId
+    z1_l1_pfRelIso03_all:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $Z_1 \ell_1$ pfRelIso03_all
+      expression: objects['best_zzcandidate'].z1.l1.pfRelIso03_all
+    # Z1 lepton 2 kinematics
+    z1_l2_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_2^{Z_1})$ [GeV]
+      expression: objects['best_zzcandidate'].z1.l2.pt
+    z1_l2_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_2^{Z_1})$
+      expression: objects['best_zzcandidate'].z1.l2.eta
+    z1_l2_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_2^{Z_1})$
+      expression: objects['best_zzcandidate'].z1.l2.phi
+    # Z1 lepton 2 IDs
+    z1_l2_is_tight:
+      type: Boolean
+      label: $Z_1 \ell_2$ is_tight
+      expression: objects['best_zzcandidate'].z1.l2.is_tight
+    z1_l2_mvaHZZIso:
+      type: Regular
+      bins: 50
+      start: -1
+      stop: 1
+      label: $Z_1 \ell_2$ mvaHZZIso
+      expression: objects['best_zzcandidate'].z1.l2.mvaHZZIso
+    z1_l2_isPFcand:
+      type: Boolean
+      label: $Z_1 \ell_2$ isPFcand
+      expression: objects['best_zzcandidate'].z1.l2.isPFcand
+    z1_l2_highPtId:
+      type: Integer
+      start: 0
+      stop: 3
+      label: $Z_1 \ell_2$ highPtId
+      expression: objects['best_zzcandidate'].z1.l2.highPtId
+    z1_l2_pfRelIso03_all:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $Z_1 \ell_2$ pfRelIso03_all
+      expression: objects['best_zzcandidate'].z1.l2.pfRelIso03_all
+    # Z2 lepton 1 kinematics
+    z2_l1_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_1^{Z_2})$ [GeV]
+      expression: objects['best_zzcandidate'].z2.l1.pt
+    z2_l1_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_1^{Z_2})$
+      expression: objects['best_zzcandidate'].z2.l1.eta
+    z2_l1_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_1^{Z_2})$
+      expression: objects['best_zzcandidate'].z2.l1.phi
+    # Z2 lepton 1 IDs
+    z2_l1_is_tight:
+      type: Boolean
+      label: $Z_2 \ell_1$ is_tight
+      expression: objects['best_zzcandidate'].z2.l1.is_tight
+    z2_l1_mvaHZZIso:
+      type: Regular
+      bins: 50
+      start: -1
+      stop: 1
+      label: $Z_2 \ell_1$ mvaHZZIso
+      expression: objects['best_zzcandidate'].z2.l1.mvaHZZIso
+    z2_l1_isPFcand:
+      type: Boolean
+      label: $Z_2 \ell_1$ isPFcand
+      expression: objects['best_zzcandidate'].z2.l1.isPFcand
+    z2_l1_highPtId:
+      type: Integer
+      start: 0
+      stop: 3
+      label: $Z_2 \ell_1$ highPtId
+      expression: objects['best_zzcandidate'].z2.l1.highPtId
+    z2_l1_pfRelIso03_all:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $Z_2 \ell_1$ pfRelIso03_all
+      expression: objects['best_zzcandidate'].z2.l1.pfRelIso03_all
+    # Z2 lepton 2 kinematics
+    z2_l2_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_2^{Z_2})$ [GeV]
+      expression: objects['best_zzcandidate'].z2.l2.pt
+    z2_l2_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_2^{Z_2})$
+      expression: objects['best_zzcandidate'].z2.l2.eta
+    z2_l2_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_2^{Z_2})$
+      expression: objects['best_zzcandidate'].z2.l2.phi
+    # Z2 lepton 2 IDs
+    z2_l2_is_tight:
+      type: Boolean
+      label: $Z_2 \ell_2$ is_tight
+      expression: objects['best_zzcandidate'].z2.l2.is_tight
+    z2_l2_mvaHZZIso:
+      type: Regular
+      bins: 50
+      start: -1
+      stop: 1
+      label: $Z_2 \ell_2$ mvaHZZIso
+      expression: objects['best_zzcandidate'].z2.l2.mvaHZZIso
+    z2_l2_isPFcand:
+      type: Boolean
+      label: $Z_2 \ell_2$ isPFcand
+      expression: objects['best_zzcandidate'].z2.l2.isPFcand
+    z2_l2_highPtId:
+      type: Integer
+      start: 0
+      stop: 3
+      label: $Z_2 \ell_2$ highPtId
+      expression: objects['best_zzcandidate'].z2.l2.highPtId
+    z2_l2_pfRelIso03_all:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $Z_2 \ell_2$ pfRelIso03_all
+      expression: objects['best_zzcandidate'].z2.l2.pfRelIso03_all
   layout:
     zz_inclusive:
       - zz_mass_inclusive
