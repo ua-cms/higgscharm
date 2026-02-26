@@ -12,8 +12,6 @@ Usage:
     python scripts/combine_comparison_from_parquet.py \
         --input-dir /eos/user/s/snandaku/higgscharm/outputs/hplusc \
         --output-dir /eos/user/s/snandaku/Analysis/combine/comparison
-
-Author: Claude Code
 """
 
 import os
