@@ -117,7 +117,7 @@ event_selection:
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     atleast_one_zz: ak.num(objects['zzcandidates']) >= 1
-    one_cjet: ak.num(objects['cjets']) == 1
+    one_cjet: ak.num(objects['cjets']) >= 1
   categories:
     base:
       - trigger
