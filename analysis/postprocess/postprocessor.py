@@ -161,7 +161,7 @@ def save_histograms_by_process(
     # accumulate and save all histograms into a single dictionary
     coffea_files = []
     for sample in process_samples_map[process]:
-        coffea_files += glob.glob(f"{output_dir}/{sample}*.coffea", recursive=True)
+        coffea_files += glob.glob(f"{output_dir}/{sample}.coffea", recursive=True)
 
     logging.info(f"Accumulating histograms for process {process}")
     hist_to_accumulate = [load(f) for f in coffea_files]
@@ -174,7 +174,7 @@ def save_histograms_by_process(
         parquet_files = []
         for sample in process_samples_map[process]:
             parquet_files += glob.glob(
-                f"{output_dir}/{sample}*.parquet", recursive=True
+                f"{output_dir}/{sample}.parquet", recursive=True
             )
         process_df = dd.read_parquet(
             parquet_files, engine="pyarrow", calculate_divisions=False
