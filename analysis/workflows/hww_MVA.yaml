@@ -74,6 +74,12 @@ object_selection:
     field: select_hww_mTl1
   mTl2: 
     field: select_hww_mTl2
+  leading_jets:
+    field: select_leading_jets
+  delta_phi:
+    field: select_delta_phi
+  delta_R:
+    field: select_delta_R
 event_selection:
   hlt_paths:
     MuonEG:
@@ -428,6 +434,200 @@ histogram_config:
       stop: 1
       label: Leading jet CvsB (PNet)
       expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB
+    cjet_cand_pt:
+      type: Variable
+      edges:
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 350
+        - 400
+      label: Candidate c-jet $p_T$ [GeV]
+      expression: objects['candidate_cjet'].pt
+    nSV:
+      type: Integer
+      start: 0
+      stop: 20
+      label: Number of secondary vertices
+      expression: ak.num(events.SV)
+    delta_R_ll_l1:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 3
+      label: $\Delta R(\ell \ell, \ell_1)$
+      expression: objects['delta_R_ll_l1']
+    delta_R_ll_l2:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(\ell \ell, \ell_2)$
+      expression: objects['delta_R_ll_l2']
+    delta_R_ll_c:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(\ell \ell, c)$
+      expression: objects['delta_R_ll_c']
+    delta_phi_l1_MET:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell_1,$ MET$)$
+      expression: objects['delta_phi_l1_MET']
+    delta_phi_l2_MET:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell_2,$ MET$)$
+      expression: objects['delta_phi_l2_MET']
+    delta_phi_ll_MET:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell \ell,$ MET$)$
+      expression: objects['delta_phi_ll_MET']
+    delta_phi_llPlusMET_c:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell \ell +$ MET$,$ candidate c-jet$)$
+      expression: objects['delta_phi_llPlusMET_c']
+    delta_phi_l1PlusMET_c:
+      type: Regular
+      bins: 20
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell_1 +$ MET$,$ candidate c-jet$)$
+      expression: objects['delta_phi_l1PlusMET_c']
+    delta_phi_l1PlusMET_jet1:
+      type: Regular
+      bins: 20
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell_1 +$ MET$, j_1)$
+      expression: objects['delta_phi_l1PlusMET_jet1']
+    delta_phi_l1PlusMET_jet2:
+      type: Regular
+      bins: 20
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell_1 +$ MET$, j_2)$
+      expression: objects['delta_phi_l1PlusMET_jet2']
+    delta_phi_l1PlusMET_jet3:
+      type: Regular
+      bins: 20
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell_1 +$ MET$, j_3)$
+      expression: objects['delta_phi_l1PlusMET_jet3']
+    jet1_pt:
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 350
+        - 400
+      label: Leading jet $p_T$ [GeV]
+      expression: objects['jet1'].pt
+    jet2_pt:
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+      label: Subleading jet $p_T$ [GeV]
+      expression: objects['jet2'].pt
+    jet3_pt:
+      type: Variable
+      edges:
+        - 0
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 150
+        - 180
+        - 210
+      label: Third leading jet $p_T$ [GeV]
+      expression: objects['jet2'].pt
+    delta_R_ll_jet1:
+      type: Regular
+      bins: 20
+      start: 0
+      stop: 5
+      label: $\Delta R(\ell \ell, j_1)$
+      expression: objects['delta_R_ll_jet1']
+    delta_R_ll_jet2:
+      type: Regular
+      bins: 20
+      start: 0
+      stop: 5
+      label: $\Delta R(\ell \ell, j_2)$
+      expression: objects['delta_R_ll_jet2']
+    delta_R_ll_jet3:
+      type: Regular
+      bins: 20
+      start: 0
+      stop: 5
+      label: $\Delta R(\ell \ell, j_3)$
+      expression: objects['delta_R_ll_jet3']
+    delta_phi_llPlusMET_jet1:
+      type: Regular
+      bins: 20
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell \ell, j_1)$
+      expression: objects['delta_phi_llPlusMET_jet1']
+    delta_phi_llPlusMET_jet2:
+      type: Regular
+      bins: 20
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell \ell, j_2)$
+      expression: objects['delta_phi_llPlusMET_jet2']
+    delta_phi_llPlusMET_jet3:
+      type: Regular
+      bins: 20
+      start: -3.14159
+      stop: 3.14159
+      label: $\Delta \phi(\ell \ell, j_3)$
+      expression: objects['delta_phi_llPlusMET_jet3']
   layout:
     dilepton_mass:
       - dilepton_mass
@@ -447,6 +647,7 @@ histogram_config:
       - cjet_cand_flavour
       - cjet_cand_cvsl_pnet
       - cjet_cand_cvsb_pnet
+      - cjet_cand_pt
     jets:
       - jet_pt
       - jet_eta
@@ -461,6 +662,48 @@ histogram_config:
       - leadingjet_flavour
       - leadingjet_cvsb_pnet
       - leadingjet_cvsl_pnet
+    SV:
+      - nSV 
+    delta_R_ll_l1:
+      - delta_R_ll_l1
+    delta_R_ll_l2:
+      - delta_R_ll_l2
+    delta_R_ll_c:
+      - delta_R_ll_c
+    delta_phi_l1_MET:
+      - delta_phi_l1_MET
+    delta_phi_l2_MET:
+      - delta_phi_l2_MET 
+    delta_phi_ll_MET:
+      - delta_phi_ll_MET
+    delta_phi_llPlusMET_c:
+      - delta_phi_llPlusMET_c
+    delta_phi_l1PlusMET_c:
+      - delta_phi_l1PlusMET_c
+    delta_phi_l1PlusMET_jet1:
+      - delta_phi_l1PlusMET_jet1
+    delta_phi_l1PlusMET_jet2:
+      - delta_phi_l1PlusMET_jet2
+    delta_phi_l1PlusMET_jet3:
+      - delta_phi_l1PlusMET_jet3
+    jet1_pt:
+      - jet1_pt
+    jet2_pt: 
+      - jet2_pt
+    jet3_pt: 
+      - jet3_pt
+    delta_R_ll_jet1:
+      - delta_R_ll_jet1
+    delta_R_ll_jet2:
+      - delta_R_ll_jet2
+    delta_R_ll_jet3:
+      - delta_R_ll_jet3
+    delta_phi_llPlusMET_jet1:
+      - delta_phi_llPlusMET_jet1
+    delta_phi_llPlusMET_jet2:
+      - delta_phi_llPlusMET_jet2
+    delta_phi_llPlusMET_jet3:
+      - delta_phi_llPlusMET_jet3
   add_syst_axis: true
   add_weight: true
 
