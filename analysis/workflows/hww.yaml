@@ -77,7 +77,7 @@ object_selection:
 event_selection:
   hlt_paths:
     MuonEG:
-      - MuEle
+      - MuEle_HWW
     Muon:
       - SingleMu
     EGamma:
