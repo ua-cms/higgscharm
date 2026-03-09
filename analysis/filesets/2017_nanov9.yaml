@@ -1,148 +1,148 @@
-SingleMuonRun2017B:
+SingleMuonB:
   era: B
   process: Data
   key: muon
   query: SingleMuon/Run2017B-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleElectronRun2017B:
+EGammaB:
   era: B
   process: Data
   key: electron
   query: SingleElectron/Run2017B-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleMuonRun2017B:
+DoubleMuonB:
   era: B
   process: Data
   key: double_muon
   query: DoubleMuon/Run2017B-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleEGRun2017B:
+DoubleEGB:
   era: B
   process: Data
   key: double_electron
   query: DoubleEG/Run2017B-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-MuonEGRun2017B:
+MuonEGB:
   era: B
   process: Data
   key: muon_electron
   query: MuonEG/Run2017B-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleMuonRun2017C:
+SingleMuonC:
   era: C
   process: Data
   key: muon
   query: SingleMuon/Run2017C-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleElectronRun2017C:
+EGammaC:
   era: C
   process: Data
   key: electron
   query: SingleElectron/Run2017C-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleMuonRun2017C:
+DoubleMuonC:
   era: C
   process: Data
   key: double_muon
   query: DoubleMuon/Run2017C-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleEGRun2017C:
+DoubleEGC:
   era: C
   process: Data
   key: double_electron
   query: DoubleEG/Run2017C-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-MuonEGRun2017C:
+MuonEGC:
   era: C
   process: Data
   key: muon_electron
   query: MuonEG/Run2017C-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleMuonRun2017D:
+SingleMuonD:
   era: D
   process: Data
   key: muon
   query: SingleMuon/Run2017D-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleElectronRun2017D:
+EGammaD:
   era: D
   process: Data
   key: electron
   query: SingleElectron/Run2017D-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleMuonRun2017D:
+DoubleMuonD:
   era: D
   process: Data
   key: double_muon
   query: DoubleMuon/Run2017D-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleEGRun2017D:
+DoubleEGD:
   era: D
   process: Data
   key: double_electron
   query: DoubleEG/Run2017D-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: nul
-MuonEGRun2017D:
+MuonEGD:
   era: D
   process: Data
   key: muon_electron
   query: MuonEG/Run2017D-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: nul
-SingleMuonRun2017E:
+SingleMuonE:
   era: E
   process: Data
   key: muon
   query: SingleMuon/Run2017E-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleElectronRun2017E:
+EGammaE:
   era: E
   process: Data
   key: electron
   query: SingleElectron/Run2017E-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleMuonRun2017E:
+DoubleMuonE:
   era: E
   process: Data
   key: double_muon
   query: DoubleMuon/Run2017E-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleEGRun2017E:
+DoubleEGE:
   era: E
   process: Data
   key: double_electron
   query: DoubleEG/Run2017E-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-MuonEGRun2017E:
+MuonEGE:
   era: E
   process: Data
   key: muon_electron
   query: MuonEG/Run2017E-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleMuonRun2017F:
+SingleMuonF:
   era: F
   process: Data
   key: muon
   query: SingleMuon/Run2017F-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleElectronRun2017F:
+EGammaF:
   era: F
   process: Data
   key: electron
   query: SingleElectron/Run2017F-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleMuonRun2017F:
+DoubleMuonF:
   era: F
   process: Data
   key: double_muon
   query: DoubleMuon/Run2017F-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleEGRun2017F:
+DoubleEGF:
   era: F
   process: Data
   key: double_electron
   query: DoubleEG/Run2017F-UL2017_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-MuonEGRun2017F:
+MuonEGF:
   era: F
   process: Data
   key: muon_electron

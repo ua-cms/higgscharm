@@ -1,88 +1,88 @@
-SingleMuonRun2016F:
+SingleMuonF:
   era: F
   process: Data
   key: muon
   query: SingleMuon/Run2016F-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleElectronRun2016F:
+EGammaF:
   era: F
   process: Data
   key: electron
   query: SingleElectron/Run2016F-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleMuonRun2016F:
+DoubleMuonF:
   era: F
   process: Data
   key: double_muon
   query: DoubleMuon/Run2016F-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleEGRun2016F:
+DoubleEGF:
   era: F
   process: Data
   key: double_electron
   query: DoubleEG/Run2016F-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: nul
-MuonEGRun2016F:
+MuonEGF:
   era: F
   process: Data
   key: muon_electron
   query: MuonEG/Run2016F-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: nul
-SingleMuonRun2016G:
+SingleMuonG:
   era: G
   process: Data
   key: muon
   query: SingleMuon/Run2016G-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleElectronRun2016G:
+EGammaG:
   era: G
   process: Data
   key: electron
   query: SingleElectron/Run2016G-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleMuonRun2016G:
+DoubleMuonG:
   era: G
   process: Data
   key: double_muon
   query: DoubleMuon/Run2016G-UL2016_MiniAODv2_NanoAODv9-v2/NANOAOD
   xsec: null
-DoubleEGRun2016G:
+DoubleEGG:
   era: G
   process: Data
   key: double_electron
   query: DoubleEG/Run2016G-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-MuonEGRun2016G:
+MuonEGG:
   era: G
   process: Data
   key: muon_electron
   query: MuonEG/Run2016G-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleMuonRun2016H:
+SingleMuonH:
   era: H
   process: Data
   key: muon
   query: SingleMuon/Run2016H-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-SingleElectronRun2016H:
+EGammaH:
   era: H
   process: Data
   key: electron
   query: SingleElectron/Run2016H-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleMuonRun2016H:
+DoubleMuonH:
   era: H
   process: Data
   key: double_muon
   query: DoubleMuon/Run2016H-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-DoubleEGRun2016H:
+DoubleEGH:
   era: H
   process: Data
   key: double_electron
   query: DoubleEG/Run2016H-UL2016_MiniAODv2_NanoAODv9-v1/NANOAOD
   xsec: null
-MuonEGRun2016H:
+MuonEGH:
   era: H
   process: Data
   key: muon_electron

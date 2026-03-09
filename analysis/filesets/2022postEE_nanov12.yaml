@@ -1,52 +1,52 @@
-MuonRun2022E:
+MuonE:
   era: E
   query: Muon/Run2022E-22Sep2023-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonRun2022F:
+MuonF:
   era: F
   query: Muon/Run2022F-22Sep2023-v2/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonRun2022G:
+MuonG:
   era: G
   query: Muon/Run2022G-22Sep2023-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGRun2022E:
+MuonEGE:
   era: E
   query: MuonEG/Run2022E-22Sep2023-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-MuonEGRun2022F:
+MuonEGF:
   era: F
   query: MuonEG/Run2022F-22Sep2023-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-MuonEGRun2022G:
+MuonEGG:
   era: G
   query: MuonEG/Run2022G-22Sep2023-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGammaRun2022E:
+EGammaE:
   era: E
   query: EGamma/Run2022E-22Sep2023-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGammaRun2022F:
+EGammaF:
   era: F
   query: EGamma/Run2022F-22Sep2023-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGammaRun2022G:
+EGammaG:
   era: G
   query: EGamma/Run2022G-22Sep2023-v2/NANOAOD
   process: Data
@@ -407,6 +407,20 @@ WplusH_Hto2Zto4L:
 TTH_Hto2Z:
   era: mc
   query: TTH_Hto2Z_M-125_4LFilter_TuneCP5_13p6TeV_powheg2-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.00312
+# H+c signal samples for MVA
+SomeSMSignal:
+  era: signal
+  query: 2022postEE_signal
+  key: smsignal
+  process: smsignal
+  xsec: 0.000026381
+# H+b background samples
+2022postEEHB:
+  era: signal
+  query: 2022postEEHB
+  key: hb
+  process: hb
+  xsec: 0.000173299

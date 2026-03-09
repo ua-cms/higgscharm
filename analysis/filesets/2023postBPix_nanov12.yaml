@@ -1,58 +1,58 @@
-MuonEGRun2023Dv1:
+MuonEGv1D:
   era: D
   query: MuonEG/Run2023D-22Sep2023_v1-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-MuonEGRun2023Dv2:
+MuonEGv2D:
   era: D
   query: MuonEG/Run2023D-22Sep2023_v2-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGamma0Run2023Dv1:
+EGamma0v1D:
   era: D
   query: EGamma0/Run2023D-22Sep2023_v1-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma0Run2023Dv2:
+EGamma0v2D:
   era: D
   query: EGamma0/Run2023D-22Sep2023_v2-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1Run2023Dv1:
+EGamma1v1D:
   era: D
   query: EGamma1/Run2023D-22Sep2023_v1-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1Run2023Dv2:
+EGamma1v2D:
   era: D
   query: EGamma1/Run2023D-22Sep2023_v2-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-Muon0Run2023Dv1:
+Muon0v1D:
   era: D
   query: Muon0/Run2023D-22Sep2023_v1-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon0Run2023Dv2:
+Muon0v2D:
   era: D
   query: Muon0/Run2023D-22Sep2023_v2-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1Run2023Dv1:
+Muon1v1D:
   era: D
   query: Muon1/Run2023D-22Sep2023_v1-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1Run2023Dv2:
+Muon1v2D:
   era: D
   query: Muon1/Run2023D-22Sep2023_v2-v1/NANOAOD
   process: Data
@@ -287,6 +287,20 @@ WplusH_Hto2Zto4L:
 ZHto2Zto4L:
   era: mc
   query: ZH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.000775
+# H+c signal samples for MVA
+SomeSMSignal:
+  era: signal
+  query: 2023postBPix_signal
+  key: smsignal
+  process: smsignal
+  xsec: 0.000026381
+# H+b background samples
+2023postBPixHB:
+  era: signal
+  query: 2023postBPixHB
+  key: hb
+  process: hb
+  xsec: 0.000173299

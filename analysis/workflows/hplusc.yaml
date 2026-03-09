@@ -7,9 +7,14 @@ datasets:
     - muon_electron
   mc:
     - higgs
+    - hb
     - qqtozz
     - ggtozz
+  signal:
+    - smsignal
 object_selection:
+  genparts:
+    field: select_genparts
   muons:
     field: events.Muon
     add_cut:
@@ -90,7 +95,7 @@ object_selection:
       - np.abs(events.Jet.eta) < 2.5
       - working_points.jet_id(events, year, 'tightlepveto')
       - delta_r_higher(events.Jet, objects['leptons'], 0.4)
-      - working_points.jet_ctagging(events, 'loose', year)
+      # - working_points.jet_ctagging(events, 'medium', year)
   zzcandidate_cjet_dphi_inclusive:
     field: select_dphi_inclusive
   zzcandidate_cjet_dphi_4e:
@@ -114,7 +119,7 @@ event_selection:
     lumimask: get_lumi_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     atleast_one_zz: ak.num(objects['zzcandidates']) >= 1
-    one_cjet: ak.num(objects['cjets']) == 1
+    one_cjet: ak.num(objects['cjets']) >= 1
   categories:
     base:
       - trigger
@@ -124,8 +129,8 @@ event_selection:
       - one_cjet
 corrections:
   object:
-    - jet
-    - jetveto
+    # - jet
+    # - jetveto
     - muon
     - electron
   object_shifts: false
@@ -140,8 +145,8 @@ corrections:
       - id: false
       - reco: true
       - trigger: false
-    ctagging: 
-      - wp: loose
+    # ctagging: 
+    #   - wp: medium
 histogram_config:
   add_syst_axis: true
   add_weight: true
@@ -160,6 +165,78 @@ histogram_config:
       stop: 400
       label: $p_T(4\ell)$ [GeV]
       expression: objects['best_zzcandidate'].p4.pt
+    zz_eta_inclusive:
+      type: Regular
+      bins: 50
+      start: -5
+      stop: 5
+      label: $\eta(4\ell)$
+      expression: (objects['best_zzcandidate'].z1.p4 + objects['best_zzcandidate'].z2.p4).eta
+    zz_phi_inclusive:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(4\ell)$
+      expression: (objects['best_zzcandidate'].z1.p4 + objects['best_zzcandidate'].z2.p4).phi
+    # Z1 kinematics
+    z1_pt:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 500
+      label: $p_T(Z_1)$ [GeV]
+      expression: objects['best_zzcandidate'].z1.p4.pt
+    z1_eta:
+      type: Regular
+      bins: 50
+      start: -5
+      stop: 5
+      label: $\eta(Z_1)$
+      expression: objects['best_zzcandidate'].z1.p4.eta
+    z1_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(Z_1)$
+      expression: objects['best_zzcandidate'].z1.p4.phi
+    z1_mass:
+      type: Regular
+      bins: 54
+      start: 12
+      stop: 120
+      label: $m(Z_1)$ [GeV]
+      expression: objects['best_zzcandidate'].z1.p4.mass
+    # Z2 kinematics
+    z2_pt:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 500
+      label: $p_T(Z_2)$ [GeV]
+      expression: objects['best_zzcandidate'].z2.p4.pt
+    z2_eta:
+      type: Regular
+      bins: 50
+      start: -5
+      stop: 5
+      label: $\eta(Z_2)$
+      expression: objects['best_zzcandidate'].z2.p4.eta
+    z2_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(Z_2)$
+      expression: objects['best_zzcandidate'].z2.p4.phi
+    z2_mass:
+      type: Regular
+      bins: 54
+      start: 12
+      stop: 120
+      label: $m(Z_2)$ [GeV]
+      expression: objects['best_zzcandidate'].z2.p4.mass
     zz_mass_4mu:
       type: Regular
       bins: 66
@@ -237,28 +314,28 @@ histogram_config:
         - 5
       label: Leading Jet HadronFlavour
       expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
-    subleadingjet_cvsl:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Leading Jet CvsL
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagUParTAK4CvL if hasattr(objects['jets'], 'btagUParTAK4CvL') else ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL if hasattr(objects['jets'], 'btagPNetCvL') else ak.pad_none(objects['jets'], target=2)[:, 1].btagDeepFlavCvL
-    subleadingjet_cvsb:
-      type: Regular
-      bins: 50
-      start: 0
-      stop: 1
-      label: Leading Jet CvsB
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagUParTAK4CvB if hasattr(objects['jets'], 'btagUParTAK4CvB') else ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB if hasattr(objects['jets'], 'btagPNetCvB') else ak.pad_none(objects['jets'], target=2)[:, 1].btagDeepFlavCvB
-    subleadingjet_flavour:
-      type: IntCategory
-      categories:
-        - 0
-        - 4
-        - 5
-      label: Subleading Jet HadronFlavour
-      expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
+    # subleadingjet_cvsl:
+    #   type: Regular
+    #   bins: 50
+    #   start: 0
+    #   stop: 1
+    #   label: Leading Jet CvsL
+    #   expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagUParTAK4CvL if hasattr(objects['jets'], 'btagUParTAK4CvL') else ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL if hasattr(objects['jets'], 'btagPNetCvL') else ak.pad_none(objects['jets'], target=2)[:, 1].btagDeepFlavCvL
+    # subleadingjet_cvsb:
+    #   type: Regular
+    #   bins: 50
+    #   start: 0
+    #   stop: 1
+    #   label: Leading Jet CvsB
+    #   expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagUParTAK4CvB if hasattr(objects['jets'], 'btagUParTAK4CvB') else ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB if hasattr(objects['jets'], 'btagPNetCvB') else ak.pad_none(objects['jets'], target=2)[:, 1].btagDeepFlavCvB
+    # subleadingjet_flavour:
+    #   type: IntCategory
+    #   categories:
+    #     - 0
+    #     - 4
+    #     - 5
+    #   label: Subleading Jet HadronFlavour
+    #   expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
     cjets_pt:
       type: Regular
       bins: 50
@@ -315,6 +392,210 @@ histogram_config:
       stop: 3.14159
       label: $|\Delta \phi(\text{c-Jet}, H_{2e2\mu})|$
       expression: np.abs(objects['zzcandidate_cjet_dphi_2e2mu'])
+    # Z1 lepton 1 kinematics
+    z1_l1_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_1^{Z_1})$ [GeV]
+      expression: objects['best_zzcandidate'].z1.l1.pt
+    z1_l1_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_1^{Z_1})$
+      expression: objects['best_zzcandidate'].z1.l1.eta
+    z1_l1_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_1^{Z_1})$
+      expression: objects['best_zzcandidate'].z1.l1.phi
+    # Z1 lepton 1 IDs
+    z1_l1_is_tight:
+      type: Boolean
+      label: $Z_1 \ell_1$ is_tight
+      expression: objects['best_zzcandidate'].z1.l1.is_tight
+    z1_l1_mvaHZZIso:
+      type: Regular
+      bins: 50
+      start: -1
+      stop: 1
+      label: $Z_1 \ell_1$ mvaHZZIso
+      expression: objects['best_zzcandidate'].z1.l1.mvaHZZIso
+    z1_l1_isPFcand:
+      type: Boolean
+      label: $Z_1 \ell_1$ isPFcand
+      expression: objects['best_zzcandidate'].z1.l1.isPFcand
+    z1_l1_highPtId:
+      type: Integer
+      start: 0
+      stop: 3
+      label: $Z_1 \ell_1$ highPtId
+      expression: objects['best_zzcandidate'].z1.l1.highPtId
+    z1_l1_pfRelIso03_all:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $Z_1 \ell_1$ pfRelIso03_all
+      expression: objects['best_zzcandidate'].z1.l1.pfRelIso03_all
+    # Z1 lepton 2 kinematics
+    z1_l2_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_2^{Z_1})$ [GeV]
+      expression: objects['best_zzcandidate'].z1.l2.pt
+    z1_l2_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_2^{Z_1})$
+      expression: objects['best_zzcandidate'].z1.l2.eta
+    z1_l2_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_2^{Z_1})$
+      expression: objects['best_zzcandidate'].z1.l2.phi
+    # Z1 lepton 2 IDs
+    z1_l2_is_tight:
+      type: Boolean
+      label: $Z_1 \ell_2$ is_tight
+      expression: objects['best_zzcandidate'].z1.l2.is_tight
+    z1_l2_mvaHZZIso:
+      type: Regular
+      bins: 50
+      start: -1
+      stop: 1
+      label: $Z_1 \ell_2$ mvaHZZIso
+      expression: objects['best_zzcandidate'].z1.l2.mvaHZZIso
+    z1_l2_isPFcand:
+      type: Boolean
+      label: $Z_1 \ell_2$ isPFcand
+      expression: objects['best_zzcandidate'].z1.l2.isPFcand
+    z1_l2_highPtId:
+      type: Integer
+      start: 0
+      stop: 3
+      label: $Z_1 \ell_2$ highPtId
+      expression: objects['best_zzcandidate'].z1.l2.highPtId
+    z1_l2_pfRelIso03_all:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $Z_1 \ell_2$ pfRelIso03_all
+      expression: objects['best_zzcandidate'].z1.l2.pfRelIso03_all
+    # Z2 lepton 1 kinematics
+    z2_l1_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_1^{Z_2})$ [GeV]
+      expression: objects['best_zzcandidate'].z2.l1.pt
+    z2_l1_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_1^{Z_2})$
+      expression: objects['best_zzcandidate'].z2.l1.eta
+    z2_l1_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_1^{Z_2})$
+      expression: objects['best_zzcandidate'].z2.l1.phi
+    # Z2 lepton 1 IDs
+    z2_l1_is_tight:
+      type: Boolean
+      label: $Z_2 \ell_1$ is_tight
+      expression: objects['best_zzcandidate'].z2.l1.is_tight
+    z2_l1_mvaHZZIso:
+      type: Regular
+      bins: 50
+      start: -1
+      stop: 1
+      label: $Z_2 \ell_1$ mvaHZZIso
+      expression: objects['best_zzcandidate'].z2.l1.mvaHZZIso
+    z2_l1_isPFcand:
+      type: Boolean
+      label: $Z_2 \ell_1$ isPFcand
+      expression: objects['best_zzcandidate'].z2.l1.isPFcand
+    z2_l1_highPtId:
+      type: Integer
+      start: 0
+      stop: 3
+      label: $Z_2 \ell_1$ highPtId
+      expression: objects['best_zzcandidate'].z2.l1.highPtId
+    z2_l1_pfRelIso03_all:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $Z_2 \ell_1$ pfRelIso03_all
+      expression: objects['best_zzcandidate'].z2.l1.pfRelIso03_all
+    # Z2 lepton 2 kinematics
+    z2_l2_pt:
+      type: Regular
+      bins: 50
+      start: 5
+      stop: 300
+      label: $p_T(\ell_2^{Z_2})$ [GeV]
+      expression: objects['best_zzcandidate'].z2.l2.pt
+    z2_l2_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_2^{Z_2})$
+      expression: objects['best_zzcandidate'].z2.l2.eta
+    z2_l2_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_2^{Z_2})$
+      expression: objects['best_zzcandidate'].z2.l2.phi
+    # Z2 lepton 2 IDs
+    z2_l2_is_tight:
+      type: Boolean
+      label: $Z_2 \ell_2$ is_tight
+      expression: objects['best_zzcandidate'].z2.l2.is_tight
+    z2_l2_mvaHZZIso:
+      type: Regular
+      bins: 50
+      start: -1
+      stop: 1
+      label: $Z_2 \ell_2$ mvaHZZIso
+      expression: objects['best_zzcandidate'].z2.l2.mvaHZZIso
+    z2_l2_isPFcand:
+      type: Boolean
+      label: $Z_2 \ell_2$ isPFcand
+      expression: objects['best_zzcandidate'].z2.l2.isPFcand
+    z2_l2_highPtId:
+      type: Integer
+      start: 0
+      stop: 3
+      label: $Z_2 \ell_2$ highPtId
+      expression: objects['best_zzcandidate'].z2.l2.highPtId
+    z2_l2_pfRelIso03_all:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: $Z_2 \ell_2$ pfRelIso03_all
+      expression: objects['best_zzcandidate'].z2.l2.pfRelIso03_all
   layout:
     zz_inclusive:
       - zz_mass_inclusive
@@ -337,10 +618,10 @@ histogram_config:
       - leadingjet_flavour
       - leadingjet_cvsl
       - leadingjet_cvsb
-    subleading_jet:
-      - subleadingjet_flavour
-      - subleadingjet_cvsl
-      - subleadingjet_cvsb
+    # subleading_jet:
+    #   - subleadingjet_flavour
+    #   - subleadingjet_cvsl
+    #   - subleadingjet_cvsb
     cjet:
       - cjets_pt
       - cjets_eta

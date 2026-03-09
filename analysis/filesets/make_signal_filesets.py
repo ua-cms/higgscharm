@@ -79,7 +79,9 @@ if __name__ == "__main__":
                         print(
                             f"Adding signal sample '{sample}'"
                         )
-                        built_dataset.update({sample: signal_json[sample]})
+                        built_dataset[sample] = {
+                            "files": {f: "Events" for f in signal_json[sample]}
+                        } 
                 else:
                     print(f"File '{signal_file}_signal.json' was not found!")
 
