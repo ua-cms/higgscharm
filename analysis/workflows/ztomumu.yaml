@@ -67,6 +67,7 @@ event_selection:
       - electron_veto
 corrections:
   objects:
+    - jec
     - muon_ss
     - electon_ss
   event_weights:
@@ -263,28 +264,72 @@ histogram_config:
         - 0
         - 4
         - 5
-      label: HadronFlavour
+      label: HadronFlavour Jet 1
       expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
-    leadingjet_cvsl:
+    leadingjet_cvsl_pnet:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: Leading Jet CvsL
-      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagUParTAK4CvL if hasattr(objects['jets'], 'btagUParTAK4CvL') else ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL if hasattr(objects['jets'], 'btagPNetCvL') else ak.pad_none(objects['jets'], target=2)[:, 0].btagDeepFlavCvL
-    leadingjet_cvsb:
+      label: CvsL Jet 1 (PNet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL
+    leadingjet_cvsb_pnet:
       type: Regular
       bins: 50
       start: 0
       stop: 1
-      label: Leading Jet CvsB
-      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagUParTAK4CvB if hasattr(objects['jets'], 'btagUParTAK4CvB') else ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB if hasattr(objects['jets'], 'btagPNetCvB') else ak.pad_none(objects['jets'], target=2)[:, 0].btagDeepFlavCvB
+      label: CvsB Jet 1 (PNet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB 
     npvs:
       type: Integer
       start: 0
       stop: 60
       label: vertex multiplicity
       expression: events.PV.npvsGood
+    subleadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour Jet 2
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].hadronFlavour
+    thirdleadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour Jet 3
+      expression: ak.pad_none(objects['jets'], target=3)[:, 2].hadronFlavour
+    secondleadingjet_cvsl_pnet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: CvsL Jet 2 (PNet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvL
+    secondleadingjet_cvsb_pnet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: CvsB Jet 2 (PNet)
+      expression: ak.pad_none(objects['jets'], target=2)[:, 1].btagPNetCvB
+    thirdleadingjet_cvsl_pnet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: CvsL Jet 3 (PNet)
+      expression: ak.pad_none(objects['jets'], target=3)[:, 2].btagPNetCvL
+    thirdleadingjet_cvsb_pnet:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: CvsB Jet 3 (PNet)
+      expression: ak.pad_none(objects['jets'], target=3)[:, 2].btagPNetCvB
   layout:
     vertex:
       - npvs
@@ -326,5 +371,13 @@ histogram_config:
       - jet_multiplicity
     leading_jet:
       - leadingjet_flavour
-      - leadingjet_cvsb
-      - leadingjet_cvsl
+      - leadingjet_cvsb_pnet
+      - leadingjet_cvsl_pnet
+    secondleading_jet:
+      - subleadingjet_flavour
+      - secondleadingjet_cvsb_pnet
+      - secondleadingjet_cvsl_pnet
+    thirdleading_jet:
+      - thirdleadingjet_flavour
+      - thirdleadingjet_cvsb_pnet
+      - thirdleadingjet_cvsl_pnet

@@ -67,6 +67,7 @@ event_selection:
       - muon_veto
 corrections:
   objects:
+    - jec
     - muon_ss
     - electon_ss
   event_weights:
