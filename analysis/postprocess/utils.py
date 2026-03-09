@@ -1,17 +1,60 @@
-import os
-import yaml
 import glob
-import hist
-import pickle
 import logging
+import os
+import pickle
+from collections import defaultdict
+from pathlib import Path
+
+import dask.dataframe as dd
+import hist
 import numpy as np
 import pandas as pd
-import dask.dataframe as dd
-from pathlib import Path
-from collections import defaultdict
-from coffea.util import load, save
+import yaml
 from coffea.processor import accumulate
+from coffea.util import load, save
+
 from analysis.filesets.utils import get_dataset_config
+
+# =============================================================================
+# MVA TRAINING CONFIGURATION (for hww workflow)
+# =============================================================================
+# Process groups for multi-class MVA classification
+# Maps process names (from fileset) to group names for one-hot encoding
+PROCESS_TO_GROUP = {
+    # Higgs (signal + background combined)
+    "H+c": "higgs",
+    "H+b": "higgs",
+    "ggH": "higgs",
+    "VBF": "higgs",
+    "ZH": "higgs",
+    "ggZH": "higgs",
+    "WH": "higgs",
+    "ttHnonBB": "higgs",
+    "ttHtoBB": "higgs",
+    "H(125)": "higgs",
+    # Top pair
+    "tt": "tt",
+    # Single top
+    "Single Top": "st",
+    # Diboson (VV) - includes ZZ production, WG and rare EW
+    "WW": "diboson",
+    "WZ": "diboson",
+    "ZZ": "diboson",
+    "qqToZZ": "diboson",
+    "ggToZZ": "diboson",
+    #"WG": "diboson",
+    #"EW": "diboson",
+    # V+jets (DY + W+jets)
+    "DY+Jets": "vjets",
+    "V+Jets": "vjets",
+}
+
+# Single source of truth for process group names and their order.
+# One-hot columns (is_higgs, is_tt, ...) are derived from this list.
+# Must match b-hive config truths order (config/HPlusCHToWW_multiclass.yml).
+PROCESS_GROUPS = ["higgs", "tt", "st", "diboson", "vjets"]
+PROCESS_GROUP_IDS = {name: i for i, name in enumerate(PROCESS_GROUPS)}
+# =============================================================================
 
 
 def setup_logger(output_dir):
@@ -191,11 +234,11 @@ def save_cutflows(metadata, categories, sample, weight, output_dir):
 
 
 def get_process_dict(output_dir, year, categories):
-    dataset_config = get_dataset_config(year)
-
+    folders = glob.glob(str(output_dir / "*"))
     process_dict = defaultdict(list)
 
-    folders = glob.glob(str(output_dir / "*"))
+    dataset_config = get_dataset_config(year)
+
     for folder in folders:
         folder_path = Path(folder)
         name = folder_path.name
@@ -433,3 +476,133 @@ def df_to_latex(df, blind, table_title="Events"):
 \end{tabular}
 \end{table}"""
     return output
+
+
+# =============================================================================
+# MVA TRAINING UTILITIES (for hww workflow)
+# =============================================================================
+
+
+def get_process_group(process: str) -> str:
+    """
+    Get the MVA group name for a given process.
+
+    Parameters
+    ----------
+    process : str
+        Process name from the fileset (e.g., "tt", "H+c", "DY+Jets")
+
+    Returns
+    -------
+    str
+        Group name for MVA classification, or "unknown" if not found
+    """
+    # Handle trailing spaces in process names
+    process_clean = process.strip()
+    return PROCESS_TO_GROUP.get(process_clean, "unknown")
+
+
+def add_mva_labels(df: pd.DataFrame, process: str) -> pd.DataFrame:
+    """
+    Add MVA training labels to a DataFrame.
+
+    Adds one-hot encoded columns (is_<group>) for each process group,
+    and ensures a 'weight' column exists for training.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame with event data
+    process : str
+        Process name for determining the group
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with added MVA label columns
+    """
+    process_group = get_process_group(process)
+
+    # Add one-hot encoded truth labels for each process group
+    for group_name in PROCESS_GROUP_IDS.keys():
+        df[f"is_{group_name}"] = int(process_group == group_name)
+
+    # Ensure weight column exists (b-hive expects "weight")
+    if "weight_nominal" in df.columns and "weight" not in df.columns:
+        df["weight"] = df["weight_nominal"]
+    elif "weight" not in df.columns:
+        df["weight"] = 1.0
+
+    return df
+
+
+def generate_filelist(output_dir: Path, category: str, process_names: list, filelist_name: str = None) -> Path:
+    """
+    Generate a filelist for MVA training from process-level parquet files.
+
+    Parameters
+    ----------
+    output_dir : Path
+        Directory containing parquet files
+    category : str
+        Category name (used for filelist naming)
+    process_names : list
+        List of process names to include (e.g., ["tt", "DY+Jets", "H+c"])
+    filelist_name : str, optional
+        Name for the filelist file. If None, uses category name.
+
+    Returns
+    -------
+    Path
+        Path to the generated filelist, or None if no files found
+    """
+    parquet_files = sorted(
+        output_dir / f"{process}.parquet"
+        for process in process_names
+        if (output_dir / f"{process}.parquet").exists()
+    )
+    if not parquet_files:
+        logging.warning(f"No process-level parquet files found in {output_dir}")
+        return None
+
+    # Create filelists directory
+    filelist_dir = output_dir / "filelists"
+    filelist_dir.mkdir(parents=True, exist_ok=True)
+
+    # Generate filelist
+    filelist_name = filelist_name or f"{category}.txt"
+    filelist_path = filelist_dir / filelist_name
+
+    with open(filelist_path, "w") as f:
+        for pf in parquet_files:
+            f.write(f"{pf}\n")
+
+    logging.info(f"Generated filelist: {filelist_path} ({len(parquet_files)} files)")
+    return filelist_path
+
+
+def generate_all_filelists(output_dir: Path, categories: list, process_names: list) -> dict:
+    """
+    Generate filelists for all categories.
+
+    Parameters
+    ----------
+    output_dir : Path
+        Base output directory
+    categories : list
+        List of category names
+    process_names : list
+        List of process names to include in filelists
+
+    Returns
+    -------
+    dict
+        Dictionary mapping category names to filelist paths
+    """
+    print_header("Generating filelists for MVA training")
+    filelists = {}
+    for category in categories:
+        filelist_path = generate_filelist(output_dir, category, process_names)
+        if filelist_path:
+            filelists[category] = filelist_path
+    return filelists

@@ -1,37 +1,35 @@
-import gc
-import yaml
-import json
-import glob
-import logging
 import argparse
+import gc
+import glob
+import json
+import logging
 import subprocess
-import pandas as pd
-from pathlib import Path
 from collections import defaultdict
-from coffea.util import load, save
-from coffea.processor import accumulate
-from analysis.postprocess.plotter import CoffeaPlotter
-from analysis.workflows.config import WorkflowConfigBuilder
-from analysis.filesets.utils import get_workflow_key_process_map, get_process_sample_map
-from analysis.postprocess.postprocessor import (
-    save_histograms_by_sample,
-    save_histograms_by_process,
-)
-from analysis.postprocess.utils import (
-    print_header,
-    setup_logger,
-    clear_output_directory,
-    df_to_latex,
-    combine_event_tables,
-    combine_cutflows,
-    format_cutflow_with_efficiency,
-    merge_parquets_by_sample,
-    load_processed_histograms,
-    get_results_report,
-)
+from pathlib import Path
 
+import pandas as pd
+import yaml
+from coffea.processor import accumulate
+from coffea.util import load, save
+
+from analysis.filesets.utils import (get_process_sample_map,
+                                     get_workflow_key_process_map)
+from analysis.postprocess.plotter import CoffeaPlotter
+from analysis.postprocess.postprocessor import (save_histograms_by_process,
+                                                save_histograms_by_sample)
+from analysis.postprocess.utils import (clear_output_directory,
+                                        combine_cutflows, combine_event_tables,
+                                        df_to_latex,
+                                        format_cutflow_with_efficiency,
+                                        generate_all_filelists,
+                                        get_results_report,
+                                        load_processed_histograms,
+                                        merge_parquets_by_sample, print_header,
+                                        setup_logger)
+from analysis.workflows.config import WorkflowConfigBuilder
 
 OUTPUT_DIR = Path.cwd() / "outputs"
+OUTPUT_DIR = Path("/eos/home-c/cgupta/higgscharm/outputs")
 
 
 def parse_arguments():
@@ -52,18 +50,12 @@ def parse_arguments():
         "--year",
         required=True,
         choices=[
-            "2016preVFP",
-            "2016postVFP",
-            "2016",
-            "2017",
-            "2018",
+            "2022",
+            "2023",
             "2022preEE",
             "2022postEE",
-            "2022",
             "2023preBPix",
             "2023postBPix",
-            "2023",
-            "2024",
         ],
         help="Data year",
     )
@@ -114,7 +106,53 @@ def parse_arguments():
         "--skipmerging", action="store_true", help="Skip parquet outputs merging"
     )
     parser.add_argument("--blind", action="store_true", help="Blind data")
-    return parser.parse_args()
+    parser.add_argument(
+        "--mva",
+        action="store_true",
+        help="Add MVA training labels to parquet files and generate filelists (hww workflow only)",
+    )
+
+    # Inference arguments
+    parser.add_argument(
+        "--infer",
+        action="store_true",
+        help="Run b-hive model inference on parquet files. Requires --output_format parquet.",
+    )
+    parser.add_argument(
+        "--model-path",
+        type=str,
+        default=None,
+        help="Path to trained model checkpoint (.pt). Required if --infer is set.",
+    )
+    parser.add_argument(
+        "--bhive-path",
+        type=str,
+        default="/eos/home-c/cgupta/HToWW/b-hive",
+        help="Path to b-hive repository root.",
+    )
+    parser.add_argument(
+        "--bhive-config",
+        type=str,
+        default="HPlusCHToWW_multiclass",
+        help="Name of the b-hive config to use for inference.",
+    )
+    parser.add_argument(
+        "--bhive-model-name",
+        type=str,
+        default="SimpleMLP_MultiClass",
+        help="Name of the b-hive model class.",
+    )
+
+    args = parser.parse_args()
+
+    # Validation: --infer requires --output_format parquet and --model-path
+    if args.infer:
+        if args.output_format != "parquet":
+            parser.error("--infer requires --output_format parquet")
+        if args.model_path is None:
+            parser.error("--infer requires --model-path")
+
+    return args
 
 
 def check_output_dir(workflow: str, year: str) -> Path:
@@ -133,7 +171,6 @@ def check_output_dir(workflow: str, year: str) -> Path:
 
     # Years that require both pre and post subdirectories
     aux_map = {
-        "2016": ["2016preVFP", "2016postVFP"],
         "2022": ["2022preEE", "2022postEE"],
         "2023": ["2023preBPix", "2023postBPix"],
     }
@@ -167,7 +204,6 @@ def get_sample_name(filename: str, year: str) -> str:
 def load_year_histograms(workflow: str, year: str):
     """load and merge histograms from pre/post years"""
     aux_map = {
-        "2016": ["2016preVFP", "2016postVFP"],
         "2022": ["2022preEE", "2022postEE"],
         "2023": ["2023preBPix", "2023postBPix"],
     }
@@ -200,6 +236,11 @@ if __name__ == "__main__":
     except json.JSONDecodeError:
         group_by = args.group_by
 
+    # Validate hww-specific flags
+    is_hww_workflow = args.workflow.startswith("hww")
+    if args.mva and not is_hww_workflow:
+        raise ValueError("--mva is only supported for hww workflows")
+
     output_dir = check_output_dir(args.workflow, args.year)
     clear_output_directory(output_dir, "txt")
     setup_logger(output_dir)
@@ -214,7 +255,7 @@ if __name__ == "__main__":
     if "data" not in workflow_config.datasets:
         args.blind = True
 
-    if args.postprocess and (args.year not in ["2016", "2022", "2023"]):
+    if args.postprocess and (args.year not in ["2022", "2023"]):
         print_header(f"Running postprocess for {args.year}")
         logging.info(f"Reading outputs from: {output_dir}")
 
@@ -258,8 +299,13 @@ if __name__ == "__main__":
                 categories,
                 args.nocutflow,
                 args.output_format,
+                add_mva_labels_flag=args.mva,
             )
             gc.collect()
+
+        # Generate filelists for MVA training (hww workflow only)
+        if args.mva:
+            generate_all_filelists(output_dir, categories, list(process_samples_map.keys()))
 
         processed_histograms = load_processed_histograms(
             args.year,
@@ -336,7 +382,7 @@ if __name__ == "__main__":
                 with open(category_dir / f"results_{category}.txt", "w") as f:
                     f.write(latex_table)
 
-    if args.year in ["2016", "2022", "2023"]:
+    if args.year in ["2022", "2023"]:
         if args.postprocess:
             print_header(f"Running postprocess for {args.year}")
             # load and accumulate processed histograms
@@ -345,8 +391,7 @@ if __name__ == "__main__":
                 processed_histograms,
                 f"{output_dir}/{args.year}_processed_histograms.coffea",
             )
-            identifier_map = {"2016": "VFP", "2022": "EE", "2023": "BPix"}
-            identifier = identifier_map[args.year]
+            identifier = "EE" if args.year == "2022" else "BPix"
             for category in categories:
                 logging.info(f"category: {category}")
                 category_dir = OUTPUT_DIR / args.workflow / args.year / category
@@ -432,6 +477,18 @@ if __name__ == "__main__":
                         combined_cutflow, eff_df
                     )
                     cutflow_eff.to_csv(category_dir / f"cutflow_eff_{category}.csv")
+
+    if args.infer:
+        from analysis.postprocess.inference import run_inference
+
+        print_header("Running MVA inference")
+        run_inference(
+            output_dir=output_dir,
+            model_path=args.model_path,
+            bhive_path=args.bhive_path,
+            config_name=args.bhive_config,
+            model_name=args.bhive_model_name,
+        )
 
     if args.plot:
         subprocess.run("python3 analysis/postprocess/build_color_map.py", shell=True)
