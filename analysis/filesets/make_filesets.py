@@ -168,7 +168,7 @@ if __name__ == "__main__":
                 new_dataset[dataset_key] = []
 
     # save new fileset
-    fileset_file = filesets_dir / f"fileset_{args.year}_NANO_lxplus.json"
+    fileset_file = filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
     with open(fileset_file, "w") as json_file:
         json.dump(new_dataset, json_file, indent=4, sort_keys=True)
 
