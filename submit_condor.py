@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
     nano_version = get_nano_version(args.year)
     with open(
-        f"{fileset_path}/fileset_{args.year}_nanov{nano_version}_lxplus.json", "r"
+        f"{fileset_path}/fileset_{args.year}_NANO_lxplus.json", "r"
     ) as f:
         root_files = json.load(f)[args.dataset]
     root_files_list = divide_list(root_files, args.nfiles)
