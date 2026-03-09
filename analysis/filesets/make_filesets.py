@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 
 import yaml
+from analysis.filesets.utils import get_nano_version
 from coffea.dataset_tools.dataset_query import DataDiscoveryCLI
 
 
@@ -168,6 +169,7 @@ if __name__ == "__main__":
                 new_dataset[dataset_key] = []
 
     # save new fileset
+    nano_version = get_nano_version(args.year)
     fileset_file = filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
     with open(fileset_file, "w") as json_file:
         json.dump(new_dataset, json_file, indent=4, sort_keys=True)
