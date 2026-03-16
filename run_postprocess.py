@@ -29,7 +29,6 @@ from analysis.postprocess.utils import (clear_output_directory,
 from analysis.workflows.config import WorkflowConfigBuilder
 
 OUTPUT_DIR = Path.cwd() / "outputs"
-OUTPUT_DIR = Path("/eos/home-c/cgupta/higgscharm/outputs")
 
 
 def parse_arguments():
