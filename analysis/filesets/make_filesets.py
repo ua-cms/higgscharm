@@ -26,7 +26,7 @@ def query_das_user_dataset(query, instance="prod/phys03"):
         List of file paths
     """
     cmd = [
-        "dasgoclient",
+        "/cvmfs/cms.cern.ch/common/dasgoclient",
         f"--query=file dataset={query} instance={instance}",
         "--limit=0"  # get all files
     ]
