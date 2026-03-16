@@ -12,6 +12,18 @@ datasets:
     - zz
     - wg
     - v+jets
+    - gghtoww
+    - vbfhtoww
+    - zh
+    - ggzh
+    - gghto2tau
+    - vbfhto2tau
+    - whto2tau
+    - whtoww
+    - tthnonbb
+    - tthtobb
+    - hc
+    - hb
 object_selection:
   muons:
     field: events.Muon
@@ -42,7 +54,7 @@ object_selection:
     cuts:
       - events.Jet.pt > 30
       - np.abs(events.Jet.eta) < 2.4
-      - working_points.jet_id(events, 'tightlepveto')
+      - working_points.jet_id(events, year, 'tightlepveto')
       - delta_r_higher(events.Jet, objects['leptons'], 0.4)
   eventJets:
     field: events.Jet
@@ -83,7 +95,7 @@ object_selection:
 event_selection:
   hlt_paths:
     MuonEG:
-      - MuEle_HWW
+      - MuEle
     Muon:
       - SingleMu
     EGamma:
@@ -108,7 +120,7 @@ event_selection:
     dilepton_mass_signal: ak.all((objects["ll_pair"].l1 + objects["ll_pair"].l2).mass <= 72, axis=1)
     dilepton_mass_top_CR: ak.all((objects["ll_pair"].l1 + objects["ll_pair"].l2).mass > 72, axis=1)
   categories:
-    top_CR:
+    base:
       - atleast_one_goodvertex
       - lumimask
       - met_filters
@@ -116,10 +128,7 @@ event_selection:
       - met_45
       - one_ll_pair
       - one_muon_one_electron
-      - atleast_two_cjets
-      - transverse_mass_top_CR
-      - dilepton_mass_top_CR
-    high_mll_CR:
+    SR:
       - atleast_one_goodvertex
       - lumimask
       - met_filters
@@ -129,7 +138,7 @@ event_selection:
       - one_muon_one_electron
       - atleast_one_cjet
       - transverse_mass_signal
-      - dilepton_mass_top_CR
+      - dilepton_mass_signal
 corrections:
   objects:
     - jec
