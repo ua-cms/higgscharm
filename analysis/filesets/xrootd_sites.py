@@ -41,5 +41,6 @@ xroot_to_site =  {
     "root://cms-t2-se01.sdfarm.kr:1094": "T2_KR_KISTI",
     "root://eos01.grid.cyfronet.pl:1094": "T2_PL_Cyfronet",
     "root://xroot02.ncg.ingrid.pt:1094": "T2_PT_NCG_Lisbon",
+    "root://xroot01.ncg.ingrid.pt:1094": "T2_PT_NCG_Lisbon",
     "root://se01.grid.nchc.org.tw": "T2_TW_NCHC",
 }
