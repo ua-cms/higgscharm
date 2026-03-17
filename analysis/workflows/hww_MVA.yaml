@@ -405,12 +405,6 @@ histogram_config:
       stop: 14
       label: c-jets multiplicity
       expression: ak.num(objects['cjets'])
-    bjet_multiplicity:
-      type: Integer
-      start: 0
-      stop: 14
-      label: b-jets multiplicity
-      expression: ak.num(objects['bjets'])
     leadingjet_flavour:
       type: IntCategory
       categories:
