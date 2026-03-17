@@ -72,8 +72,6 @@ object_selection:
       - delta_r_higher(events.Jet, objects['leptons'], 0.4)
   candidate_cjet:
     field: select_candidate_cjet
-  candidate_bjet:
-    field: select_candidate_bjet
   met:
     field: events.PuppiMET
   mTll:
