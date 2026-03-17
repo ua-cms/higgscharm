@@ -502,7 +502,7 @@ class ObjectSelector:
         leptons = ak.concatenate(
             [self.objects["muons"], self.objects["electrons"]], axis=1
         )
-        leptons = leptons[ak.argsort(leptons.pt, axis=1)]
+        leptons = leptons[ak.argsort(leptons.pt, ascending=False, axis=1)]
         self.objects[obj_name] = ak.zip(
             {
                 "pt": leptons.pt,
@@ -515,6 +515,7 @@ class ObjectSelector:
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
+
     def select_hww_ll_pair(self, obj_name):
         has_lepton = ak.num(self.objects["leptons"]) >= 1
         #self.objects["first_leptons"] = ak.where(has_lepton, self.objects["leptons"][:, 0], None)
@@ -564,8 +565,86 @@ class ObjectSelector:
             ak.argmax(self.objects["cjets"].btagPNetCvL, axis=1)
             == ak.local_index(self.objects["cjets"], axis=1)
         ]
+        self.objects["candidate_cjet_lorentzvector"] = ak.zip(
+            {
+                "pt": self.objects["candidate_cjet"].pt,
+                "eta": self.objects["candidate_cjet"].eta,
+                "phi": self.objects["candidate_cjet"].phi,
+                "mass": self.objects["candidate_cjet"].mass,
+            },
+            with_name="PtEtaPhiMCandidate",
+            behavior=candidate.behavior,
+        )
+
+
     def select_candidate_bjet(self, obj_name):
         self.objects["candidate_bjet"] = self.objects["bjets"][
             ak.argmax(self.objects["bjets"].btagPNetB, axis=1)
             == ak.local_index(self.objects["bjets"], axis=1)
         ]
+
+    def select_leading_jets(self, obj_name):
+        # sort jets by pt in descending order (first element has highest pt ...)
+        jets = self.objects["jets"]
+        jets = jets[ak.argsort(jets.pt, ascending=False, axis=1)]
+        jets = ak.pad_none(self.objects['jets'], target=3)
+        def make_candidate(jet):
+            return ak.zip(
+                {
+                    "pt": jet.pt,
+                    "eta": jet.eta,
+                    "phi": jet.phi,
+                    "mass": jet.mass,
+                },
+                with_name="PtEtaPhiMCandidate",
+                behavior=candidate.behavior,
+            )
+        self.objects["jet1"] = make_candidate(jets[:, 0])
+        self.objects["jet2"] = make_candidate(jets[:, 1])
+        self.objects["jet3"] = make_candidate(jets[:, 2])
+
+    def select_delta_phi(self, obj_name):
+        ll_plus_met = self.objects["ll_pair"].l1 + self.objects["ll_pair"].l2 + self.objects["met"]
+        ll_plus_met = ak.firsts(ll_plus_met)
+        l1_plus_met = self.objects["ll_pair"].l1 + self.objects["met"]
+        l1_plus_met = ak.firsts(l1_plus_met)
+        cjet = ak.firsts(self.objects["candidate_cjet_lorentzvector"])
+        self.objects["delta_phi_llPlusMET_c"] = ll_plus_met.delta_phi(cjet)
+        self.objects["delta_phi_l1PlusMET_c"] = l1_plus_met.delta_phi(cjet)
+
+        self.objects["delta_phi_l1PlusMET_jet1"] = l1_plus_met.delta_phi(self.objects["jet1"])
+        self.objects["delta_phi_l1PlusMET_jet2"] = l1_plus_met.delta_phi(self.objects["jet2"])
+        self.objects["delta_phi_l1PlusMET_jet3"] = l1_plus_met.delta_phi(self.objects["jet3"])
+
+        self.objects["delta_phi_llPlusMET_jet1"] = ll_plus_met.delta_phi(self.objects["jet1"])
+        self.objects["delta_phi_llPlusMET_jet2"] = ll_plus_met.delta_phi(self.objects["jet2"])
+        self.objects["delta_phi_llPlusMET_jet3"] = ll_plus_met.delta_phi(self.objects["jet3"])
+
+        self.objects["delta_phi_ll_MET"] = (
+            (self.objects["ll_pair"].l1 + self.objects["ll_pair"].l2).delta_phi(self.objects["met"])
+        )
+        self.objects["delta_phi_l1_MET"] = (
+            self.objects["ll_pair"].l1.delta_phi(self.objects["met"])
+        )
+        self.objects["delta_phi_l2_MET"]= (
+            self.objects["ll_pair"].l2.delta_phi(self.objects["met"])
+        )
+
+    def select_delta_R(self, obj_name):
+        ll_pair = self.objects["ll_pair"].l1 + self.objects["ll_pair"].l2
+        ll_pair = ak.firsts(ll_pair)
+
+        self.objects["delta_R_ll_jet1"] = ll_pair.delta_r(self.objects["jet1"])
+        self.objects["delta_R_ll_jet2"] = ll_pair.delta_r(self.objects["jet2"])
+        self.objects["delta_R_ll_jet3"] = ll_pair.delta_r(self.objects["jet3"])
+
+        self.objects["delta_R_ll_l1"]= (
+            ll_pair.delta_r(self.objects["ll_pair"].l1)
+        )
+        self.objects["delta_R_ll_l2"]= (
+            ll_pair.delta_r(self.objects["ll_pair"].l2)
+        )
+        cjet = ak.firsts(self.objects["candidate_cjet_lorentzvector"])
+        self.objects["delta_R_ll_c"]= (
+            ll_pair.delta_r(cjet)
+        )
