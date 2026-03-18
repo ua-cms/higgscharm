@@ -498,7 +498,7 @@ HplusCharm_HtoWW:
   xsec: 0.0022141
 HplusBottom_HtoWW:
   era: mc
-  query: HPlusBottom_HToWW_M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/tvanlaer-Run3Summer22NanoAODv13-HToWW-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-8653679c76b04a5edd42171c9a5e3f96/USER
+  query: HPlusBottom_HToWW_M-125_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/tvanlaer-Run3Summer22NanoAODv13-HToWW-133X_mcRun3_2022_realistic_ForNanov13_v1-v2-8653679c76b04a5edd42171c9a5e3f96/USER
   process: H+b
   key: hb
   xsec: 0.016972
