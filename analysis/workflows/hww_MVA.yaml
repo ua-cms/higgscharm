@@ -649,8 +649,6 @@ histogram_config:
       - jet_multiplicity
     cjet_multiplicity:
       - cjet_multiplicity
-    bjet_multiplicity:
-      - bjet_multiplicity
     leading_jet:
       - leadingjet_flavour
       - leadingjet_cvsb_pnet
