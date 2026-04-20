@@ -3,7 +3,7 @@ import numpy as np
 import awkward as ak
 from analysis.working_points import working_points
 from analysis.filesets.utils import get_nano_version
-from analysis.corrections.utils import correction_files
+from analysis.corrections.correctionlib_files import correction_files
 
 
 def apply_jetvetomaps(events, year: str, mapname: str = "jetvetomap"):
