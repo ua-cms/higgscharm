@@ -149,11 +149,16 @@ To continuously monitor your Condor jobs:
 ```bash
 watch condor_q
 ```
-To get a summary of missing, failed, or incomplete jobs, and optionally resubmit them, use:
+To get a summary of missing, failed, or incomplete jobs, and resubmit them, use:
 ```bash
 python3 jobs_status.py --workflow <workflow> --year <campaign> --eos
 ```
-It can also update the input filesets and resubmit jobs if needed.
+This command will:
+- Report total expected, completed, and missing jobs per dataset.
+- Analyze recent xrootd-related errors on a per-dataset basis.
+- Optionally regenerate input filesets for datasets with failing sites. By default, datasets are grouped by identical failing sites to minimize repeated fetches.
+- Use the `--single_fetch` flag to merge all datasets with failing sites into a single group such that `fetch.py` is run only once.
+- Optionally resubmit missing jobs.
 
 
 ### Postprocessing
@@ -172,7 +177,7 @@ Instead of manually running `run_postprocess.py` for each workflow and year, you
 
 This script:
 
-* Iterates over all years (2022preEE, 2022postEE, 2023preBPix, 2023postBPix) unless a specific year is provided.
+* Iterates over all years unless a specific year is provided.
 * Runs all steps of `run_postprocess.py` depending on the workflow type.
 * Adds special configurations (e.g. `--group_by` for the $Z\rightarrow \ell\ell$ workflows and `--pass_axis` for the `zplusl_X` workflows).
 * Automatically produces plots and merged results for multi-campaign years (e.g. 2022, 2023).

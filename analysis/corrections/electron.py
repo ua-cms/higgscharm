@@ -343,7 +343,7 @@ class ElectronWeights:
             )
             sf = ak.where(in_electrons_mask, sf, ak.ones_like(sf))
             sf = ak.fill_none(ak.unflatten(sf, self.electrons_counts), value=1)
-            nominal_sf = ak.firsts(nominal_sf)
+            nominal_sf = ak.firsts(sf)
 
         elif kind == "double":
             # for double electron events, compute SF from electrons' efficiencies
