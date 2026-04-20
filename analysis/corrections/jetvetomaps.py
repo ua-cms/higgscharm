@@ -1,18 +1,30 @@
 import correctionlib
 import numpy as np
 import awkward as ak
+from analysis.working_points import working_points
+from analysis.filesets.utils import get_nano_version
 from analysis.corrections.utils import correction_files
 
 
 def apply_jetvetomaps(events, year: str, mapname: str = "jetvetomap"):
     """
-    These are the jet veto maps showing regions with an excess of jets (hot zones) and lack of jets
-    (cold zones). Using the phi-symmetry of the CMS detector, these areas with detector and or
-    calibration issues can be pinpointed.
+    From: https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/summaries/JME_2022_Summer22EE_jetvetomaps.html
+        These are the jet veto maps showing regions with an excess of jets (hot zones) and lack of jets
+        (cold zones). Using the phi-symmetry of the CMS detector, these areas with detector and or
+        calibration issues can be pinpointed. Non-zero value indicates that the region is vetoed
 
-    Non-zero value indicates that the region is vetoed
-
-    taken from: https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/summaries/JME_2022_Summer22EE_jetvetomaps.html
+    From https://cms-jerc.web.cern.ch/Recommendations/#jet-veto-maps:
+        The nominal “loose selection” would be:
+            Run2:
+                - jet pT > 15 GeV
+                - tight jet ID
+                - PU jet ID for CHS jets with pT < 50 GeV
+                - (jet charged EM fraction + jet neutral EM fraction) < 0.9
+                - jets that don’t overlap with PF muon (dR < 0.2)
+            Run3:
+                - jet pT > 15 GeV
+                - tightLepVeto jet ID
+                - (jet charged EM fraction + jet neutral EM fraction) < 0.9
     """
     vetomap_names = {
         "2016preVFP": "Summer19UL16_V1",
@@ -27,6 +39,17 @@ def apply_jetvetomaps(events, year: str, mapname: str = "jetvetomap"):
     }
     cset = correctionlib.CorrectionSet.from_file(correction_files["jetvetomaps"][year])
 
+    # nominal loose selection
+    nano_version = get_nano_version(year)
+    jet_pt = events.Jet.pt > 15
+    jets_pu_id = working_points.jet_pileup_id(events, "tight", year)
+    jets_id = working_points.jet_id(
+        events, year, wp="tight" if nano_version == "9" else "tightlepveto"
+    )
+    jets_em_fraction = (events.Jet.neEmEF + events.Jet.chEmEF) < 0.9
+    events["Jet", "loose_mask"] = jet_pt & jets_pu_id & jets_id & jets_em_fraction
+
+    # get jet veto mask
     jets = events.Jet
     j, n = ak.flatten(jets), ak.num(jets)
     jet_eta_mask = np.abs(j.eta) < 5.19
