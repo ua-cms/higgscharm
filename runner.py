@@ -62,6 +62,13 @@ if __name__ == "__main__":
         choices=["coffea", "parquet"],
         help="format of output file",
     )
+    parser.add_argument(
+        "-m",
+        "--memory",
+        type=str,
+        default="2000",
+        help="Requested memory (in MB) for the condor job",
+    )
     args = parser.parse_args()
 
     # get datasets to run over for selected workflow and year
@@ -84,6 +91,8 @@ if __name__ == "__main__":
             str(args.nfiles),
             "--output_format",
             args.output_format,
+            "--memory",
+            args.memory
         ]
         if args.submit:
             cmd_args.append("--submit")

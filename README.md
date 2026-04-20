@@ -1,5 +1,7 @@
 # H+c
 
+[![Codestyle](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 Python package for analyzing H+c events. The package uses a columnar framework to process input tree-based NanoAOD V12 files using [Coffea](https://coffeateam.github.io/coffea/) and [scikit-hep](https://scikit-hep.org) Python libraries.
 
 - [Input filesets](#Input-filesets)
@@ -27,7 +29,7 @@ Please make a dedicated branch with your commits and make a PR to the main.
 Each data-taking year or campaign has a corresponding config file in `analysis/filesets/<year>_<nano version>.yaml`, which defines the input datasets to process
 
 ```yaml
-EGammaD:
+EGammaRun2022D:
   era: D
   query: EGamma/Run2022D-22Sep2023-v1/NANOAOD
   process: Data
@@ -58,28 +60,21 @@ options:
   --samples [SAMPLES ...]
                         (Optional) List of samples to use. If omitted, all available samples will be used
 ```
-We use [Coffea's dataset discovery tools](https://coffea-hep.readthedocs.io/en/latest/dataset_tools.html) to build the input filesets. The container (default is [/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask:latest-py3.10](https://hub.docker.com/layers/coffeateam/coffea-dask/latest-py3.10/images/sha256-110d080a5ec9155f56cabf8303a2e4e87768111abea99d9898b67d0aff370c1f)) provides a reproducible environment with all required dependencies. The script executes [`analysis/filesets/make_filesets.py`](https://github.com/ua-cms/higgscharm/blob/main/analysis/filesets/make_filesets.py) inside the container (using `Singularity`), which reads the corresponding dataset configuration file to extract the DAS queries and builds a dictionary of dataset definitions. It then calls `coffea.dataset_tools.DataDiscoveryCLI` to query Rucio/DAS, collecting the available file replicas across the allowed sites (listed [here](https://github.com/ua-cms/higgscharm/blob/main/analysis/filesets/sites.yaml)). The files are reformatted into a dictionary mapping dataset names to lists of ROOT files and saved to `analysis/filesets/fileset_<year>_NANO_lxplus.json`
+These fileset definitions are the entry point for the analysis: they control which datasets are included, how they are grouped, and how they are weighted, ensuring a transparent and reproducible workflow across different campaigns.
 
 ### Workflows
 
-Workflows define the configuration of an analysis: object and event selections, triggers, correctionsm variabbles and histograms. They are stored as YAML files in the `analysis/workflows` directory. 
+A workflow defines the full configuration of an analysis: which datasets are used, how objects and events are selected, which corrections and weights are applied, and which histograms are produced. Workflows are stored as YAML files in the [`analysis/workflows`](https://github.com/ua-cms/higgscharm/tree/main/analysis/workflows) directory.
 
+Each workflow YAML is organized into the following main sections:
 
+- **`datasets`**: which samples to run over (referencing dataset *keys* defined in the filesets)
+- **`object_selection`**: how to build and filter physics objects (muons, electrons, jets, etc.)
+- **`event_selection`**: event-level cuts, triggers, and category definitions
+- **`corrections`**: physics corrections and event weights  
+- **`histogram_config`**: definition of output histograms
 
-
-Each workflow also specifies which data, mc or signal samples to run over for a given workflow through the `datasets` field:
-```yaml
-datasets:
-  data: 
-    - electron
-  mc:
-    - dy_inclusive
-    - singletop
-    - tt
-    - wjets_ht
-    - diboson
-```
-These entries (e.g. `muon`, `dy_inclusive`, etc) refer directly to the key fields defined in the input fileset configuration. **You can find a detailed explanation of the structure of a workflow** [here](https://github.com/ua-cms/higgscharm/blob/dev/signal/analysis/workflows/README.md) 
+Together, these sections control the full behavior of the analysis pipeline. **You can find a detailed explanation of the structure of a workflow** [here](https://github.com/ua-cms/higgscharm/blob/dev/signal/analysis/workflows/README.md) 
 
 The available workflows are:
 
@@ -94,7 +89,8 @@ The available workflows are:
         * `zplusll_os`: Select $Z+\ell\ell$ events (Z+X estimation with the OS Method)
         * `zplusl_ss`: Select $Z+\ell$ events (lepton fake rate estimation with the SS Method)
         * `zplusll_ss`: Select $Z+\ell\ell$ events (Z+X estimation with the SS Method)
-
+* $H(\rightarrow ZZ \rightarrow 4\ell)+c$
+    *  `hplusc`: Select $H(\rightarrow ZZ \rightarrow 4\ell)+c$ events
 
 The workflows (selections, variables, output histograms, triggers, etc) are defined through a configuration file located in `analysis/workflows/workflow/<workflow>.yaml`. [Here](https://github.com/deoache/higgscharm/blob/lxplus/analysis/workflows/README.md) you can find a detailed description on how to create the config file.
 

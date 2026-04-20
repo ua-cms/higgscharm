@@ -6,7 +6,7 @@ from analysis.filesets.utils import get_nano_version
 from analysis.corrections.correctionlib_files import correction_files
 
 
-def apply_jetvetomaps(events, year: str, mapname: str = "jetvetomap"):
+def jet_veto(events, year: str, mapname: str = "jetvetomap"):
     """
     From: https://cms-nanoaod-integration.web.cern.ch/commonJSONSFs/summaries/JME_2022_Summer22EE_jetvetomaps.html
         These are the jet veto maps showing regions with an excess of jets (hot zones) and lack of jets
@@ -52,16 +52,15 @@ def apply_jetvetomaps(events, year: str, mapname: str = "jetvetomap"):
     # get jet veto mask
     jets = events.Jet
     j, n = ak.flatten(jets), ak.num(jets)
+    jet_loose_mask = j.loose_mask
     jet_eta_mask = np.abs(j.eta) < 5.19
     jet_phi_mask = np.abs(j.phi) < 3.14
 
-    in_jet_mask = jet_eta_mask & jet_phi_mask
+    in_jet_mask = jet_loose_mask & jet_eta_mask & jet_phi_mask
     in_jets = j.mask[in_jet_mask]
 
     jets_eta = ak.fill_none(in_jets.eta, 0.0)
     jets_phi = ak.fill_none(in_jets.phi, 0.0)
 
-    vetomaps = cset[vetomap_names[year]].evaluate(mapname, jets_eta, jets_phi)
-    vetomaps_mask = ak.any(ak.unflatten(vetomaps, n) > 0, axis=1)
-    vetoed_events = events[~vetomaps_mask]
-    return vetoed_events
+    vetomap = cset[vetomap_names[year]].evaluate(mapname, jets_eta, jets_phi)
+    return ak.any(ak.unflatten(vetomap, n) > 0, axis=1)

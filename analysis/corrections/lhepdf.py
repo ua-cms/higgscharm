@@ -2,7 +2,7 @@ import numpy as np
 import awkward as ak
 
 
-def add_lhepdf_weight(events, weights_container):
+def add_lhepdf_weight(events, weights_container, shift):
     """
     Add PDF, αs, and combined (PDF⊕αs) systematic weight variations to the Weights container.
 
@@ -33,74 +33,84 @@ def add_lhepdf_weight(events, weights_container):
         https://indico.cern.ch/event/938672/contributions/3943718/attachments/2073936/3482265/MC_ContactReport_v3.pdf
       - PDF4LHC recommendations, arXiv:1510.03865
     """
-    if "LHEPdfWeight" in events.fields:
-        pdfweights = events.LHEPdfWeight
-        n_members = ak.num(pdfweights)
+    if shift is None:
+        if "LHEPdfWeight" in events.fields:
+            pdfweights = events.LHEPdfWeight
+            n_members = ak.num(pdfweights)
 
-        # Case 2: 103 members → PDF + αs
-        if ak.all(n_members == 103):
-            # PDF
-            w0 = pdfweights[:, 0]  # central (mem=0)
-            w_all = pdfweights[:, 1:101]  # mem=1..100
-            diffs = (w_all - w0[:, None]) ** 2
-            delta_pdf = np.sqrt(ak.sum(diffs, axis=1))
+            # Case 2: 103 members → PDF + αs
+            if ak.all(n_members == 103):
+                # PDF
+                w0 = pdfweights[:, 0]  # central (mem=0)
+                w_all = pdfweights[:, 1:101]  # mem=1..100
+                diffs = (w_all - w0[:, None]) ** 2
+                delta_pdf = np.sqrt(ak.sum(diffs, axis=1))
 
-            w_up_pdf = 1 + delta_pdf
-            w_down_pdf = 1 - delta_pdf
+                w_up_pdf = 1 + delta_pdf
+                w_down_pdf = 1 - delta_pdf
 
-            # αs
-            w_as_low = pdfweights[:, 101]
-            w_as_high = pdfweights[:, 102]
-            delta_alpha = 0.5 * np.abs(w_as_high - w_as_low)
-            w_up_alpha = 1 + delta_alpha
-            w_down_alpha = 1 - delta_alpha
+                # αs
+                w_as_low = pdfweights[:, 101]
+                w_as_high = pdfweights[:, 102]
+                delta_alpha = 0.5 * np.abs(w_as_high - w_as_low)
+                w_up_alpha = 1 + delta_alpha
+                w_down_alpha = 1 - delta_alpha
 
-            # PDF + αs
-            delta_total = np.sqrt(delta_pdf**2 + delta_alpha**2)
-            w_up_total = 1 + delta_total
-            w_down_total = 1 - delta_total
+                # PDF + αs
+                delta_total = np.sqrt(delta_pdf**2 + delta_alpha**2)
+                w_up_total = 1 + delta_total
+                w_down_total = 1 - delta_total
 
-        # Case 3: 101 members → PDF only, αs = 1
-        elif ak.all(n_members == 101):
-            w0 = pdfweights[:, 0]
-            w_all = pdfweights[:, 1:101]
-            diffs = (w_all - w0[:, None]) ** 2
-            delta_pdf = np.sqrt(ak.sum(diffs, axis=1))
+            # Case 3: 101 members → PDF only, αs = 1
+            elif ak.all(n_members == 101):
+                w0 = pdfweights[:, 0]
+                w_all = pdfweights[:, 1:101]
+                diffs = (w_all - w0[:, None]) ** 2
+                delta_pdf = np.sqrt(ak.sum(diffs, axis=1))
 
-            w_up_pdf = 1 + delta_pdf
-            w_down_pdf = 1 - delta_pdf
+                w_up_pdf = 1 + delta_pdf
+                w_down_pdf = 1 - delta_pdf
 
-            print("skiping AlphaS systematic Weight")
-            w_up_alpha = ak.ones_like(delta_pdf)
-            w_down_alpha = ak.ones_like(delta_pdf)
-            w_up_total = ak.ones_like(delta_pdf)
-            w_down_total = ak.ones_like(delta_pdf)
+                print("skiping AlphaS systematic Weight")
+                w_up_alpha = ak.ones_like(delta_pdf)
+                w_down_alpha = ak.ones_like(delta_pdf)
+                w_up_total = ak.ones_like(delta_pdf)
+                w_down_total = ak.ones_like(delta_pdf)
+            else:
+                print("skiping PDF/AlphaS systematic Weight")
+                delta_pdf = np.ones(len(events))
+                w_up_pdf = np.ones(len(events))
+                w_down_pdf = np.ones(len(events))
+                w_up_alpha = np.ones(len(events))
+                w_down_alpha = np.ones(len(events))
+                w_up_total = np.ones(len(events))
+                w_down_total = np.ones(len(events))
 
-    else:
-        print("No LHEPdf Weights in dataset, skiping PDF/AlphaS systematic Weight")
-        delta_pdf = np.ones(len(events))
-        w_up_pdf = np.ones(len(events))
-        w_down_pdf = np.ones(len(events))
-        w_up_alpha = np.ones(len(events))
-        w_down_alpha = np.ones(len(events))
-        w_up_total = np.ones(len(events))
-        w_down_total = np.ones(len(events))
+        else:
+            print("No LHEPdf Weights in dataset, skiping PDF/AlphaS systematic Weight")
+            delta_pdf = np.ones(len(events))
+            w_up_pdf = np.ones(len(events))
+            w_down_pdf = np.ones(len(events))
+            w_up_alpha = np.ones(len(events))
+            w_down_alpha = np.ones(len(events))
+            w_up_total = np.ones(len(events))
+            w_down_total = np.ones(len(events))
 
-    weights_container.add(
-        "lhe_pdf",
-        weight=ak.ones_like(delta_pdf),
-        weightUp=w_up_pdf,
-        weightDown=w_down_pdf,
-    )
-    weights_container.add(
-        "lhe_alphaS",
-        weight=ak.ones_like(delta_pdf),
-        weightUp=w_up_alpha,
-        weightDown=w_down_alpha,
-    )
-    weights_container.add(
-        "lhe_pdf_alphaS",
-        weight=ak.ones_like(delta_pdf),
-        weightUp=w_up_total,
-        weightDown=w_down_total,
-    )
+        weights_container.add(
+            "lhe_pdf",
+            weight=ak.ones_like(delta_pdf),
+            weightUp=w_up_pdf,
+            weightDown=w_down_pdf,
+        )
+        weights_container.add(
+            "lhe_alphaS",
+            weight=ak.ones_like(delta_pdf),
+            weightUp=w_up_alpha,
+            weightDown=w_down_alpha,
+        )
+        weights_container.add(
+            "lhe_pdf_alphaS",
+            weight=ak.ones_like(delta_pdf),
+            weightUp=w_up_total,
+            weightDown=w_down_total,
+        )

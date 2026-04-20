@@ -1,7 +1,7 @@
 import correctionlib
 import awkward as ak
 from analysis.filesets.utils import get_nano_version
-from analysis.corrections.utils import correction_files
+from analysis.corrections.correctionlib_files import correction_files
 
 
 def get_ctag_mask(jets: ak.Array, year: str, wp: str):

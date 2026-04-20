@@ -5,7 +5,8 @@ import awkward as ak
 from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.filesets.utils import get_nano_version
-from analysis.corrections.utils import correction_files, unflat_sf
+from analysis.corrections.utils import unflat_sf
+from analysis.corrections.correctionlib_files import correction_files
 
 
 class MuonWeights:
@@ -20,8 +21,8 @@ class MuonWeights:
             Weights container
         year:
             Year of the dataset {2016preVFP, 2016postVFP, 2017, 2018, 2022preEE, 2022postEE, 2023preBPix, 2023postBPix, 2024}
-        variation:
-            syst variation
+        syst:
+            syst syst
         id_wp:
             ID working point {loose, medium, tight}
         iso_wp:
@@ -35,13 +36,13 @@ class MuonWeights:
         events: ak.Array,
         weights: Type[Weights],
         year: str,
-        variation: str = "nominal",
+        shift: str,
     ) -> None:
         self.events = events
         self.muons = events.selected_muons
         self.weights = weights
         self.year = year
-        self.variation = variation
+        self.shift = shift
         self.nano_version = get_nano_version(year)
 
         self.flat_muons = ak.flatten(self.muons)
@@ -60,11 +61,11 @@ class MuonWeights:
         """
         add muon ID weights to weights container
         """
-        nominal_weights = self.get_id_weights(id_wp, variation="nominal")
-        if self.variation == "nominal":
+        nominal_weights = self.get_id_weights(id_wp, syst="nominal")
+        if self.shift is None:
             # get 'up' and 'down' weights
-            up_weights = self.get_id_weights(id_wp, variation="systup")
-            down_weights = self.get_id_weights(id_wp, variation="systdown")
+            up_weights = self.get_id_weights(id_wp, syst="systup")
+            down_weights = self.get_id_weights(id_wp, syst="systdown")
             # add scale factors to weights container
             self.weights.add(
                 name=f"CMS_eff_m_id_{self.year[:4]}",
@@ -83,11 +84,11 @@ class MuonWeights:
         add muon iso weights to weights container
         """
         # get nominal scale factors
-        nominal_weights = self.get_iso_weights(id_wp, iso_wp, variation="nominal")
-        if self.variation == "nominal":
+        nominal_weights = self.get_iso_weights(id_wp, iso_wp, syst="nominal")
+        if self.shift is None:
             # get 'up' and 'down' weights
-            up_weights = self.get_iso_weights(id_wp, iso_wp, variation="systup")
-            down_weights = self.get_iso_weights(id_wp, iso_wp, variation="systdown")
+            up_weights = self.get_iso_weights(id_wp, iso_wp, syst="systup")
+            down_weights = self.get_iso_weights(id_wp, iso_wp, syst="systdown")
             # add nominal, up and down weights to weights container
             self.weights.add(
                 name=f"CMS_eff_m_iso_{self.year[:4]}",
@@ -110,20 +111,20 @@ class MuonWeights:
         nominal_weights = self.get_hlt_weights(
             id_wp=id_wp,
             iso_wp=iso_wp,
-            variation="nominal",
+            syst="nominal",
         )
-        if self.variation == "nominal":
+        if self.shift is None:
             """
             # get 'up' and 'down' weights
             up_weights = self.get_hlt_weights(
                 id_wp=id_wp,
                 iso_wp=iso_wp,
-                variation="systup",
+                syst="systup",
             )
             down_weights = self.get_hlt_weights(
                 id_wp=id_wp,
                 iso_wp=iso_wp,
-                variation="systdown",
+                syst="systdown",
             )
             """
             # add nominal, up and down weights to weights container
@@ -140,7 +141,7 @@ class MuonWeights:
                 weight=nominal_weights,
             )
 
-    def get_id_weights(self, id_wp, variation):
+    def get_id_weights(self, id_wp, syst):
         """Compute muon ID weights"""
         id_corrections = {
             "loose": "NUM_LooseID_DEN_TrackerMuons",
@@ -160,7 +161,7 @@ class MuonWeights:
         muon_pt = ak.fill_none(in_muons.pt, 15.0)
         muon_eta = np.abs(ak.fill_none(in_muons.eta, 0.0))
 
-        sfs = self.cset[id_corrections[id_wp]].evaluate(muon_eta, muon_pt, variation)
+        sfs = self.cset[id_corrections[id_wp]].evaluate(muon_eta, muon_pt, syst)
         weights = unflat_sf(
             sfs,
             in_muon_mask,
@@ -168,7 +169,7 @@ class MuonWeights:
         )
         return weights
 
-    def get_iso_weights(self, id_wp, iso_wp, variation):
+    def get_iso_weights(self, id_wp, iso_wp, syst):
         """Compute muon iso weights"""
         iso_corrections = {
             "9": {
@@ -247,14 +248,14 @@ class MuonWeights:
             self.cset[correction_name].evaluate(
                 muon_eta,
                 muon_pt,
-                variation,
+                syst,
             ),
             in_muon_mask,
             self.muons_counts,
         )
         return weights
 
-    def get_hlt_weights(self, id_wp, iso_wp, variation):
+    def get_hlt_weights(self, id_wp, iso_wp, syst):
         """Compute muon HLT weights"""
 
         hlt_path_id_map = {
@@ -295,13 +296,13 @@ class MuonWeights:
 
         if kind == "single":
             sf = self.cset[hlt_path_id_map[self.year]].evaluate(
-                muon_abseta, muon_pt, variation
+                muon_abseta, muon_pt, syst
             )
             nominal_sf = unflat_sf(sf, in_muons_mask, self.muons_counts)
 
         elif kind == "double":
             data_eff = self.cset_eff["Muon-HLT-DataEff"].evaluate(
-                variation,
+                syst,
                 hlt_path_id_map[self.year],
                 muon_abseta if self.nano_version == "9" else muon_eta,
                 muon_pt,
@@ -318,7 +319,7 @@ class MuonWeights:
             full_data_eff = ak.fill_none(full_data_eff, 1)
 
             mc_eff = self.cset_eff["Muon-HLT-McEff"].evaluate(
-                variation,
+                syst,
                 hlt_path_id_map[self.year],
                 muon_abseta if self.nano_version == "9" else muon_eta,
                 muon_pt,

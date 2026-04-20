@@ -6,7 +6,7 @@ from pathlib import Path
 from random import random
 from scipy.special import erfinv, erf
 from analysis.corrections.met import update_met
-from analysis.corrections.utils import correction_files
+from analysis.corrections.correctionlib_files import correction_files
 from coffea.lookup_tools import txt_converters, rochester_lookup
 
 
@@ -286,14 +286,14 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
             pt_woresol_f * (1 + (k_f + k_unc_f) * std_x_cb),
             pt_var_f,
         )
-    elif updn == "dn":
+    elif updn == "down":
         pt_var_f = ak.where(
             condition,
             pt_woresol_f * (1 + (k_f - k_unc_f) * std_x_cb),
             pt_var_f,
         )
     else:
-        print("ERROR: updn must be 'up' or 'dn'")
+        print("ERROR: updn must be 'up' or 'down'")
 
     if nested:
         pt_var = ak.unflatten(pt_var_f, nmuons)
@@ -350,7 +350,7 @@ def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
     eta - muon pseudorapidity
     phi - muon angle
     charge - muon charge
-    updn - uncertainty variation (up or dn)
+    updn - uncertainty variation (up or down)
     cset - correctionlib object
 
     This function should be applied to reco muons in MC!
@@ -387,7 +387,7 @@ def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
 
     if updn == "up":
         pt_var = pt_var + unc
-    elif updn == "dn":
+    elif updn == "down":
         pt_var = pt_var - unc
 
     return pt_var
@@ -396,51 +396,122 @@ def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
 def apply_muon_ss_corrections_run3(
     events: ak.Array,
     year: str,
+    shifts: list,
+    corrections_config: dict,
 ):
-    # save original muon pT
-    events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
-
-    # get correction set
+    muons = events.Muon
     cset = correctionlib.CorrectionSet.from_file(correction_files["muon_ss"][year])
 
     if hasattr(events, "genWeight"):
         # MC: both scale correction to gen Z peak AND resolution correction to Z width in data
-        ptscalecorr = pt_scale(
+        muon_ptscalecorr = pt_scale(
             False,
-            events.Muon.pt,
-            events.Muon.eta,
-            events.Muon.phi,
-            events.Muon.charge,
+            muons.pt,
+            muons.eta,
+            muons.phi,
+            muons.charge,
             cset,
             nested=True,
         )
-        ptcorr = pt_resol(
-            ptscalecorr,
-            events.Muon.eta,
-            events.Muon.nTrackerLayers,
+        muon_ptcorr = pt_resol(
+            muon_ptscalecorr,
+            muons.eta,
+            muons.nTrackerLayers,
             cset,
             nested=True,
         )
     else:
         # Data: only scale correction to gen Z peak
-        ptcorr = pt_scale(
+        muon_ptcorr = pt_scale(
             True,
-            events.Muon.pt,
-            events.Muon.eta,
-            events.Muon.phi,
-            events.Muon.charge,
+            muons.pt,
+            muons.eta,
+            muons.phi,
+            muons.charge,
             cset,
             nested=True,
         )
-    # update muon pT
-    events["Muon", "pt"] = ak.where(
-        events.Muon.pt_raw <= 200, ptcorr, events.Muon.pt_raw
-    )
-    # Propagate to MET
-    update_met(events=events, other_obj="Muon", met_obj="PuppiMET")
+
+    # add nominal scale & smearing correction to shifts
+    muons["pt"] = muon_ptcorr
+    for i in range(len(shifts)):
+        shifts[i][0]["Muon"] = muons
+
+    # systematics
+    if hasattr(events, "genWeight") and corrections_config["object_shifts"]:
+        muons_ptscalecorr_up = pt_scale_var(
+            muon_ptcorr, muons.eta, muons.phi, muons.charge, "up", cset, nested=True
+        )
+        muons_ptscalecorr_down = pt_scale_var(
+            muon_ptcorr, muons.eta, muons.phi, muons.charge, "down", cset, nested=True
+        )
+        muons_ptcorr_resol_up = pt_resol_var(
+            muon_ptscalecorr, muon_ptcorr, muons.eta, "up", cset, nested=True
+        )
+        muons_ptcorr_resol_down = pt_resol_var(
+            muon_ptscalecorr, muon_ptcorr, muons.eta, "down", cset, nested=True
+        )
+
+    if corrections_config["object_shifts"]:
+        mu_up, mu_down = events.Muon, events.Muon
+        mu_resol_up, mu_resol_down = events.Muon, events.Muon
+
+        if hasattr(events, "genWeight"):
+            mu_up["pt"] = muons_ptscalecorr_up
+            mu_down["pt"] = muons_ptscalecorr_down
+            mu_resol_up["pt"] = muons_ptcorr_resol_up
+            mu_resol_down["pt"] = muons_ptcorr_resol_down
+
+        shifts += [
+            (
+                {
+                    "Jet": shifts[0][0]["Jet"],
+                    "MET": shifts[0][0]["MET"],
+                    "Muon": mu_up,
+                },
+                f"CMS_scale_m_{year[:4]}Up",
+            )
+        ]
+        shifts += [
+            (
+                {
+                    "Jet": shifts[0][0]["Jet"],
+                    "MET": shifts[0][0]["MET"],
+                    "Muon": mu_down,
+                },
+                f"CMS_scale_m_{year[:4]}Down",
+            )
+        ]
+        shifts += [
+            (
+                {
+                    "Jet": shifts[0][0]["Jet"],
+                    "MET": shifts[0][0]["MET"],
+                    "Muon": mu_resol_up,
+                },
+                f"CMS_res_m_{year[:4]}Up",
+            )
+        ]
+        shifts += [
+            (
+                {
+                    "Jet": shifts[0][0]["Jet"],
+                    "MET": shifts[0][0]["MET"],
+                    "Muon": mu_resol_down,
+                },
+                f"CMS_res_m_{year[:4]}Down",
+            )
+        ]
+
+    return shifts
 
 
-def apply_muon_ss_corrections_run2(events, year):
+def apply_muon_ss_corrections_run2(
+    events: ak.Array,
+    year: str,
+    shifts: list,
+    corrections_config: dict,
+):
     """apply rochester corrections for Run2"""
     # https://twiki.cern.ch/twiki/bin/viewauth/CMS/RochcorMuon
     rochester_data = txt_converters.convert_rochester_file(
@@ -448,76 +519,109 @@ def apply_muon_ss_corrections_run2(events, year):
     )
     rochester = rochester_lookup.rochester_lookup(rochester_data)
 
+    muons = events.Muon
+    counts = ak.num(events.Muon)
+
     if hasattr(events, "genWeight"):
-        hasgen = ~np.isnan(ak.fill_none(events.Muon.matched_gen.pt, np.nan))
-        mc_rand = np.random.rand(*ak.to_numpy(ak.flatten(events.Muon.pt)).shape)
-        mc_rand = ak.unflatten(mc_rand, ak.num(events.Muon.pt, axis=1))
-        corrections = np.array(ak.flatten(ak.ones_like(events.Muon.pt)))
+        hasgen = ~np.isnan(ak.fill_none(muons.matched_gen.pt, np.nan))
+        mc_rand = np.random.rand(*ak.to_numpy(ak.flatten(muons.pt)).shape)
+        mc_rand = ak.unflatten(mc_rand, ak.num(muons.pt, axis=1))
+        corrections = np.array(ak.flatten(ak.ones_like(muons.pt)))
         mc_kspread = rochester.kSpreadMC(
-            events.Muon.charge[hasgen],
-            events.Muon.pt[hasgen],
-            events.Muon.eta[hasgen],
-            events.Muon.phi[hasgen],
-            events.Muon.matched_gen.pt[hasgen],
+            muons.charge[hasgen],
+            muons.pt[hasgen],
+            muons.eta[hasgen],
+            muons.phi[hasgen],
+            muons.matched_gen.pt[hasgen],
         )
         mc_ksmear = rochester.kSmearMC(
-            events.Muon.charge[~hasgen],
-            events.Muon.pt[~hasgen],
-            events.Muon.eta[~hasgen],
-            events.Muon.phi[~hasgen],
-            events.Muon.nTrackerLayers[~hasgen],
+            muons.charge[~hasgen],
+            muons.pt[~hasgen],
+            muons.eta[~hasgen],
+            muons.phi[~hasgen],
+            muons.nTrackerLayers[~hasgen],
             mc_rand[~hasgen],
         )
         hasgen_flat = np.array(ak.flatten(hasgen))
         corrections[hasgen_flat] = np.array(ak.flatten(mc_kspread))
         corrections[~hasgen_flat] = np.array(ak.flatten(mc_ksmear))
-        corrections = ak.unflatten(corrections, ak.num(events.Muon.pt, axis=1))
+        corrections = ak.unflatten(corrections, ak.num(muons.pt, axis=1))
 
-        errors = np.array(ak.flatten(ak.ones_like(events.Muon.pt)))
+        errors = np.array(ak.flatten(ak.ones_like(muons.pt)))
         errspread = rochester.kSpreadMCerror(
-            events.Muon.charge[hasgen],
-            events.Muon.pt[hasgen],
-            events.Muon.eta[hasgen],
-            events.Muon.phi[hasgen],
-            events.Muon.matched_gen.pt[hasgen],
+            muons.charge[hasgen],
+            muons.pt[hasgen],
+            muons.eta[hasgen],
+            muons.phi[hasgen],
+            muons.matched_gen.pt[hasgen],
         )
         errsmear = rochester.kSmearMCerror(
-            events.Muon.charge[~hasgen],
-            events.Muon.pt[~hasgen],
-            events.Muon.eta[~hasgen],
-            events.Muon.phi[~hasgen],
-            events.Muon.nTrackerLayers[~hasgen],
+            muons.charge[~hasgen],
+            muons.pt[~hasgen],
+            muons.eta[~hasgen],
+            muons.phi[~hasgen],
+            muons.nTrackerLayers[~hasgen],
             mc_rand[~hasgen],
         )
         errors[hasgen_flat] = np.array(ak.flatten(errspread))
         errors[~hasgen_flat] = np.array(ak.flatten(errsmear))
-        errors = ak.unflatten(errors, ak.num(events.Muon.pt, axis=1))
+        errors = ak.unflatten(errors, ak.num(muons.pt, axis=1))
     else:
-        corrections = rochester.kScaleDT(
-            events.Muon.charge, events.Muon.pt, events.Muon.eta, events.Muon.phi
+        corrections = rochester.kScaleDT(muons.charge, muons.pt, muons.eta, muons.phi)
+        errors = rochester.kScaleDTerror(muons.charge, muons.pt, muons.eta, muons.phi)
+
+    flat_muons = ak.flatten(muons)
+    corrected_pt = flat_muons.pt * ak.flatten(corrections)
+
+    # add nominal scale & smearing correction to shifts
+    pt_nom = ak.where(flat_muons.pt <= 200, corrected_pt, flat_muons.pt)
+    muons["pt"] = ak.unflatten(pt_nom, counts)
+    for i in range(len(shifts)):
+        shifts[i][0]["Muon"] = muons
+
+    # systematics
+    if corrections_config["object_shifts"]:
+        pt_error = ak.where(
+            flat_muons.pt <= 200, ak.flatten(errors), np.zeros_like(flat_muons.pt)
         )
-        errors = rochester.kScaleDTerror(
-            events.Muon.charge, events.Muon.pt, events.Muon.eta, events.Muon.phi
-        )
+        pt_delta = flat_muons.pt * pt_error
+        pt_up = pt_nom + pt_delta
+        pt_down = pt_nom - pt_delta
 
-    # Backup original pt and MET values
-    events["Muon", "pt_raw"] = events.Muon.pt
-    events["MET", "pt_raw"] = events.MET.pt
-    events["MET", "phi_raw"] = events.MET.phi
+        mu_up, mu_down = events.Muon, events.Muon
 
-    # Apply nominal correction
-    muons, counts, fields = events.Muon, ak.num(events.Muon), ak.fields(events.Muon)
-    out = ak.flatten(muons)
-    corrected_pt = out.pt_raw * ak.flatten(corrections)
-    pt_nom = ak.where(out.pt_raw <= 200, corrected_pt, out.pt_raw)
-    events["Muon", "pt"] = ak.unflatten(pt_nom, counts)
+        if hasattr(events, "genWeight"):
+            mu_up["pt"] = ak.unflatten(pt_up, counts)
+            mu_down["pt"] = ak.unflatten(pt_down, counts)
 
-    # Propagate to MET
-    update_met(events=events, other_obj="Muon", met_obj="MET")
+        shifts += [
+            (
+                {
+                    "Jet": shifts[0][0]["Jet"],
+                    "MET": shifts[0][0]["MET"],
+                    "Muon": mu_up,
+                },
+                f"CMS_rochester_{year[:4]}Up",
+            )
+        ]
+        shifts += [
+            (
+                {
+                    "Jet": shifts[0][0]["Jet"],
+                    "MET": shifts[0][0]["MET"],
+                    "Muon": mu_down,
+                },
+                f"CMS_rochester_{year[:4]}Down",
+            )
+        ]
+
+    return shifts
 
 
-def apply_muon_ss_corrections(events, year):
+def apply_muon_ss_corrections(events, year, shifts, corrections_config):
     if year.startswith("201"):
-        apply_muon_ss_corrections_run2(events, year)
+        corr_func = apply_muon_ss_corrections_run2
     else:
-        apply_muon_ss_corrections_run3(events, year)
+        corr_func = apply_muon_ss_corrections_run3
+    shifts = corr_func(events, year, shifts, corrections_config)
+    return shifts

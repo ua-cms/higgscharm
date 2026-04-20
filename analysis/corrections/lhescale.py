@@ -1,6 +1,7 @@
 import numpy as np
 
-def add_scalevar_weight(events, weights_container, variation="nominal"):
+
+def add_scalevar_weight(events, weights_container, shift):
     """
     Twiki: https://twiki.cern.ch/twiki/bin/viewauth/CMS/TopSystematics#Factorization_and_renormalizatio
 
@@ -18,7 +19,7 @@ def add_scalevar_weight(events, weights_container, variation="nominal"):
     """
     lhe_weights = events.LHEScaleWeight
     nom = np.ones(len(weights_container.weight()))
-    if variation == "nominal":
+    if shift is None:
         if len(lhe_weights) > 0:
             if len(lhe_weights[0]) == 9:
                 nom = lhe_weights[:, 4]

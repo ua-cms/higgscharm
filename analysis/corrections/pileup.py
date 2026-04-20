@@ -3,14 +3,14 @@ import awkward as ak
 from typing import Type
 from pathlib import Path
 from coffea.analysis_tools import Weights
-from analysis.corrections.utils import correction_files
+from analysis.corrections.correctionlib_files import correction_files
 
 
 def add_pileup_weight(
     events,
     weights_container: Type[Weights],
     year: str,
-    variation: str = "nominal",
+    shift: str,
 ) -> None:
     """
     add pileup weights to weights container
@@ -23,9 +23,9 @@ def add_pileup_weight(
             Weight object from coffea.analysis_tools
         year:
             dataset year {2016preVFP, 2016postVFP, 2017, 2018, 2022preEE, 2022postEE, 2023preBPix, 2023postBPix, 2024}
-        variation:
-            if 'nominal' (default) add 'nominal', 'up' and 'down'
-            variations to weights container. else, add only 'nominal' weights.
+        shift:
+            if None add 'nominal', 'up' and 'down' variations to weights container.
+            else, add only 'nominal' weights.
     """
     # define correction set and goldenJSON file names
     pileup_corr_file = correction_files["pileup"][year]
@@ -46,7 +46,7 @@ def add_pileup_weight(
     nti = events.Pileup.nTrueInt
     # get nominal scale factors
     nominal_sf = cset[year_to_corr[year]].evaluate(ak.to_numpy(nti), "nominal")
-    if variation == "nominal":
+    if shift is None:
         # get up and down variations
         up_sf = cset[year_to_corr[year]].evaluate(ak.to_numpy(nti), "up")
         down_sf = cset[year_to_corr[year]].evaluate(ak.to_numpy(nti), "down")

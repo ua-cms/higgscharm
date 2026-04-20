@@ -95,6 +95,13 @@ if __name__ == "__main__":
         default="/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-base-almalinux9:0.7.30-py3.10",
     )
     parser.add_argument("--jobflavor", dest="jobflavor", type=str, default="longlunch")
+    parser.add_argument(
+        "-m",
+        "--memory",
+        type=str,
+        default="2000",
+        help="Requested memory (in MB) for the condor job",
+    )
     args = parser.parse_args()
 
     # check if the fileset for the given year exists, generate it otherwise
@@ -163,6 +170,7 @@ if __name__ == "__main__":
             line = line.replace("JOBNUM_FILE", str(jobnum_file))
             line = line.replace("JOBFLAVOR", f'"{args.jobflavor}"')
             line = line.replace("IMAGE", f'"{args.image}"')
+            line = line.replace("MEMORY", args.memory)
             condor_file.write(line)
 
     if args.submit:

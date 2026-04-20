@@ -1,238 +1,238 @@
-Muon0C:
+Muon0Run2024C:
   era: C
   query: Muon0/Run2024C-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1C:
+Muon1Run2024C:
   era: C
   query: Muon1/Run2024C-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGC:
+MuonEGRun2024C:
   era: C
   query: MuonEG/Run2024C-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGamma0C:
+EGamma0Run2024C:
   era: C
   query: EGamma0/Run2024C-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1C:
+EGamma1Run2024C:
   era: C
   query: EGamma1/Run2024C-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-Muon0D:
+Muon0Run2024D:
   era: D
   query: Muon0/Run2024D-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1D:
+Muon1Run2024D:
   era: D
   query: Muon1/Run2024D-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGD:
+MuonEGRun2024D:
   era: D
   query: MuonEG/Run2024D-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGamma0D:
+EGamma0Run2024D:
   era: D
   query: EGamma0/Run2024D-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1D:
+EGamma1Run2024D:
   era: D
   query: EGamma1/Run2024D-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-Muon0E:
+Muon0Run2024E:
   era: E
   query: Muon0/Run2024E-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1E:
+Muon1Run2024E:
   era: E
   query: Muon1/Run2024E-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGE:
+MuonEGRun2024E:
   era: E
   query: MuonEG/Run2024E-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGamma0E:
+EGamma0Run2024E:
   era: E
   query: EGamma0/Run2024E-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1E:
+EGamma1Run2024E:
   era: E
   query: EGamma1/Run2024E-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-Muon0F:
+Muon0Run2024F:
   era: F
   query: Muon0/Run2024F-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1F:
+Muon1Run2024F:
   era: F
   query: Muon1/Run2024F-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGF:
+MuonEGRun2024F:
   era: F
   query: MuonEG/Run2024F-MINIv6NANOv15-v2/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGamma0F:
+EGamma0Run2024F:
   era: F
   query: EGamma0/Run2024F-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1F:
+EGamma1Run2024F:
   era: F
   query: EGamma1/Run2024F-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-Muon0G:
+Muon0Run2024G:
   era: G
   query: Muon0/Run2024G-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1G:
+Muon1Run2024G:
   era: G
   query: Muon1/Run2024G-MINIv6NANOv15-v2/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGG:
+MuonEGRun2024G:
   era: G
   query: MuonEG/Run2024G-MINIv6NANOv15-v3/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGamma0G:
+EGamma0Run2024G:
   era: G
   query: EGamma0/Run2024G-MINIv6NANOv15-v2/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1G:
+EGamma1Run2024G:
   era: G
   query: EGamma1/Run2024G-MINIv6NANOv15-v2/NANOAOD
   process: Data
   key: electron
   xsec: None
-Muon0H:
+Muon0Run2024H:
   era: H
   query: Muon0/Run2024H-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1H:
+Muon1Run2024H:
   era: H
   query: Muon1/Run2024H-MINIv6NANOv15-v2/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGH:
+MuonEGRun2024H:
   era: H
   query: MuonEG/Run2024H-MINIv6NANOv15-v2/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGamma0H:
+EGamma0Run2024H:
   era: H
   query: EGamma0/Run2024H-MINIv6NANOv15-v2/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1H:
+EGamma1Run2024H:
   era: H
   query: EGamma1/Run2024H-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-Muon0v1I:
+Muon0Run2024I:
   era: I
   query: Muon0/Run2024I-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon0v2I:
+Muon0Run2024I:
   era: I
   query: Muon0/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1v1I:
+Muon1Run2024I:
   era: I
   query: Muon1/Run2024I-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-Muon1v2I:
+Muon1Run2024I:
   era: I
   query: Muon1/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGv1I:
+MuonEGRun2024I:
   era: I
   query: MuonEG/Run2024I-MINIv6NANOv15-v2/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-MuonEGv2I:
+MuonEGRun2024I:
   era: I
   query: MuonEG/Run2024I-MINIv6NANOv15_v2-v2/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGamma0v1I:
+EGamma0Run2024I:
   era: I
   query: EGamma0/Run2024I-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma0v2I:
+EGamma0Run2024I:
   era: I
   query: EGamma0/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1v1I:
+EGamma1Run2024I:
   era: I
   query: EGamma1/Run2024I-MINIv6NANOv15-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGamma1v2I:
+EGamma1Run2024I:
   era: I
   query: EGamma1/Run2024I-MINIv6NANOv15_v2-v1/NANOAOD
   process: Data

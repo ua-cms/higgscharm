@@ -53,7 +53,7 @@ With `field` you define how to select the object, either through a NanoAOD field
 
 `cuts` defines the set of object-level cuts to apply to the object. Similarly, you can use NanoAOD fields (`events.Muon.pt > 24`) to define a cut or any valid expression using the already defined objects (`objects['dimuons'].z.mass < 120.0`). Alternatively, you can also use a working point function (`working_points.muon_iso(events, 'tight')`) defined in `analysis/working_points/working_points.py)`
 
-You can also use `add_cut` to define masks that will be added to the object and can be accessed later in the workflow:
+You can also use `add_cut` to define masks that will be added to the object collection as a new field and can be accessed later in the workflow:
 
 ```yaml
 muons:
@@ -114,13 +114,17 @@ event_selection:
       - subleading_muon_pt
       - one_dimuon
 ```
-- `hlt_paths`: This section associates each dataset key (e.g. `muon`, `electron`) with one or more trigger flags. The available trigger flags are located at `analysis/selections/trigger_flags.yaml`)
 
-- `selections`: Here you define all event-level cuts. Similarly to object selection, you can use any valid expression from a NanoAOD field or a custom event-selection function defined at `analysis/selections/event_selections.py`
+- `hlt_paths`: Maps each dataset key (e.g. muon, electron) to the list of HLT trigger flags relevant for that dataset
+    - Trigger flags are defined in [analysis/selections/trigger_flags.yaml](https://github.com/ua-cms/higgscharm/blob/main/analysis/selections/trigger_flags.yaml)
+    - For data: only the triggers listed under the corresponding dataset key are applied.
+    - For MC: all triggers across datasets are combined with a logical OR via [`get_trigger_mask()`](https://github.com/ua-cms/higgscharm/blob/main/analysis/selections/trigger.py#L96-L125). Alternatively, you can write your own trigger function to be used.
+    - In addition, lepton–trigger object matching is enforced (via [`get_trigger_match_mask()`](https://github.com/ua-cms/higgscharm/blob/main/analysis/selections/trigger.py#L128-L249)) to ensure selected leptons are consistent with the fired triggers.
 
-    For **data**, only the trigger flags listed under `hlt_paths` for the corresponding dataset key are applied. For **MC**, all trigger flags across all datasets are combined with a logical OR (via `get_trigger_mask()`). In addition, lepton–trigger object matching is enforced (via `get_trigger_match_mask()`) to ensure selected leptons are consistent with the fired HLT paths.
+- `selections`: Defines event-level cuts. Similarly to object selection, you can use any valid expression from a NanoAOD field or a custom event-selection function defined at [`analysis/selections/event_selections.py`](https://github.com/ua-cms/higgscharm/blob/main/analysis/selections/event_selections.py)
 
-- `categories`: List of cuts to select events. Each category defines a region for histogram filling and postprocessing
+- `categories`: Named groups of selections that define analysis regions. Each category defines a region for histogram filling and postprocessing
+
 
 
 ### `corrections`
@@ -129,10 +133,12 @@ Contains the object-level corrections and event-level weights to apply:
 
 ```yaml
 corrections:
-  objects:
-    - jets         # JEC
-    - muons        # Muon scale and resolution
-    - electrons    # Electron scale and resolution 
+  object:
+    - jet                 # Jet scale and resolution
+    - jetveto             # Jet veto
+    - muon                # Muon scale and resolution  
+    - electron            # Electron scale and resolution 
+  object_shifts: false    # include object-level shifts 
   event_weights:
     genWeight: true
     pileupWeight: true
@@ -150,6 +156,12 @@ corrections:
       - trigger: false
 ```
 
+- `object_shifts`: If true, object-level systematic shifts (e.g., JES_up, JES_down, JER_up, JER_down, etc) are automatically applied and propagated to downstream event-level calculations.
+- Corrections are implemented through a set of utilities managed by two functions:
+    - [`object_corrector_manager`](https://github.com/ua-cms/higgscharm/blob/main/analysis/corrections/correction_manager.py#L19-L73): applies object-level corrections (jets scale and smearing corrections, rochester correctiones etc.).  
+    - [`weight_manager`](https://github.com/ua-cms/higgscharm/blob/main/analysis/corrections/correction_manager.py#L76-L210): applies event-level weights (pileup, lepton efficiencies, etc.).
+
+**Note**: Ensure that the working points used for object selection and event-level corrections (ID, isolation, etc.) are consistent!
 
 ### `histogram_config`
 

@@ -113,3 +113,39 @@ def dump_ak_array(
         shutil.copy(local_file, destination)
         assert os.path.isfile(destination)
     pathlib.Path(local_file).unlink()
+
+
+def dump_parquet(
+    events,
+    weights_container,
+    variables_map,
+    workflow,
+    year,
+    category,
+    output_location,
+    shift,
+):
+    if shift is None:
+        if hasattr(events, "genWeight"):
+            # add weights to variables_map
+            variations = ["nominal", *weights_container.variations]
+            for variation in variations:
+                if variation == "nominal":
+                    variables_map[f"weight_nominal"] = weights_container.weight()
+                    for partial_weight in weights_container.weightStatistics:
+                        variables_map[f"weight_{partial_weight}"] = (
+                            weights_container.partial_weight(include=[partial_weight])
+                        )
+                else:
+                    variables_map[f"weight_{variation}"] = weights_container.weight(
+                        modifier=variation
+                    )
+
+        # save parquet files
+        fname = (
+            events.behavior["__events_factory__"]._partition_key.replace("/", "_")
+            + ".parquet"
+        )
+        dataset = events.metadata["dataset"]
+        subdirs = [workflow, year, dataset, category]
+        dump_pa_table(variables_map, fname, output_location, subdirs)

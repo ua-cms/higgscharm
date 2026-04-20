@@ -5,7 +5,8 @@ from typing import Type
 from coffea.analysis_tools import Weights
 from analysis.filesets.utils import get_nano_version
 from analysis.selections.event_selections import get_trigger_mask
-from analysis.corrections.utils import correction_files, unflat_sf
+from analysis.corrections.utils import unflat_sf
+from analysis.corrections.correctionlib_files import correction_files
 
 
 class ElectronWeights:
@@ -33,13 +34,13 @@ class ElectronWeights:
         events: ak.Array,
         weights: Type[Weights],
         year: str,
-        variation: str,
+        shift: str,
     ) -> None:
         self.events = events
         self.electrons = events.selected_electrons
         self.weights = weights
         self.year = year
-        self.variation = variation
+        self.shift = shift
         self.nano_version = get_nano_version(year)
 
         self.flat_electrons = ak.flatten(self.electrons)
@@ -58,14 +59,15 @@ class ElectronWeights:
         add electron ID weights to weights container
         """
         if self.nano_version in ["12", "15"]:
-            nominal_weights = self.get_id_weights_run3(variation="sf", id_wp=id_wp)
-            up_weights = self.get_id_weights_run3(variation="sfup", id_wp=id_wp)
-            down_weights = self.get_id_weights_run3(variation="sfdown", id_wp=id_wp)
+            id_weight_func = self.get_id_weights_run3
         elif self.nano_version == "9":
-            nominal_weights = self.get_id_weights_run2(variation="sf", id_wp=id_wp)
-            up_weights = self.get_id_weights_run2(variation="sfup", id_wp=id_wp)
-            down_weights = self.get_id_weights_run2(variation="sfdown", id_wp=id_wp)
-        if self.variation == "nominal":
+            id_weight_func = self.get_id_weights_run2
+
+        nominal_weights = id_weight_func(syst="sf", id_wp=id_wp)
+
+        if self.shift is None:
+            up_weights = id_weight_func(syst="sfup", id_wp=id_wp)
+            down_weights = id_weight_func(syst="sfdown", id_wp=id_wp)
             # add scale factors to weights container
             self.weights.add(
                 name=f"CMS_eff_e_id_{self.year[:4]}",
@@ -90,26 +92,15 @@ class ElectronWeights:
             "RecoAbove75": f"CMS_eff_e_reco_above75_{self.year[:4]}",
         }
         if self.nano_version in ["12", "15"]:
-            nominal_weights = self.get_reco_weights_run3(
-                variation="sf", reco_range=reco_range
-            )
-            up_weights = self.get_reco_weights_run3(
-                variation="sfup", reco_range=reco_range
-            )
-            down_weights = self.get_reco_weights_run3(
-                variation="sfdown", reco_range=reco_range
-            )
+            reco_weight_func = self.get_reco_weights_run3
         elif self.nano_version == "9":
-            nominal_weights = self.get_reco_weights_run2(
-                variation="sf", reco_range=reco_range
-            )
-            up_weights = self.get_reco_weights_run2(
-                variation="sfup", reco_range=reco_range
-            )
-            down_weights = self.get_reco_weights_run2(
-                variation="sfdown", reco_range=reco_range
-            )
-        if self.variation == "nominal":
+            reco_weight_func = self.get_reco_weights_run2
+
+        nominal_weights = reco_weight_func(syst="sf", reco_range=reco_range)
+
+        if self.shift is None:
+            up_weights = reco_weight_func(syst="sfup", reco_range=reco_range)
+            down_weights = reco_weight_func(syst="sfdown", reco_range=reco_range)
             # add scale factors to weights container
             self.weights.add(
                 name=var_naming_map[reco_range],
@@ -128,10 +119,10 @@ class ElectronWeights:
         add electron HLT weights to weights container
         """
         if self.nano_version in ["12", "15"]:
-            nominal_weights = self.get_hlt_weights_run3(variation="nom", id_wp=id_wp)
+            nominal_weights = self.get_hlt_weights_run3(syst="nom", id_wp=id_wp)
         elif self.nano_version == "9":
-            nominal_weights = self.get_hlt_weights_run2(variation="nom", id_wp=id_wp)
-        if self.variation == "nominal":
+            nominal_weights = self.get_hlt_weights_run2(syst="nom", id_wp=id_wp)
+        if self.shift is None:
             # add scale factors to weights container
             self.weights.add(
                 name=f"CMS_eff_e_trigger_{self.year[:4]}",
@@ -145,7 +136,7 @@ class ElectronWeights:
                 weight=nominal_weights,
             )
 
-    def get_id_weights_run3(self, variation, id_wp):
+    def get_id_weights_run3(self, syst, id_wp):
         """Compute electron ID weights for Run3 datasets"""
         # get electrons that pass the id wp, and within SF binning
         if self.nano_version != "15":
@@ -175,7 +166,7 @@ class ElectronWeights:
         }
         cset_args = [
             year_map.get(self.year, self.year),
-            variation,
+            syst,
             id_wp,
             electron_eta,
             electron_pt,
@@ -189,7 +180,7 @@ class ElectronWeights:
         )
         return weights
 
-    def get_id_weights_run2(self, variation, id_wp):
+    def get_id_weights_run2(self, syst, id_wp):
         """Compute electron ID weights for Run2 datasets"""
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = (self.flat_electrons.pt > 10.0) & (
@@ -205,7 +196,7 @@ class ElectronWeights:
 
         cset_args = [
             self.year,
-            variation,
+            syst,
             id_wp,
             electron_eta,
             electron_pt,
@@ -219,7 +210,7 @@ class ElectronWeights:
         )
         return weights
 
-    def get_reco_weights_run3(self, variation, reco_range):
+    def get_reco_weights_run3(self, syst, reco_range):
         """Compute electron Reco weights for Run3 datasets"""
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = {
@@ -251,7 +242,7 @@ class ElectronWeights:
         }
         cset_args = [
             year_map.get(self.year, self.year),
-            variation,
+            syst,
             reco_range,
             electron_eta,
             electron_pt,
@@ -265,7 +256,7 @@ class ElectronWeights:
         )
         return weights
 
-    def get_reco_weights_run2(self, variation, reco_range):
+    def get_reco_weights_run2(self, syst, reco_range):
         """Compute electron Reco weights for Run2 datasets"""
         # get electrons that pass the id wp, and within SF binning
         electron_pt_mask = {
@@ -290,7 +281,7 @@ class ElectronWeights:
 
         cset_args = [
             self.year,
-            variation,
+            syst,
             reco_range,
             electron_eta,
             electron_pt,
@@ -302,7 +293,7 @@ class ElectronWeights:
         )
         return weights
 
-    def get_hlt_weights_run3(self, variation, id_wp):
+    def get_hlt_weights_run3(self, syst, id_wp):
         """Compute electron HLT weights for Run3 datasets"""
         # get correction set
         cset = correctionlib.CorrectionSet.from_file(
@@ -329,14 +320,14 @@ class ElectronWeights:
             "2023postBPix": "2023PromptD",
             "2024": "2024Prompt",
         }
-        sf_variations_map = {"nom": "sf", "up": "sfup", "down": "sfdown"}
+        sf_syst_map = {"nom": "sf", "up": "sfup", "down": "sfdown"}
 
         kind = "single" if ak.all(ak.num(self.electrons) == 1) else "double"
         if kind == "single":
             # for single electron events, compute SF from POG SF
             sf = cset["Electron-HLT-SF"].evaluate(
                 year_map[self.year],
-                sf_variations_map[variation],
+                sf_syst_map[syst],
                 hlt_path_id_map[id_wp],
                 electron_eta,
                 electron_pt,
@@ -349,7 +340,7 @@ class ElectronWeights:
             # for double electron events, compute SF from electrons' efficiencies
             data_eff = cset["Electron-HLT-DataEff"].evaluate(
                 year_map[self.year],
-                variation,
+                syst,
                 hlt_path_id_map[id_wp],
                 electron_eta,
                 electron_pt,
@@ -367,7 +358,7 @@ class ElectronWeights:
 
             mc_eff = cset["Electron-HLT-McEff"].evaluate(
                 year_map[self.year],
-                variation,
+                syst,
                 hlt_path_id_map[id_wp],
                 electron_eta,
                 electron_pt,
@@ -386,7 +377,7 @@ class ElectronWeights:
 
         return nominal_sf
 
-    def get_hlt_weights_run2(self, variation, id_wp):
+    def get_hlt_weights_run2(self, syst, id_wp):
         """Compute electron HLT weights for Run2 datasets"""
         hlt_paths = {
             "2016preVFP": "Ele27_WPTight_Gsf_OR_Photon175",
