@@ -66,10 +66,11 @@ event_selection:
       - one_dimuon
       - electron_veto
 corrections:
-  objects:
-    - jec
-    - muon_ss
-    - electon_ss
+  object:
+    - jet
+    - muon
+    - electron
+  object_shifts: false
   event_weights:
     genWeight: true
     pileupWeight: true
@@ -82,6 +83,8 @@ corrections:
       - id: tight
       - iso: tight
       - trigger: true
+    ctagging: 
+      - wp: medium
 histogram_config:
   add_syst_axis: true
   add_weight: true
@@ -381,3 +384,4 @@ histogram_config:
       - thirdleadingjet_flavour
       - thirdleadingjet_cvsb_pnet
       - thirdleadingjet_cvsl_pnet
+
