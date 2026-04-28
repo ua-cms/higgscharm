@@ -35,15 +35,13 @@ def dump_pa_table(
     )
     out = {}
     for variable, array in arrays.items():
-        if array.ndim == 2:
-            out[variable] = ak.firsts(array)
-        else:
-            out[variable] = array
+        # Preserve jagged arrays - don't flatten with ak.firsts()
+        out[variable] = array
 
-    import pyarrow as pa
     import pyarrow.parquet as pq
 
-    table = pa.Table.from_pydict(out)
+    # Use ak.to_arrow to properly handle jagged arrays
+    table = ak.to_arrow_table(ak.Array(out))
     if len(table) != 0:  # skip dataframes with empty entries
         pq.write_table(table, local_file)
         if xrootd:

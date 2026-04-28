@@ -76,6 +76,17 @@ def add_lhepdf_weight(events, weights_container):
             w_up_total = ak.ones_like(delta_pdf)
             w_down_total = ak.ones_like(delta_pdf)
 
+        # Case 4: other number of members → skip PDF weights
+        else:
+            print(f"Unexpected number of LHEPdfWeight members: {ak.to_list(n_members[:5])}, skipping PDF/AlphaS systematic Weight")
+            delta_pdf = np.ones(len(events))
+            w_up_pdf = np.ones(len(events))
+            w_down_pdf = np.ones(len(events))
+            w_up_alpha = np.ones(len(events))
+            w_down_alpha = np.ones(len(events))
+            w_up_total = np.ones(len(events))
+            w_down_total = np.ones(len(events))
+
     else:
         print("No LHEPdf Weights in dataset, skiping PDF/AlphaS systematic Weight")
         delta_pdf = np.ones(len(events))
