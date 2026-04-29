@@ -279,6 +279,8 @@ Barrel: $|\eta| < 1.5$; Endcap: $1.5 < |\eta| < 2.5$.
 
 ---
 
+~96% classified as gg→ZZ by the MVA.
+
 ---
 
 ## Script Reference
