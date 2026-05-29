@@ -52,6 +52,8 @@ def fill_histogram(
 ):
     if histogram_config.layout == "individual":
         for variable in histograms:
+            if variable not in variables_map:
+                continue
             variable_array = get_variable_array(
                 histogram=histograms[variable],
                 histogram_config=histogram_config,
@@ -77,15 +79,33 @@ def fill_histogram(
             histograms[variable].fill(**fill_args)
     else:
         for key, variables in histogram_config.layout.items():
+            # Separate jagged (per-jet) from scalar (per-event) variables in this group
+            jagged_vars = [
+                v for v in variables
+                if v in variables_map and getattr(variables_map[v], "ndim", 1) == 2
+            ]
+            scalar_vars = [
+                v for v in variables
+                if v in variables_map and getattr(variables_map[v], "ndim", 1) < 2
+            ]
+            # Use the first jagged variable as the reference for broadcasting
+            ref_jagged = variables_map[jagged_vars[0]] if jagged_vars else None
+
             fill_args = {}
             for variable in variables:
-                fill_args[variable] = get_variable_array(
+                arr = get_variable_array(
                     histogram=histograms[key],
                     histogram_config=histogram_config,
                     variable=variable,
                     variables_map=variables_map,
                     flow=flow,
                 )
+                # Scalar variables need to be broadcast to match flattened jagged length
+                if ref_jagged is not None and variable in scalar_vars:
+                    arr = ak.to_numpy(
+                        ak.flatten(ak.broadcast_arrays(ak.Array(arr), ref_jagged)[0])
+                    )
+                fill_args[variable] = arr
             if len(histogram_config.categories) > 1:
                 fill_args.update({"category": category})
             if histogram_config.add_syst_axis:
@@ -94,12 +114,21 @@ def fill_histogram(
                 fill_args.update(
                     {
                         "weight": (
-                            ak.flatten(ak.ones_like(variables_map[variable]) * weights)
-                            if variables_map[variable].ndim == 2
+                            ak.to_numpy(ak.flatten(ak.ones_like(ref_jagged) * weights))
+                            if ref_jagged is not None
                             else weights
                         ),
                     }
                 )
+            import logging
+            logging.debug(
+                f"fill layout '{key}': "
+                + ", ".join(
+                    f"{k}={len(v) if hasattr(v,'__len__') else '?'}"
+                    for k, v in fill_args.items()
+                    if k not in ("variation", "category")
+                )
+            )
             histograms[key].fill(**fill_args)
 
 

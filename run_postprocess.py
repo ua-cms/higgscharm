@@ -5,6 +5,7 @@ import glob
 import logging
 import argparse
 import subprocess
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from collections import defaultdict
@@ -29,6 +30,7 @@ from analysis.postprocess.utils import (
     load_processed_histograms,
     get_results_report,
 )
+from analysis.postprocess.mva_inference import MVAPostProcessor
 
 
 OUTPUT_DIR = Path.cwd() / "outputs"
@@ -114,6 +116,34 @@ def parse_arguments():
         "--skipmerging", action="store_true", help="Skip parquet outputs merging"
     )
     parser.add_argument("--blind", action="store_true", help="Blind data")
+    parser.add_argument(
+        "--mva-inference",
+        action="store_true",
+        help="Run MVA inference on merged parquet files",
+    )
+    parser.add_argument(
+        "--mva-config",
+        type=str,
+        default=None,
+        help="Path to b-hive config YAML for MVA inference",
+    )
+    parser.add_argument(
+        "--mva-model",
+        type=str,
+        default=None,
+        help="Path to trained model .pt file for MVA inference",
+    )
+    parser.add_argument(
+        "--mva-output",
+        type=str,
+        default=None,
+        help="Output directory for MVA-scored parquets (default: outputs/<workflow>_mvascores/<year>)",
+    )
+    parser.add_argument(
+        "--mva-mass-window",
+        action="store_true",
+        help="Apply mass window cut (100 < m4l < 150 GeV) before running MVA inference",
+    )
     return parser.parse_args()
 
 
@@ -432,6 +462,108 @@ if __name__ == "__main__":
                         combined_cutflow, eff_df
                     )
                     cutflow_eff.to_csv(category_dir / f"cutflow_eff_{category}.csv")
+
+    if args.mva_inference:
+        if not args.mva_config or not args.mva_model:
+            raise ValueError(
+                "--mva-config and --mva-model are required when using --mva-inference"
+            )
+        print_header(f"Running MVA inference for {args.year}")
+        logging.info(f"Config: {args.mva_config}")
+        logging.info(f"Model:  {args.mva_model}")
+
+        # Resolve output dir: default to outputs/<workflow>_mvascores/<year>
+        if args.mva_output:
+            mva_output_dir = Path(args.mva_output)
+        else:
+            mva_output_dir = OUTPUT_DIR / f"{args.workflow}_mvascores" / args.year
+        mva_output_dir.mkdir(parents=True, exist_ok=True)
+        logging.info(f"MVA output: {mva_output_dir}")
+
+        processor = MVAPostProcessor(
+            bhive_config_path=args.mva_config,
+            bhive_model_path=args.mva_model,
+            apply_mass_window=args.mva_mass_window,
+        )
+        processor._load_model()
+
+        import hist as hist_lib
+
+        def _build_mva_histograms(class_names):
+            """Build one histogram per MVA score column (signal + per-class)."""
+            hists = {}
+            score_cols = ["mva_signal_score"] + [f"mva_score_{c}" for c in class_names]
+            for col in score_cols:
+                hists[col] = hist_lib.Hist(
+                    hist_lib.axis.Regular(50, 0, 1, name=col, label=col),
+                    hist_lib.axis.StrCategory([], name="process", growth=True),
+                    hist_lib.axis.StrCategory([], name="variation", growth=True),
+                    hist_lib.storage.Weight(),
+                )
+            return hists
+
+        def _fill_mva_histograms(hists, df, process_name, weight_col="weight_nominal"):
+            """Fill MVA score histograms from a scored DataFrame."""
+            # Only fill events with valid scores (apply_mass_window sets -1 outside window)
+            mask = df["mva_signal_score"] >= 0
+            df_valid = df[mask]
+            if df_valid.empty:
+                return
+            weights = (
+                df_valid[weight_col].fillna(1.0).values
+                if weight_col in df_valid.columns
+                else np.ones(len(df_valid))
+            )
+            for col, h in hists.items():
+                if col in df_valid.columns:
+                    h.fill(
+                        **{col: df_valid[col].values},
+                        process=process_name,
+                        variation="nominal",
+                        weight=weights,
+                    )
+
+        # Run on merged parquets (parquets_<sample>/ dirs created by merge step)
+        merged_dirs = sorted(output_dir.glob("parquets_*"))
+        if not merged_dirs:
+            logging.warning(
+                "No merged parquet dirs found (parquets_*/). "
+                "Run with --postprocess first, or ensure --output_format parquet was used."
+            )
+        for merged_dir in merged_dirs:
+            sample_name = merged_dir.name.replace("parquets_", "")
+            sample_hists = _build_mva_histograms(processor.class_names)
+
+            for pq_file in sorted(merged_dir.rglob("*.parquet")):
+                df = pd.read_parquet(pq_file)
+                if df.empty:
+                    continue
+                features = processor.prepare_features(df)
+                result = processor.predict(features)
+                for i, cls in enumerate(processor.class_names):
+                    df[f"mva_score_{cls}"] = result["scores"][:, i]
+                df["mva_signal_score"] = result["signal_score"]
+                df["mva_class_prediction"] = result["class_prediction"]
+
+                # Save scored parquet
+                rel = pq_file.relative_to(merged_dir)
+                out_file = mva_output_dir / sample_name / rel
+                out_file.parent.mkdir(parents=True, exist_ok=True)
+                df.to_parquet(out_file, index=False)
+
+                # Accumulate into histograms
+                _fill_mva_histograms(sample_hists, df, sample_name)
+                logging.info(
+                    f"  {sample_name}/{rel}: {len(df)} events, "
+                    f"mean signal score={df['mva_signal_score'].mean():.4f}"
+                )
+
+            # Save per-sample MVA histogram coffea file
+            hist_file = mva_output_dir / f"{sample_name}_mva_scores.coffea"
+            save(sample_hists, hist_file)
+            logging.info(f"  Saved histograms: {hist_file}")
+
+        logging.info("MVA inference complete")
 
     if args.plot:
         subprocess.run("python3 analysis/postprocess/build_color_map.py", shell=True)

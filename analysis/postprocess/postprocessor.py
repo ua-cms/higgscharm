@@ -4,6 +4,7 @@ import glob
 import logging
 import numpy as np
 import pandas as pd
+import awkward as ak
 import dask.dataframe as dd
 from pathlib import Path
 from coffea.util import load, save
@@ -24,14 +25,15 @@ from analysis.postprocess.utils import (
 
 
 def fill_histograms_from_parquets(
-    year, sample, categories, workflow_config, output_dir, nano_version
+    year, sample, categories, workflow_config, output_dir
 ):
     """Build and fill histograms from parquet files for a given sample"""
-    dataset_config = get_dataset_config(year, nano_version)
+    dataset_config = get_dataset_config(year)
     histogram_config = workflow_config.histogram_config
     variables = list(histogram_config.axes.keys())
-    histograms = HistBuilder(workflow_config).build_histogram()
+    histograms = HistBuilder(workflow_config).build_individual_histogram()
     process_dict = get_process_dict(output_dir, year, categories)
+    sample_histograms = copy.deepcopy(histograms)
 
     for category in categories:
         logging.info(f"Filling {sample} histograms")
@@ -44,6 +46,9 @@ def fill_histograms_from_parquets(
             sample_parquets = glob.glob(
                 f"{output_dir}/parquets_{sample}/{category}/*.parquet"
             )
+            if not sample_parquets:
+                logging.warning(f"No parquet files found for sample {sample}, category {category} — skipping")
+                continue
             sample_df = dd.read_parquet(
                 sample_parquets, engine="pyarrow", calculate_divisions=False
             ).compute()
@@ -56,14 +61,23 @@ def fill_histograms_from_parquets(
         variables_map = {}
         variables_mask_map = {}
         for variable in variables:
-            if variable in sample_df.columns:
-                variable_array = sample_df[variable].values
-            else:
+            if variable not in sample_df.columns:
                 logging.info(f"Could not found variable {variable} for sample {sample}")
+                continue
+            variable_array = sample_df[variable].values
             if variable_array.dtype.type is np.object_:
-                variable_array = np.array(
-                    [x if x is not None else np.nan for x in variable_array], dtype=bool
-                )
+                first_valid = next((x for x in variable_array if x is not None), None)
+                if isinstance(first_valid, np.ndarray):
+                    # Jagged column (e.g. cjets_pt): convert to ak.Array for flatten support
+                    variable_array = ak.Array(
+                        [x.tolist() if x is not None else [] for x in variable_array]
+                    )
+                else:
+                    # Scalar object column (bool-like)
+                    variable_array = np.array(
+                        [x if x is not None else np.nan for x in variable_array],
+                        dtype=bool,
+                    )
             variables_map[variable] = variable_array
 
         # compute nominal weights
@@ -84,6 +98,9 @@ def fill_histograms_from_parquets(
 
         # fill nominal histograms
         sample_histograms = copy.deepcopy(histograms)
+        # Force individual fill (stacked multi-D histograms are too large for postprocess)
+        original_layout = histogram_config.layout
+        histogram_config.layout = "individual"
         fill_args = {
             "histograms": sample_histograms,
             "histogram_config": histogram_config,
@@ -104,6 +121,8 @@ def fill_histograms_from_parquets(
                         fill_args["weights"] = sample_df[syst_name].values
                         fill_args["variation"] = syst_name.replace("weight_", "")
                         fill_histogram(**fill_args)
+
+        histogram_config.layout = original_layout
 
     return sample_histograms
 
@@ -176,9 +195,9 @@ def save_histograms_by_process(
             parquet_files += glob.glob(
                 f"{output_dir}/{sample}*.parquet", recursive=True
             )
-        process_df = dd.read_parquet(
-            parquet_files, engine="pyarrow", calculate_divisions=False
-        ).compute()
+        process_df = pd.concat(
+            [pd.read_parquet(f) for f in parquet_files], ignore_index=True
+        )
         process_df.to_parquet(Path(output_dir) / f"{process}.parquet")
 
     # accumulate and save cutflows if requested
