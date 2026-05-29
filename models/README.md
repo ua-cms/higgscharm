@@ -77,4 +77,4 @@ For each sample, the inference step produces:
 
 ## Config
 
-The b-hive config YML defines the feature list used at training time. The same config must be used at inference to ensure the feature vector matches the model's `input_dim`. 
+The b-hive config YAML defines the feature list used at training time. The same config must be used at inference to ensure the feature vector matches the model's `input_dim`. Configs are stored in the b-hive repository under `config/`.
