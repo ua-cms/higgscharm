@@ -298,7 +298,7 @@ class MVAPostProcessor:
         for feat in global_feats:
             if feat == 'in_mass_window':
                 m4l = self._get_col(df, ['zz_mass_inclusive', 'm4l'])
-                all_features.append(((m4l >= 100) & (m4l < 150)).astype(np.float32))
+                all_features.append(((m4l >= self.mass_window_min) & (m4l < self.mass_window_max)).astype(np.float32))
             elif feat == 'n_ctagged_jets':
                 # Count jets in C categories
                 count = np.zeros(n, dtype=np.float32)
