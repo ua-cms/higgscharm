@@ -29,7 +29,6 @@ condor/logs/
 # Credentials / proxy
 x509up*
 *.cc
-.sites_map.json
 
 # Misc
 *.swp
