@@ -36,7 +36,12 @@ import hist
 from pathlib import Path
 from typing import Optional, List, Dict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from coffea.util import save as coffea_save
+try:
+    from coffea.util import save as coffea_save
+    HAS_COFFEA = True
+except ImportError:
+    HAS_COFFEA = False
+    def coffea_save(obj, path): pass
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
