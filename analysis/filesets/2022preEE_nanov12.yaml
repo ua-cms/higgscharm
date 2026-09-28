@@ -54,7 +54,7 @@ DYJetsToLL:
   xsec: 6688.0
 DYJetsToLL_50:
   era: mc
-  query: DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+  query: DYto2L-2Jets_MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v5/NANOAODSIM
   process: DY+Jets
   key: dy_nlo
   xsec: 6688.0
@@ -197,7 +197,7 @@ TTto2L2Nu:
   key:
     - tt
     - tt_semileptonic
-  xsec: 97.78
+  xsec: 762.1
 TTto4Q:
   era: mc
   query: TTto4Q_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM

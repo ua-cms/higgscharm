@@ -1,4 +1,6 @@
+import os
 import yaml
+import pickle
 import logging
 import numpy as np
 import mplhep as hep
@@ -82,9 +84,6 @@ class CoffeaPlotter:
         if other_category is not None:
             selector[self.group_by["name"]] = other_category
         histogram = histogram[selector].project(variable)
-        # if axis type is variable divide by bin width
-        if isinstance(self.histogram_config.axes[variable], VariableAxis):
-            histogram = divide_by_binwidth(histogram)
         return histogram
 
     def get_variations(
@@ -107,9 +106,6 @@ class CoffeaPlotter:
         histogram_up = histogram[selectorup].project(variable)
         histogram_down = histogram[selectordown].project(variable)
         # if axis type is variable divide by bin width
-        if isinstance(self.histogram_config.axes[variable], VariableAxis):
-            histogram_up = divide_by_binwidth(histogram_up)
-            histogram_down = divide_by_binwidth(histogram_down)
         return histogram_up, histogram_down
 
     def collect_histograms_for_plotting(self, variable, category):
@@ -526,7 +522,32 @@ class CoffeaPlotter:
         fig.savefig(figname)
         plt.close()
 
-    def plot_fake_rate(self, category, ylim=(None, 0.35), extension="pdf"):
+    def _debug_fr_table(self, label, endcap_vals, barrel_vals, edges):
+        """Print a (pt x region) table matching the compute_fake_rates debug format."""
+        pt_labels = [f"{edges[i]:.0f}-{edges[i+1]:.0f}" for i in range(len(edges) - 1)]
+        region_labels = ["endcap", "barrel"]
+        col_w = 14
+        header = (
+            f"{'pT / region':>16s}"
+            + "".join(f"{r:>{col_w}s}" for r in region_labels)
+            + f"{'SUM':>{col_w}s}"
+        )
+        print(f"\n  {label}")
+        print(f"  {'-' * len(header)}")
+        print(f"  {header}")
+        print(f"  {'-' * len(header)}")
+        arr = np.stack([endcap_vals, barrel_vals], axis=1)
+        for i, pt_lab in enumerate(pt_labels):
+            row = arr[i, :]
+            print(f"  {pt_lab:>16s}" + "".join(f"{v:>{col_w}.2f}" for v in row)
+                    + f"{np.sum(row):>{col_w}.2f}")
+        print(f"  {'-' * len(header)}")
+        col_sums = arr.sum(axis=0)
+        print(f"  {'SUM':>16s}" + "".join(f"{v:>{col_w}.2f}" for v in col_sums)
+               + f"{arr.sum():>{col_w}.2f}")
+        print()
+
+    def plot_fake_rate(self, category, ylim=(None, 0.35), extension="png",debug=True):
         edges = (
             self.processed_histograms["Data"]["probe_lepton"]
             .project("probe_lepton_pt")
@@ -553,6 +574,46 @@ class CoffeaPlotter:
         ].project("probe_lepton_pt", "is_passing_lepton")
         data_wz_barrel = data_barrel + (wz_barrel * -1)
         data_wz_endcap = data_endcap + (wz_endcap * -1)
+        
+        if debug:
+            sep = "=" * 80
+            print(f"\n{sep}\n  DEBUG [COFFEA PLOTTER — {category.upper()}]\n{sep}")
+
+            # column 0 = endcap (is_barrel False), column 1 = barrel (is_barrel True)
+            data_total = {"endcap": data_endcap[{"is_passing_lepton": sum}].values(),
+                "barrel": data_barrel[{"is_passing_lepton": sum}].values()}
+            data_pass  = {"endcap": data_endcap[{"is_passing_lepton": True}].values(),
+                "barrel": data_barrel[{"is_passing_lepton": True}].values()}
+            wz_total   = {"endcap": wz_endcap[{"is_passing_lepton": sum}].values(),
+                "barrel": wz_barrel[{"is_passing_lepton": sum}].values()}
+            wz_pass    = {"endcap": wz_endcap[{"is_passing_lepton": True}].values(),
+                "barrel": wz_barrel[{"is_passing_lepton": True}].values()}
+            corr_total = {"endcap": data_wz_endcap[{"is_passing_lepton": sum}].values(),
+                "barrel": data_wz_barrel[{"is_passing_lepton": sum}].values()}
+            corr_pass  = {"endcap": data_wz_endcap[{"is_passing_lepton": True}].values(),
+                "barrel": data_wz_barrel[{"is_passing_lepton": True}].values()}
+
+            self._debug_fr_table("DATA  n_total (unweighted)",    data_total["endcap"], data_total["barrel"], edges)
+            self._debug_fr_table("DATA  n_pass  (unweighted)",    data_pass["endcap"],  data_pass["barrel"],  edges)
+            self._debug_fr_table("WZ MC n_total (lumi-weighted)", wz_total["endcap"],   wz_total["barrel"],   edges)
+            self._debug_fr_table("WZ MC n_pass  (lumi-weighted)", wz_pass["endcap"],    wz_pass["barrel"],    edges)
+            self._debug_fr_table("CORR  n_total = DATA - WZ",     corr_total["endcap"], corr_total["barrel"], edges)
+            self._debug_fr_table("CORR  n_pass  = DATA - WZ",     corr_pass["endcap"],  corr_pass["barrel"],  edges)
+
+            with np.errstate(divide="ignore", invalid="ignore"):
+                fr_data = {r: np.where(data_total[r] > 0, data_pass[r] / data_total[r], np.nan)
+                          for r in ("endcap", "barrel")}
+                fr_corr = {r: np.where(corr_total[r] > 0, corr_pass[r] / corr_total[r], np.nan)
+                        for r in ("endcap", "barrel")}
+            self._debug_fr_table("DATA  fake rate", fr_data["endcap"], fr_data["barrel"], edges)
+            self._debug_fr_table("CORR  fake rate", fr_corr["endcap"], fr_corr["barrel"], edges)
+
+            print(f"  SCALAR SUMMARY [{category}]")
+            print(f"    DATA  total probe leptons    : {sum(v.sum() for v in data_total.values()):.1f}")
+            print(f"    DATA  passing probe leptons  : {sum(v.sum() for v in data_pass.values()):.1f}")
+            print(f"    WZ MC total (lumi-weighted)  : {sum(v.sum() for v in wz_total.values()):.4f}")
+            print(f"    WZ MC passing (lumi-weighted): {sum(v.sum() for v in wz_pass.values()):.4f}")
+            print()
 
         data_barrel_ratio = (
             data_barrel[{"is_passing_lepton": True}].values()
@@ -731,3 +792,225 @@ class CoffeaPlotter:
         fig.savefig(
             f"{output_path}/{self.workflow}_{category}_FR_{self.year}.{extension}"
         )
+
+    def _compute_fake_rate_arrays(self, n_pass, n_total, min_events=10):
+        """
+        Binomial fake rate f = n_pass / n_total with the same validity/clipping
+        convention as compute_fake_rates.compute_fake_rate: bins with
+        n_total <= min_events (or negative counts, which can occur after MC
+        subtraction) get fake_rate=0 and a sentinel fake_rate_err=1.0 so
+        downstream consumers (get_fake_rate in estimate_zx_background.py)
+        can identify and skip them.
+        """
+        valid = (n_total > min_events) & (n_pass >= 0) & (n_total >= 0)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            fr = np.where(valid, n_pass / n_total, 0.0)
+            fr = np.clip(fr, 0.0, 1.0)
+            fr_err = np.where(
+                valid,
+                np.sqrt(fr * (1 - fr) / np.where(valid, n_total, 1.0)),
+                1.0,
+            )
+        return fr, fr_err
+
+    def compute_fake_rates(self, categories=("electron", "muon"), min_events=10, debug=False):
+        """
+        Compute fake rates directly from the histograms this plotter already
+        holds, reusing exactly the DATA-minus-WZ barrel/endcap logic used in
+        plot_fake_rate (and printed by _debug_fr_table), instead of relying
+        on the separate compute_fake_rates.py script.
+
+        Returns a dict keyed by category (e.g. 'electron', 'muon'), each with:
+          'fake_rate', 'fake_rate_err', 'n_pass', 'n_total' : shape (n_pt_bins, 2)
+              column 0 = endcap, column 1 = barrel
+          'pt_edges'  : probe_lepton_pt bin edges
+          'eta_edges' : [0.0, boundary, eta_max] where boundary is the EB/EE
+              cut used to fill is_barrel_lepton (1.2 for muon, 1.5 for electron)
+
+        This is the format expected by get_fake_rate() in
+        estimate_zx_background.py (np.searchsorted over pt_edges/eta_edges).
+        """
+        eb_ee_boundary = {"muon": 1.2, "electron": 1.5}
+        eta_max = 2.5
+
+        fake_rates = {}
+        for category in categories:
+            pt_edges = (
+                self.processed_histograms["Data"]["probe_lepton"]
+                .project("probe_lepton_pt")
+                .axes.edges[0]
+            )
+
+            data_barrel = self.processed_histograms["Data"]["probe_lepton"][
+                {"variation": "nominal", "category": category, "is_barrel_lepton": True}
+            ].project("probe_lepton_pt", "is_passing_lepton")
+            data_endcap = self.processed_histograms["Data"]["probe_lepton"][
+                {"variation": "nominal", "category": category, "is_barrel_lepton": False}
+            ].project("probe_lepton_pt", "is_passing_lepton")
+            wz_barrel = self.processed_histograms["WZ"]["probe_lepton"][
+                {"variation": "nominal", "category": category, "is_barrel_lepton": True}
+            ].project("probe_lepton_pt", "is_passing_lepton")
+            wz_endcap = self.processed_histograms["WZ"]["probe_lepton"][
+                {"variation": "nominal", "category": category, "is_barrel_lepton": False}
+            ].project("probe_lepton_pt", "is_passing_lepton")
+
+            # DATA-only (uncorrected)
+            unc_total_endcap = data_endcap[{"is_passing_lepton": sum}].values()
+            unc_pass_endcap = data_endcap[{"is_passing_lepton": True}].values()
+            unc_total_barrel = data_barrel[{"is_passing_lepton": sum}].values()
+            unc_pass_barrel = data_barrel[{"is_passing_lepton": True}].values()
+
+            # DATA - WZ (corrected)
+            data_wz_barrel = data_barrel + (wz_barrel * -1)
+            data_wz_endcap = data_endcap + (wz_endcap * -1)
+            
+            if debug:
+                sep = "=" * 80
+                print(f"\n{sep}\n  DEBUG [COMPUTE_FAKE_RATES — {category.upper()}]\n{sep}")
+
+                data_total = {"endcap": data_endcap[{"is_passing_lepton": sum}].values(),
+                    "barrel": data_barrel[{"is_passing_lepton": sum}].values()}
+                data_pass  = {"endcap": data_endcap[{"is_passing_lepton": True}].values(),
+                    "barrel": data_barrel[{"is_passing_lepton": True}].values()}
+                wz_total   = {"endcap": wz_endcap[{"is_passing_lepton": sum}].values(),
+                    "barrel": wz_barrel[{"is_passing_lepton": sum}].values()}
+                wz_pass    = {"endcap": wz_endcap[{"is_passing_lepton": True}].values(),
+                    "barrel": wz_barrel[{"is_passing_lepton": True}].values()}
+                corr_total = {"endcap": data_wz_endcap[{"is_passing_lepton": sum}].values(),
+                    "barrel": data_wz_barrel[{"is_passing_lepton": sum}].values()}
+                corr_pass  = {"endcap": data_wz_endcap[{"is_passing_lepton": True}].values(),
+                    "barrel": data_wz_barrel[{"is_passing_lepton": True}].values()}
+
+                self._debug_fr_table("DATA  n_total (unweighted)",    data_total["endcap"], data_total["barrel"], pt_edges)
+                self._debug_fr_table("DATA  n_pass  (unweighted)",    data_pass["endcap"],  data_pass["barrel"],  pt_edges)
+                self._debug_fr_table("WZ MC n_total (lumi-weighted)", wz_total["endcap"],   wz_total["barrel"],   pt_edges)
+                self._debug_fr_table("WZ MC n_pass  (lumi-weighted)", wz_pass["endcap"],    wz_pass["barrel"],    pt_edges)
+                self._debug_fr_table("CORR  n_total = DATA - WZ",     corr_total["endcap"], corr_total["barrel"], pt_edges)
+                self._debug_fr_table("CORR  n_pass  = DATA - WZ",     corr_pass["endcap"],  corr_pass["barrel"],  pt_edges)
+
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    fr_data = {r: np.where(data_total[r] > 0, data_pass[r] / data_total[r], np.nan)
+                              for r in ("endcap", "barrel")}
+                    fr_wz = {r: np.where(wz_total[r] > 0, wz_pass[r] / wz_total[r], np.nan)
+                              for r in ("endcap", "barrel")}
+                    fr_corr = {r: np.where(corr_total[r] > 0, corr_pass[r] / corr_total[r], np.nan)
+                            for r in ("endcap", "barrel")}
+                self._debug_fr_table("DATA  fake rate", fr_data["endcap"], fr_data["barrel"], pt_edges)
+                self._debug_fr_table("WZ MC fake rate", fr_wz["endcap"], fr_wz["barrel"], pt_edges)
+                self._debug_fr_table("CORR  fake rate", fr_corr["endcap"], fr_corr["barrel"], pt_edges)
+
+                data_tot_sum = sum(v.sum() for v in data_total.values())
+                wz_tot_sum = sum(v.sum() for v in wz_total.values())
+                print(f"  SCALAR SUMMARY [{category}]")
+                print(f"    DATA  total probe leptons    : {data_tot_sum:.1f}")
+                print(f"    DATA  passing probe leptons  : {sum(v.sum() for v in data_pass.values()):.1f}")
+                print(f"    WZ MC total (lumi-weighted)  : {wz_tot_sum:.4f}")
+                print(f"    WZ MC passing (lumi-weighted): {sum(v.sum() for v in wz_pass.values()):.4f}")
+                print(f"    WZ / DATA total ratio        : {wz_tot_sum / max(data_tot_sum, 1):.4f}")
+                print()
+            corr_total_endcap = data_wz_endcap[{"is_passing_lepton": sum}].values()
+            corr_pass_endcap = data_wz_endcap[{"is_passing_lepton": True}].values()
+            corr_total_barrel = data_wz_barrel[{"is_passing_lepton": sum}].values()
+            corr_pass_barrel = data_wz_barrel[{"is_passing_lepton": True}].values()
+
+            unc_fr_endcap, unc_fr_err_endcap = self._compute_fake_rate_arrays(
+                unc_pass_endcap, unc_total_endcap, min_events
+            )
+            unc_fr_barrel, unc_fr_err_barrel = self._compute_fake_rate_arrays(
+                unc_pass_barrel, unc_total_barrel, min_events
+            )
+            corr_fr_endcap, corr_fr_err_endcap = self._compute_fake_rate_arrays(
+                corr_pass_endcap, corr_total_endcap, min_events
+            )
+            corr_fr_barrel, corr_fr_err_barrel = self._compute_fake_rate_arrays(
+                corr_pass_barrel, corr_total_barrel, min_events
+            )
+
+            uncorrected = {
+                "fake_rate": np.stack([unc_fr_endcap, unc_fr_barrel], axis=1),
+                "fake_rate_err": np.stack([unc_fr_err_endcap, unc_fr_err_barrel], axis=1),
+                "n_pass": np.stack([unc_pass_endcap, unc_pass_barrel], axis=1),
+                "n_total": np.stack([unc_total_endcap, unc_total_barrel], axis=1),
+                "pt_edges": pt_edges,
+                "eta_edges": np.array([0.0, eb_ee_boundary[category], eta_max]),
+            }
+            corrected = {
+                "fake_rate": np.stack([corr_fr_endcap, corr_fr_barrel], axis=1),
+                "fake_rate_err": np.stack([corr_fr_err_endcap, corr_fr_err_barrel], axis=1),
+                "n_pass": np.stack([corr_pass_endcap, corr_pass_barrel], axis=1),
+                "n_total": np.stack([corr_total_endcap, corr_total_barrel], axis=1),
+                "pt_edges": pt_edges,
+                "eta_edges": np.array([0.0, eb_ee_boundary[category], eta_max]),
+            }
+
+            # safe_corrected: use WZ-corrected rate where stable, else fall back
+            # to data-only, same convention as compute_fake_rates.extract_fake_rates
+            stable = (corrected["n_total"] > 0) & (corrected["n_pass"] >= 0)
+            n_unstable = int(np.sum(~stable))
+            if n_unstable > 0:
+                print(
+                    f"  [{category}] {n_unstable} bins with unstable WZ subtraction "
+                    f"-> falling back to uncorrected"
+                )
+            safe_corrected = {
+                "fake_rate": np.where(stable, corrected["fake_rate"], uncorrected["fake_rate"]),
+                "fake_rate_err": np.where(
+                    stable, corrected["fake_rate_err"], uncorrected["fake_rate_err"]
+                ),
+                "n_pass": np.where(stable, corrected["n_pass"], uncorrected["n_pass"]),
+                "n_total": np.where(stable, corrected["n_total"], uncorrected["n_total"]),
+                "pt_edges": pt_edges,
+                "eta_edges": np.array([0.0, eb_ee_boundary[category], eta_max]),
+            }
+
+            fake_rates[category] = {
+                "uncorrected": uncorrected,
+                "corrected": corrected,
+                "safe_corrected": safe_corrected,
+                # top-level keys mirror safe_corrected for backwards-compat
+                # with get_fake_rate() in estimate_zx_background.py
+                **safe_corrected,
+            }
+
+            fr_valid = safe_corrected["fake_rate"][safe_corrected["fake_rate"] > 0]
+            if fr_valid.size:
+                print(
+                    f"  [{category}] safe_corrected: mean f={np.mean(fr_valid):.3f}, "
+                    f"max f={np.max(safe_corrected['fake_rate']):.3f}"
+                )
+
+        return fake_rates
+
+    def save_fake_rates(self, output_path=None, categories=("electron", "muon"), min_events=10, debug=True):
+        """
+        Compute and pickle fake rates for this plotter's year, in the same
+        schema expected by get_fake_rate() in estimate_zx_background.py
+        (dict keyed by 'electron'/'muon', each with 'fake_rate',
+        'fake_rate_err', 'n_pass', 'n_total', 'pt_edges', 'eta_edges').
+
+        Use this instead of compute_fake_rates.py — it reuses the exact
+        barrel/endcap DATA-minus-WZ logic already validated in
+        plot_fake_rate/_debug_fr_table on this same set of histograms,
+        rather than a separately-loaded and independently-summed set of
+        coffea files.
+
+        Args:
+            output_path: where to write the .pkl. Defaults to
+                {self.output_dir}/fake_rates/{self.year}/fake_rates.pkl
+        Returns:
+            The fake_rates dict that was saved.
+        """
+        fake_rates = self.compute_fake_rates(categories=categories, min_events=min_events, debug=debug)
+
+        if output_path is None:
+            out_dir = Path(self.output_dir) / "fake_rates" / self.year
+            out_dir.mkdir(parents=True, exist_ok=True)
+            output_path = out_dir / "fake_rates.pkl"
+        else:
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, "wb") as f:
+            pickle.dump(fake_rates, f)
+        print(f"Saved fake rates to: {output_path}")
+        return fake_rates

@@ -125,7 +125,7 @@ event_selection:
       - atleast_one_zll
 corrections:
   object:
-    - jet
+    # - jet
     - muon
     - electron
   object_shifts: false

@@ -1,0 +1,68 @@
+Mass window: DISABLED (inclusive m4l, all CR_SS data used)
+MC ratio: WEIGHTED (weight_nominal) sums, OS/SS, MC-only
+
+================================================================
+  Era: 2022postEE
+================================================================
+  Fake rates loaded.
+
+  Computing (OS/SS)^MC ratio (raw entries)...
+  [CR_2P2F] found 14105 parquet files in /eos/user/p/pkatris/higgscharm/outputs/hplus_FR/2022postEE
+  [CR_SS] found 14453 parquet files in /eos/user/p/pkatris/higgscharm/outputs/hplus_FR_SS/2022postEE
+    N_MC_OS  (CR_2P2F, reducible, weight_nominal sum): 494776171.034
+    N_MC_SS  (CR_SS,   reducible, weight_nominal sum): 511961563.359
+    (OS/SS)^MC [overall] = 494776171.034 / 511961563.359 = 0.9664
+    Per-final-state (OS/SS)^MC (weighted):
+      4e       N_MC_OS=212375719.422  N_MC_SS=214067517.446  ratio=  0.9921
+      4mu      N_MC_OS=10714471.766  N_MC_SS=10700404.984  ratio=  1.0013
+      2e2mu    N_MC_OS=9371598.315  N_MC_SS=7899786.286  ratio=  1.1863
+      2mu2e    N_MC_OS=262314381.532  N_MC_SS=279293854.642  ratio=  0.9392
+
+  Loading DATA CR_SS parquets...
+  [CR_SS] found 14453 parquet files in /eos/user/p/pkatris/higgscharm/outputs/hplus_FR_SS/2022postEE
+
+  Computing DATA SS f1*f2 sum (inclusive, no mass window)...
+    DATA events in CR_SS: 15860
+
+  Computing final-state breakdown (nominal + fake-rate Up/Dn)...
+
+  ────────────────────────────────────────────────────────────
+  AN Eq. 11 SS Yield — 2022postEE  (inclusive, no m4l window)
+  ────────────────────────────────────────────────────────────
+  N_DATA_SS (inclusive):              15860
+  N_MC_OS   (CR_2P2F, weighted):   494776171.034
+  N_MC_SS   (CR_SS, weighted):     511961563.359
+  >>> (OS/SS)^MC ratio [overall]:      0.9664  <<<
+  sum_DATA f1*f2 [overall]:           81.9243  ± 1.0704
+  Net Z+X yield [overall ratio]:      79.1742  ± 1.0345   (for comparison only)
+
+  Per-final-state breakdown (each with ITS OWN OS/SS ratio):
+  Final state   N_data     Yield     stat   syst_up   syst_dn  syst_cmp     +comb     -comb
+  ──────────────────────────────────────────────────────────────────────────────────────────
+  4e             6103    18.215    0.233     0.852     0.833     5.465     5.535     5.533
+  4mu            1209    22.934    0.660     1.166     1.139     6.880     7.010     7.005
+  2e2mu           959    21.575    0.697     1.093     1.068     6.472     6.601     6.597
+  2mu2e          7589    21.107    0.242     0.984     0.962     6.332     6.413     6.409
+  ──────────────────────────────────────────────────────────────────────────────────────────
+  >>> Net Z+X yield [sum of per-final-state]:    83.8313  +12.8246 / -12.8171  <<<
+  ────────────────────────────────────────────────────────────
+
+================================================================
+  AN-18-340 Eq. 11 SS Method — Z+X Yield Summary (inclusive)
+  (per-final-state OS/SS ratios, asymmetric stat+syst errors)
+================================================================
+  Era                N_DATA_SS       N_MC_OS       N_MC_SS               Net Z+X
+  ────────────────────────────────────────────────────────────────────────────────
+  2022postEE             15860  494776171.034  511961563.359     83.83 +12.82/-12.82
+  ────────────────────────────────────────────────────────────────────────────────
+  Total                                                        83.83 +12.82/-12.82
+================================================================
+
+  Per-final-state totals across shown eras:
+  Final state                 Net Z+X
+  ────────────────────────────────────
+  4e               18.22 +5.54/-5.53
+  4mu              22.93 +7.01/-7.00
+  2e2mu            21.57 +6.60/-6.60
+  2mu2e            21.11 +6.41/-6.41
+================================================================

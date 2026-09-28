@@ -109,7 +109,7 @@ event_selection:
       - one_relaxed_lepton
 corrections:
   object:
-    - jet
+    # - jet
     - muon
     - electron
   object_shifts: false
@@ -142,10 +142,10 @@ histogram_config:
     probe_lepton_eta:
       type: Regular
       bins: 50
-      start: 0
+      start: -2.5
       stop: 2.5
       label: $|\eta(\ell)|$
-      expression: np.abs(objects['other_relaxed_leptons'].eta)
+      expression: objects['other_relaxed_leptons'].eta
     is_barrel_lepton:
       type: Boolean
       label: is barrel $\ell$
@@ -160,6 +160,20 @@ histogram_config:
       stop: 10
       label: n_missing_hits
       expression: objects['other_relaxed_leptons'].lostHits
+    zcand_mass:
+      type: Regular
+      bins: 80
+      start: 40
+      stop: 120
+      label: $m(\ell\ell)$ [GeV]
+      expression: objects['best_zcandidates'].p4.mass
+    trilepton_mass:
+      type: Regular
+      bins: 80
+      start: 40
+      stop: 120
+      label: $m(3\ell)$ [GeV]
+      expression: (objects['best_zcandidates'].p4 + objects['other_relaxed_leptons'].p4).mass
   layout:
     probe_lepton:
       - probe_lepton_pt
@@ -167,5 +181,13 @@ histogram_config:
       - n_missing_hits
       - is_passing_lepton
       - is_barrel_lepton
+    zl_fit:
+      - probe_lepton_pt
+      - probe_lepton_eta
+      - n_missing_hits
+      - is_passing_lepton
+      - is_barrel_lepton
+      - zcand_mass
+      - trilepton_mass
   add_syst_axis: true
   add_weight: true

@@ -3,7 +3,6 @@ from coffea.analysis_tools import Weights
 from analysis.filesets.utils import get_nano_version
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.ctag import CTagCorrector
-from analysis.corrections.jetvetomaps import jet_veto
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
 from analysis.corrections.lhepdf import add_lhepdf_weight
@@ -16,64 +15,37 @@ from analysis.corrections.partonshower import add_partonshower_weight
 from analysis.corrections.electron_ss import apply_electron_ss_corrections
 
 
-def object_corrector_manager(events, year, corrections_config):
+def object_corrector_manager(events, year, dataset, workflow_config):
     """apply object level corrections"""
-    objcorr_config = corrections_config["object"]
-
-    shifts = []
+    objcorr_config = workflow_config.corrections_config["object"]
     if objcorr_config:
-        # apply jet energy scale and smearing corrections
-        if "jet" in objcorr_config:
-            shifts = apply_jerc_corrections(
-                events=events,
-                year=year,
-                shifts=shifts,
-                corrections_config=corrections_config,
-            )
-        else:
-            met_field_key = "PuppiMET" if int(get_nano_version(year)) >= 12 else "MET"
-            shifts = [({"Jet": events.Jet, "MET": events[met_field_key]}, None)]
-
-        if "muon" in objcorr_config:
+        if "jec" in objcorr_config:
+            # apply JEC/JER corrections
+            apply_jerc_corrections(events, year, dataset)
+        if "muon_ss" in objcorr_config:
             # apply muon scale and smearing corrections
-            shifts = apply_muon_ss_corrections(
+            apply_muon_ss_corrections(
                 events=events,
                 year=year,
-                shifts=shifts,
-                corrections_config=corrections_config,
             )
-        else:
-            for i in range(len(shifts)):
-                shifts[i][0]["Muon"] = events.Muon
-
-        if "electron" in objcorr_config:
+        if "electon_ss" in objcorr_config:
             # electron scale and smearing corrections are applied only to run3 datasets
             # they are already applied in nanov9 datasets
             if year.startswith("202"):
-                shifts = apply_electron_ss_corrections(
+                apply_electron_ss_corrections(
                     events=events,
                     year=year,
-                    shifts=shifts,
-                    corrections_config=corrections_config,
+                    variation="nominal",
                 )
-        else:
-            for i in range(len(shifts)):
-                shifts[i][0]["Electron"] = events.Electron
-
-        # apply jet veto
-        if "jetveto" in objcorr_config:
-            event_veto = jet_veto(events, year)
-            vetoed_events = events[~event_veto]
-            for collections, _ in shifts:
-                for key in collections:
-                    collections[key] = collections[key][~event_veto]
-        else:
-            vetoed_events = events
-
-    return vetoed_events, shifts
+        if "met_phi" in objcorr_config:
+            # apply MET-phi modulation corrections
+            if year.startswith("2022"):
+                apply_met_phi_corrections(
+                    events=events, is_mc=hasattr(events, "genWeight"), year=year
+                )
 
 
-def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
+def weight_manager(pruned_ev, year, dataset, workflow_config, variation="nominal"):
     """apply event level corrections (weights)"""
     # get weights config info
     weights_config = workflow_config.corrections_config["event_weights"]
@@ -91,7 +63,7 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                 add_pileup_weight(
                     events=pruned_ev,
                     year=year,
-                    shift=shift,
+                    variation="nominal",
                     weights_container=weights_container,
                 )
         if "partonshowerWeight" in weights_config:
@@ -100,7 +72,6 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     add_partonshower_weight(
                         events=pruned_ev,
                         weights_container=weights_container,
-                        shift=shift,
                     )
         if "lhepdfWeight" in weights_config:
             if weights_config["lhepdfWeight"]:
@@ -108,15 +79,12 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     add_lhepdf_weight(
                         events=pruned_ev,
                         weights_container=weights_container,
-                        shift=shift,
                     )
         if "lhescaleWeight" in weights_config:
             if weights_config["lhescaleWeight"]:
                 if "LHEScaleWeight" in pruned_ev.fields:
                     add_scalevar_weight(
-                        events=pruned_ev,
-                        weights_container=weights_container,
-                        shift=shift,
+                        events=pruned_ev, weights_container=weights_container
                     )
         if "nnlopsWeight" in weights_config:
             if weights_config["nnlopsWeight"]:
@@ -131,7 +99,7 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     muon_weights = MuonWeights(
                         events=pruned_ev,
                         year=year,
-                        shift=shift,
+                        variation=variation,
                         weights=weights_container,
                     )
                     if "id" in weights_config["muon"]:
@@ -159,7 +127,7 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     electron_weights = ElectronWeights(
                         events=pruned_ev,
                         year=year,
-                        shift=shift,
+                        variation=variation,
                         weights=weights_container,
                     )
                     if "id" in weights_config["electron"]:
@@ -198,9 +166,8 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     events=pruned_ev,
                     weights=weights_container,
                     worging_point=weights_config["ctagging"]["wp"],
-                    category=category,
                     year=year,
-                    shift=shift,
+                    variation=variation,
                 )
                 ctag_corrector.add_ctag_weights(flavor="b")
                 ctag_corrector.add_ctag_weights(flavor="c")

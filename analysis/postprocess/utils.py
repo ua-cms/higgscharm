@@ -12,6 +12,9 @@ from collections import defaultdict
 from coffea.util import load, save
 from coffea.processor import accumulate
 from analysis.filesets.utils import get_dataset_config
+import gc
+from coffea.util import load
+from coffea.processor import accumulate
 
 
 def setup_logger(output_dir):
@@ -129,24 +132,31 @@ def merge_parquets(inpath, outpath, sample_name):
     df.to_parquet(f"{outpath}/{sample_name}.parquet", engine="pyarrow", index=False)
 
 
+def accumulate_histograms(grouped_outputs, sample):
+    result = None
+    for fname in grouped_outputs[sample]:
+        output = load(fname)
+        if output:
+            result = (
+                output["histograms"]
+                if result is None
+                else accumulate([result, output["histograms"]])
+            )
+        del output
+        gc.collect()
+    return result
+ 
+ 
 def accumulate_metadata(grouped_outputs, sample):
     grouped_metadata = {}
     for fname in grouped_outputs[sample]:
         output = load(fname)
-        if not output:
-            continue
-        for meta_key, meta_val in output["metadata"].items():
-            grouped_metadata.setdefault(meta_key, []).append(meta_val)
-    return {k: accumulate(v) for k, v in grouped_metadata.items()}
-
-
-def accumulate_histograms(grouped_outputs, sample):
-    grouped_histograms = []
-    for fname in grouped_outputs[sample]:
-        output = load(fname)
         if output:
-            grouped_histograms.append(output["histograms"])
-    return accumulate(grouped_histograms)
+            for meta_key, meta_val in output["metadata"].items():
+                grouped_metadata.setdefault(meta_key, []).append(meta_val)
+        del output
+        gc.collect()
+    return {k: accumulate(v) for k, v in grouped_metadata.items()}
 
 
 def get_lumi_weight(year, sample, metadata):

@@ -1,10 +1,10 @@
 import correctionlib
 import numpy as np
 import awkward as ak
-from analysis.corrections.correctionlib_files import correction_files
+from analysis.corrections.utils import correction_files
 
 
-def jet_veto(events, year: str, mapname: str = "jetvetomap"):
+def apply_jetvetomaps(events, year: str, mapname: str = "jetvetomap"):
     """
     These are the jet veto maps showing regions with an excess of jets (hot zones) and lack of jets
     (cold zones). Using the phi-symmetry of the CMS detector, these areas with detector and or
@@ -38,5 +38,7 @@ def jet_veto(events, year: str, mapname: str = "jetvetomap"):
     jets_eta = ak.fill_none(in_jets.eta, 0.0)
     jets_phi = ak.fill_none(in_jets.phi, 0.0)
 
-    vetomap = cset[vetomap_names[year]].evaluate(mapname, jets_eta, jets_phi)
-    return ak.any(ak.unflatten(vetomap, n) > 0, axis=1)
+    vetomaps = cset[vetomap_names[year]].evaluate(mapname, jets_eta, jets_phi)
+    vetomaps_mask = ak.any(ak.unflatten(vetomaps, n) > 0, axis=1)
+    vetoed_events = events[~vetomaps_mask]
+    return vetoed_events

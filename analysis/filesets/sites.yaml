@@ -1,4 +1,5 @@
-black: []
+black: 
+- T2_PT_NCG_Lisbon
 white:
 - T1_UK_RAL_Disk
 - T1_DE_KIT_Disk
@@ -25,7 +26,6 @@ white:
 - T2_KR_KISTI
 - T2_PL_Cyfronet
 - T2_PL_Swierk
-- T2_PT_NCG_Lisbon
 - T2_RU_JINR
 - T2_TW_NCHC
 - T2_UA_KIPT

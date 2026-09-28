@@ -1,6 +1,6 @@
 import numpy as np
 import awkward as ak
-from coffea.nanoevents.methods import candidate
+from coffea.nanoevents.methods import candidate, vector
 from coffea.nanoevents.methods.vector import LorentzVector
 from analysis.working_points import working_points
 from analysis.selections import (
@@ -66,50 +66,24 @@ class ObjectSelector:
         return selection_mask
     
     def select_genparts(self, obj_name):
-        """
-        Expose GenPart collection.
-        For MC: store GenPart with useful decoded status flags.
-        For data: create an empty collection so the pipeline works.
-            """
-
-        # DATA case (no GenPart branch)
         if not hasattr(self.events, "GenPart"):
-            empty = ak.Array([[]] * len(self.events))
-
-            self.objects[obj_name] = ak.zip(
-                {
-                    "pt": empty,
-                    "eta": empty,
-                    "phi": empty,
-                    "mass": empty,
-                    "pdgId": empty,
-                    "statusFlags": empty,
-                    "genPartIdxMother": empty,
-                    "isHardProcess": empty,
-                    "isLastCopy": empty,
-                },
-                with_name="PtEtaPhiMCandidate",
-                behavior=candidate.behavior,
-            )
             return
 
-        # MC case
         gen = self.events.GenPart
-        status = gen.statusFlags
-        isHardProcess = (status & (1 << 7)) != 0
-        isLastCopy = (status & (1 << 13)) != 0
+        print("GenPart pt sample:", ak.to_list(gen.pt[0][:5]))
+        print("GenPart eta sample:", ak.to_list(gen.eta[0][:5]))
 
         self.objects[obj_name] = ak.zip(
             {
-                "pt": gen.pt,
-                "eta": gen.eta,
-                "phi": gen.phi,
-                "mass": gen.mass,
-                "pdgId": gen.pdgId,
-                "statusFlags": status,
+                "pt":               gen.pt,
+                "eta":              gen.eta,
+                "phi":              gen.phi,
+                "mass":             gen.mass,
+                "pdgId":            gen.pdgId,
+                "statusFlags":      gen.statusFlags,
                 "genPartIdxMother": gen.genPartIdxMother,
-                "isHardProcess": isHardProcess,
-                "isLastCopy": isLastCopy,
+                "isHardProcess":    (gen.statusFlags & (1 << 7))  != 0,
+                "isLastCopy":       (gen.statusFlags & (1 << 13)) != 0,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -134,100 +108,86 @@ class ObjectSelector:
     def select_zzto4l_leptons(self, obj_name):
         muons = self.objects["muons"]
         muons["lostHits"] = ak.zeros_like(muons.pt)
-        # Add placeholder mvaHZZIso for muons (electrons use this for tight ID)
         muons["mvaHZZIso"] = ak.ones_like(muons.pt) * -999
-        # muons already have isPFcand and highPtId from NanoAOD
+        
         electrons = self.objects["electrons"]
-        # electrons already have mvaHZZIso from NanoAOD
-        # Add placeholder isPFcand and highPtId for electrons (muons use these for tight ID)
         electrons["isPFcand"] = ak.ones_like(electrons.pt, dtype=bool)
         electrons["highPtId"] = ak.zeros_like(electrons.pt, dtype=int)
-        # leptons before FSR recovery/iso correction
-        helper_leptons = ak.concatenate([muons, electrons], axis=1)
-        helper_leptons["idx"] = ak.local_index(helper_leptons, axis=1)
-        helper_leptons = ak.zip(
-            {
-                "pt": helper_leptons.pt,
-                "eta": helper_leptons.eta,
-                "phi": helper_leptons.phi,
-                "mass": helper_leptons.mass,
-                "charge": helper_leptons.charge,
-                "pdgId": helper_leptons.pdgId,
-                "idx": helper_leptons.idx,
-                "is_loose": helper_leptons.is_loose,
-                "is_relaxed": helper_leptons.is_relaxed,
-                "is_tight": helper_leptons.is_tight,
-                "lostHits": helper_leptons.lostHits,
-                "sip3d": helper_leptons.sip3d,
-                "pfRelIso03_all": helper_leptons.pfRelIso03_all,
-                "mvaHZZIso": helper_leptons.mvaHZZIso,
-                "isPFcand": helper_leptons.isPFcand,
-                "highPtId": helper_leptons.highPtId,
-            },
-            with_name="PtEtaPhiMCandidate",
-            behavior=candidate.behavior,
-        )
-        # select FSR photons
+        
+        # 1. Establish stable initial sorting layout
+        leptons_pre = ak.concatenate([muons, electrons], axis=1)
+        leptons_pre = leptons_pre[ak.argsort(leptons_pre.pt, axis=1, ascending=False)]
+        leptons_pre["idx"] = ak.local_index(leptons_pre, axis=1)
+        
+        # 2. Setup FSR photons
         fsr_photons = self.objects["fsr_photons"]
-        fsr_photons["mass"] = 0
-        fsr_photons["charge"] = 0
+        fsr_photons["mass"] = ak.zeros_like(fsr_photons.pt)
+        fsr_photons["charge"] = ak.zeros_like(fsr_photons.pt)
         fsr_photons["idx"] = ak.local_index(fsr_photons, axis=1)
-        # find closest lepton
-        closest_lepton, dr_et2 = get_closest_lepton(fsr_photons, helper_leptons)
+        
+        # 3. Match against the pre-isolation sorted lepton layout
+        closest_lepton, dr_et2 = get_closest_lepton(fsr_photons, leptons_pre)
         fsr_photons["helper_idx"] = ak.local_index(closest_lepton, axis=1)
         fsr_photons["lepton_idx"] = ak.fill_none(closest_lepton.idx, -1)
-        # if the FSR photon is matched to multiple leptons, choose the one with lowest dREt2
+        
+        # Clean duplicate photon records
         fsr_cartesian = ak.cartesian(
             {"fsr1": fsr_photons, "fsr2": fsr_photons}, nested=True, axis=1
         )
         is_duplicate = (
-            ak.sum(
-                fsr_cartesian.fsr1.lepton_idx == fsr_cartesian.fsr2.lepton_idx, axis=-1
-            )
-            > 1
+            ak.sum(fsr_cartesian.fsr1.lepton_idx == fsr_cartesian.fsr2.lepton_idx, axis=-1) > 1
         )
         min_dr_et2 = ak.argmin(dr_et2.mask[is_duplicate], axis=-1, keepdims=True)
         is_min = ak.fill_none(
             ak.flatten(min_dr_et2[:, None] == fsr_photons.helper_idx, axis=-1), False
         )
-        new_lepton_idx = ak.where(
+        fsr_photons["lepton_idx"] = ak.where(
             ~is_duplicate | (is_duplicate & is_min), fsr_photons.lepton_idx, -1
         )
-        fsr_photons["lepton_idx"] = new_lepton_idx
-
-        # add fsr_idx field to leptons
-        helper_leptons = assign_lepton_fsr_idx(fsr_photons, helper_leptons)
-
-        # for each FSR photon that was selected, we exclude that photon from the isolation sum of all the leptons in the event
-        # This concerns the photons that are in the isolation cone and outside the isolation veto of said leptons dR < 0.4 AND dR > 0.01
+        
+        # Extract temporary fsr mapping indices
+        leptons_pre = assign_lepton_fsr_idx(fsr_photons, leptons_pre)
+        computed_fsr_idx = leptons_pre.fsr_idx
+        
+        # 4. FSR isolation subtraction for Muons
         selected_fsr_photons = fsr_photons[fsr_photons.lepton_idx > -1]
         muons_matchedfsr_cartesian = ak.cartesian(
-            {"muon": muons, "fsr": selected_fsr_photons},
-            nested=True,
-            axis=1,
+            {"muon": muons, "fsr": selected_fsr_photons}, nested=True, axis=1
         )
         muons_matchedfsr_cartesian_dr = muons_matchedfsr_cartesian.muon.delta_r(
             muons_matchedfsr_cartesian.fsr
         )
         muons_matchedfsr_cartesian_dr_valid = (muons_matchedfsr_cartesian_dr > 0.01) & (
-            muons_matchedfsr_cartesian_dr < 0.4
+            muons_matchedfsr_cartesian_dr < 0.3
         )
         valid_matchedfsr_pt = ak.sum(
             muons_matchedfsr_cartesian.fsr.mask[muons_matchedfsr_cartesian_dr_valid].pt,
             axis=-1,
         )
         muon_corrected_iso = muons.pfRelIso03_all - (valid_matchedfsr_pt / muons.pt)
-        # update pfRelIso03_all field with corrected isolation
-        muons["pfRelIso03_all"] = ak.where(
-            muon_corrected_iso > 0, muon_corrected_iso, 0.0
-        )
-        # update 'is_tight' selection for muons
+        muons["pfRelIso03_all"] = ak.where(muon_corrected_iso > 0, muon_corrected_iso, 0.0)
         muons["is_tight"] = muons.is_tight & (muons.pfRelIso03_all < 0.35)
-
         electrons["pfRelIso03_all"] = ak.zeros_like(electrons.pt)
-        # concatenate muons and electrons with corrected iso
+        
+        # 5. Re-merge collections (Order matches original sort paths perfectly)
         leptons = ak.concatenate([muons, electrons], axis=1)
         leptons = leptons[ak.argsort(leptons.pt, axis=1, ascending=False)]
+        
+        # Inject the calculated fsr mapping back safely onto the final array
+        leptons["fsr_idx"] = computed_fsr_idx
+        
+        # Extract matching photons cleanly via mapped tracking.
+        # NOTE: awkward 1.x cannot slice with an option-typed (masked) integer
+        # array, so we index with a clamped plain-int array and apply the mask
+        # to the *result* instead. pad_none guards events with no FSR photon
+        # (where the clamped index 0 would otherwise be out of bounds).
+        valid_fsr = ak.fill_none(leptons.fsr_idx >= 0, False)
+        safe_fsr_idx = ak.values_astype(
+            ak.fill_none(ak.where(valid_fsr, leptons.fsr_idx, 0), 0), np.int64
+        )
+        fsr_photons_padded = ak.pad_none(fsr_photons, 1, axis=1)
+        matched_photons = ak.mask(fsr_photons_padded[safe_fsr_idx], valid_fsr)
+        
         leptons = ak.zip(
             {
                 "pt": leptons.pt,
@@ -237,8 +197,8 @@ class ObjectSelector:
                 "charge": leptons.charge,
                 "pdgId": leptons.pdgId,
                 "pfRelIso03_all": leptons.pfRelIso03_all,
-                "idx": helper_leptons.idx,
-                "fsr_idx": helper_leptons.fsr_idx,
+                "idx": ak.local_index(leptons, axis=1),
+                "fsr_idx": leptons.fsr_idx,
                 "is_loose": leptons.is_loose,
                 "is_relaxed": leptons.is_relaxed,
                 "is_tight": leptons.is_tight,
@@ -251,161 +211,85 @@ class ObjectSelector:
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
         )
-        leptons["idx"] = ak.local_index(leptons, axis=1)
-        # assign -1 to FSR lepton_idx associated with the excluded leptons
-        index_still_present = ak.any(
-            fsr_photons.idx == leptons.fsr_idx[:, None], axis=-1
-        )
-        new_lepton_idx = ak.where(index_still_present, fsr_photons.lepton_idx, -1)
-        fsr_photons["lepton_idx"] = new_lepton_idx
-
-        # select leptons with and without matched FSR photons
-        has_matched_fsr_photons = leptons.fsr_idx > -1
-        leptons_with_matched_fsrphotons = ak.pad_none(
-            leptons[has_matched_fsr_photons], 1
-        )
-        leptons_without_matched_fsrphotons = leptons[~has_matched_fsr_photons]
-        # select FSR photons with matched leptons
-        has_matched_leptons = fsr_photons.lepton_idx > -1
-        fsr_with_matched_leptons = ak.pad_none(fsr_photons[has_matched_leptons], 1)
-
-        # add p4 field to leptons adding the matched FSR photons
-        leptons_with_matched_fsrphotons["p4"] = ak.zip(
+        
+        # 6. Four-vector reconstruction (add matched FSR photon when present).
+        # Build p4 as a single, uniformly typed four-vector. Use the plain
+        # LorentzVector behavior (NOT candidate): p4 is only kinematics, and
+        # the candidate behavior's add() requires a 'charge' field, which a
+        # bare four-vector doesn't carry. Charge/pdgId stay on the lepton
+        # record itself, which is what every downstream cut actually uses.
+        has_fsr = ~ak.is_none(matched_photons, axis=1)
+        combined = leptons + matched_photons  # None where there is no matched photon
+        leptons["p4"] = ak.zip(
             {
-                "pt": (leptons_with_matched_fsrphotons + fsr_with_matched_leptons).pt,
-                "eta": (leptons_with_matched_fsrphotons + fsr_with_matched_leptons).eta,
-                "phi": (leptons_with_matched_fsrphotons + fsr_with_matched_leptons).phi,
-                "mass": (
-                    leptons_with_matched_fsrphotons + fsr_with_matched_leptons
-                ).mass,
-                "charge": (
-                    leptons_with_matched_fsrphotons + fsr_with_matched_leptons
-                ).charge,
-                "lostHits": leptons_with_matched_fsrphotons.lostHits,
+                "pt":   ak.where(has_fsr, ak.fill_none(combined.pt, 0.0),   leptons.pt),
+                "eta":  ak.where(has_fsr, ak.fill_none(combined.eta, 0.0),  leptons.eta),
+                "phi":  ak.where(has_fsr, ak.fill_none(combined.phi, 0.0),  leptons.phi),
+                "mass": ak.where(has_fsr, ak.fill_none(combined.mass, 0.0), leptons.mass),
             },
-            with_name="PtEtaPhiMCandidate",
-            behavior=candidate.behavior,
-        )
-        leptons_without_matched_fsrphotons["p4"] = ak.zip(
-            {
-                "pt": leptons_without_matched_fsrphotons.pt,
-                "eta": leptons_without_matched_fsrphotons.eta,
-                "phi": leptons_without_matched_fsrphotons.phi,
-                "mass": leptons_without_matched_fsrphotons.mass,
-                "charge": leptons_without_matched_fsrphotons.charge,
-                "lostHits": leptons_without_matched_fsrphotons.lostHits,
-            },
-            with_name="PtEtaPhiMCandidate",
-            behavior=candidate.behavior,
-        )
-        # concatenate leptons with and without matched FSR photons after FSR recovery
-        leptons = ak.where(
-            # concatenate only events with matched FSR photons
-            # to avoid including None values from 'leptons_with_matched_fsrphotons'
-            ak.sum(leptons.fsr_idx > -1, axis=1) == 0,
-            leptons_without_matched_fsrphotons,
-            ak.concatenate(
-                [leptons_with_matched_fsrphotons, leptons_without_matched_fsrphotons],
-                axis=1,
-            ),
+            with_name="PtEtaPhiMLorentzVector",
+            behavior=vector.behavior,
         )
         self.objects[obj_name] = leptons
 
     def select_zcandidates(self, obj_name):
         """selects Z candidates for SR and all CRS"""
-        # get Z candidates
         zcand = ak.combinations(self.objects["leptons"], 2, fields=["l1", "l2"])
-        # check that Z candidates leptons pass the loose id
-        zcand = zcand[zcand.l1.is_loose & zcand.l2.is_loose]
-        # add Z candidate, p4, pT and idx fields
+        zcand = zcand[zcand.l1.is_relaxed & zcand.l2.is_relaxed]
         zcand["p4"] = zcand.l1.p4 + zcand.l2.p4
         zcand["pt"] = zcand.p4.pt
         zcand["idx"] = ak.local_index(zcand, axis=1)
-        # add the Z candidates to objects
         self.objects[obj_name] = zcand
 
     def select_best_zcandidate(self, obj_name):
-        """selects best Z candidate as the one closest to the nominal Z mass"""
+        """selects best Z candidate as a flattened non-jagged option-type"""
         zmass = 91.1876
         best_zcand_idx = ak.argmin(
-            np.abs(self.objects["zcandidates"].p4.mass - zmass), axis=1
+            np.abs(self.objects["zcandidates"].p4.mass - zmass), axis=1, keepdims=True
         )
-        best_zcand = self.objects["zcandidates"][
-            best_zcand_idx == self.objects["zcandidates"].idx
-        ]
-        self.objects[obj_name] = best_zcand
+        best_zcand = self.objects["zcandidates"][best_zcand_idx]
+        self.objects[obj_name] = ak.firsts(best_zcand)
 
     def select_other_relaxed_leptons(self, obj_name):
         """
-        selects additional relaxed leptons in the Z+L CR. Adds the mask 'pass_selection' to additional relaxed leptons that pass the analysis selection
+        selects additional relaxed leptons in the Z+L CR matching the exact physics
+        vetos and event criteria of the historic baseline producer framework.
         """
-        # select best Z candidates
-        best_zcands = self.objects["best_zcandidates"]
-        # select relaxed leptons (whose idx are different to best Z candidate lepton's idx)
+        best_z = self.objects["best_zcandidates"]
         relaxed_leptons = self.objects["leptons"][self.objects["leptons"].is_relaxed]
-        relaxed_leptons_bestzl1_idx = relaxed_leptons.idx != best_zcands.l1.idx[:, None]
-        relaxed_leptons_bestzl2_idx = relaxed_leptons.idx != best_zcands.l2.idx[:, None]
-        relaxed_leptons_bestz_idx_mask = ak.flatten(
-            relaxed_leptons_bestzl1_idx & relaxed_leptons_bestzl2_idx, axis=-1
-        )
-        relaxed_leptons = relaxed_leptons[relaxed_leptons_bestz_idx_mask]
+        
+        # 1. Clean track matching: Drop probe if it's part of the Z pair
+        relaxed_leptons_bestzl1_idx = ak.fill_none(relaxed_leptons.idx != best_z.l1.idx, True)
+        relaxed_leptons_bestzl2_idx = ak.fill_none(relaxed_leptons.idx != best_z.l2.idx, True)
+        relaxed_leptons = relaxed_leptons[relaxed_leptons_bestzl1_idx & relaxed_leptons_bestzl2_idx]
 
-        # add the 'pass_selection' attribute to 'relaxed_leptons'. It flags relaxed leptons passing the analysis selection
-        is_tight = relaxed_leptons.is_tight == ak.ones_like(
-            best_zcands.l1.idx[:, None], dtype=bool
-        )
-        is_tight = ak.flatten(is_tight, axis=-1)
-        # ghost removal: ∆R(η, φ) > 0.02 between each of the leptons (to protect against split tracks)
-        relaxed_leptons_bestzl1_dr = relaxed_leptons.metric_table(best_zcands.l1)
-        relaxed_leptons_bestzl2_dr = relaxed_leptons.metric_table(best_zcands.l2)
-        relaxed_leptons_bestz_dr_mask = ak.flatten(
-            (relaxed_leptons_bestzl1_dr > 0.02) & (relaxed_leptons_bestzl2_dr > 0.02),
-            axis=-1,
-        )
-        # QCD suppression cut: invariant mass of relaxed lepton and the opposite sign tight lepton from the best Z candidate should satisfy m2l > 4 GeV
-        relaxed_leptons_bestzl1_opposite_charge = ak.flatten(
-            relaxed_leptons.charge != best_zcands.l1.charge[:, None], axis=-1
-        )
-        relaxed_leptons_bestzl2_opposite_charge = ak.flatten(
-            relaxed_leptons.charge != best_zcands.l2.charge[:, None], axis=-1
-        )
-        relaxed_leptons_bestzl1_cartesian = ak.cartesian(
-            {"lepton": relaxed_leptons.p4, "zl1": best_zcands.l1.p4},
-            nested=True,
-            axis=1,
-        )
-        relaxed_leptons_bestzl1_mass = ak.flatten(
-            (
-                relaxed_leptons_bestzl1_cartesian.lepton
-                + relaxed_leptons_bestzl1_cartesian.zl1
-            ).mass,
-            axis=-1,
-        )
-        relaxed_leptons_bestzl1_mass_mask = relaxed_leptons_bestzl1_mass > 4
-        relaxed_leptons_bestzl2_cartesian = ak.cartesian(
-            {"lepton": relaxed_leptons.p4, "zl2": best_zcands.l2.p4},
-            nested=True,
-            axis=1,
-        )
-        relaxed_leptons_bestzl2_mass = ak.flatten(
-            (
-                relaxed_leptons_bestzl2_cartesian.lepton
-                + relaxed_leptons_bestzl2_cartesian.zl2
-            ).mass,
-            axis=-1,
-        )
-        relaxed_leptons_bestzl2_mass_mask = relaxed_leptons_bestzl2_mass > 4
-        qcd_suppression_mask = (
-            relaxed_leptons_bestzl1_opposite_charge & relaxed_leptons_bestzl1_mass_mask
-        ) | (
-            relaxed_leptons_bestzl2_opposite_charge & relaxed_leptons_bestzl2_mass_mask
-        )
+        # 2. Ghost removal (ΔR > 0.02)
+        dr1 = ak.fill_none(relaxed_leptons.delta_r(best_z.l1), 999)
+        dr2 = ak.fill_none(relaxed_leptons.delta_r(best_z.l2), 999)
+        relaxed_leptons = relaxed_leptons[(dr1 > 0.02) & (dr2 > 0.02)]
 
-        # get full pass selection mask
-        pass_selection = is_tight & relaxed_leptons_bestz_dr_mask & qcd_suppression_mask
-        relaxed_leptons["pass_selection"] = pass_selection
+        # 3. QCD suppression veto format: Fail only if OS AND mass <= 4 GeV
+        m_l1 = ak.fill_none((relaxed_leptons.p4 + best_z.l1.p4).mass, 0)
+        m_l2 = ak.fill_none((relaxed_leptons.p4 + best_z.l2.p4).mass, 0)
+        
+        opp_charge_l1 = ak.fill_none(relaxed_leptons.charge != best_z.l1.charge, False)
+        opp_charge_l2 = ak.fill_none(relaxed_leptons.charge != best_z.l2.charge, False)
 
-        # add relaxed leptons to objects
+        fails_qcd_l1 = opp_charge_l1 & (m_l1 <= 4)
+        fails_qcd_l2 = opp_charge_l2 & (m_l2 <= 4)
+        
+        # Reverse to form an exact veto check block
+        qcd_mask = ~(fails_qcd_l1 | fails_qcd_l2)
+        # If there is no best Z in the event, don't apply the QCD veto (keep all).
+        # Use a broadcasted OR rather than ak.where: mixing a scalar branch with
+        # a jagged branch under a per-event condition builds a union-typed array
+        # in awkward 1.x, which can't be used as a slice. The per-event bool
+        # broadcasts cleanly across each event's lepton list here.
+        qcd_mask = qcd_mask | ak.is_none(best_z)
+        relaxed_leptons = relaxed_leptons[qcd_mask]
+
+        # 4. Save clean selection status flags
+        relaxed_leptons["pass_selection"] = relaxed_leptons.is_tight
         self.objects[obj_name] = relaxed_leptons
 
     def select_trilepton(self, obj_name):
@@ -438,61 +322,80 @@ class ObjectSelector:
         self.objects[obj_name] = select_best_zzcandidate(self.objects["zzcandidates"])
 
     def select_best_1fcr_zllcandidate(self, obj_name):
-        """selects best Zll candidates for 3P1F CR"""
+        """selects best Zll candidates for 3P1F CR (OS region)"""
+        # FIX: was self.objects["zllcandidates"] — that key no longer exists
+        # now that the OS and SS control regions are built as two separate
+        # objects (zllcandidates_os / zllcandidates_ss) so each can carry its
+        # own m4l mass-window cut. 1FCR/2FCR are both OS-flavor regions, so
+        # they read from zllcandidates_os.
         self.objects[obj_name] = select_best_zzcandidate(
-            self.objects["zllcandidates"], "is_1fcr"
+            self.objects["zllcandidates_os"], "is_1fcr"
         )
 
     def select_best_2fcr_zllcandidate(self, obj_name):
-        """selects best Zll candidates for 2P2F CR"""
+        """selects best Zll candidates for 2P2F CR (OS region)"""
+        # FIX: same as above — reads from zllcandidates_os, not the old
+        # unified "zllcandidates" key.
         self.objects[obj_name] = select_best_zzcandidate(
-            self.objects["zllcandidates"], "is_2fcr"
+            self.objects["zllcandidates_os"], "is_2fcr"
         )
 
     def select_best_sscr_zllcandidate(self, obj_name):
         """selects best Zll candidates for SS CR"""
+        # FIX: was self.objects["zllcandidates"] — the SS region is built as
+        # its own zllcandidates_ss object (separate mass cut from the OS
+        # regions), so is_sscr must be evaluated against that collection.
         self.objects[obj_name] = select_best_zzcandidate(
-            self.objects["zllcandidates"], "is_sscr"
+            self.objects["zllcandidates_ss"], "is_sscr"
+        )
+
+    def select_best_2fcr_ss_zllcandidate(self, obj_name):
+        """selects best Zll candidates for SS CR (legacy is_2fcr_ss definition)"""
+        # FIX: was self.objects["zllcandidates"]. Kept for configs that still
+        # reference the older exactly-0-tight is_2fcr_ss definition rather
+        # than is_sscr; also now reads from zllcandidates_ss.
+        self.objects[obj_name] = select_best_zzcandidate(
+            self.objects["zllcandidates_ss"], "is_2fcr_ss"
         )
 
     def select_mass_4e_1fcr(self, obj_name):
         self.objects[obj_name] = select_candidate_mass(
-            self.objects["best_zllcandidate_1fcr"], "4e"
+            self.objects["best_zllcandidate_3p1f"], "4e"
         )
 
     def select_mass_2e2mu_1fcr(self, obj_name):
         self.objects[obj_name] = select_candidate_mass(
-            self.objects["best_zllcandidate_1fcr"], "2e2mu"
+            self.objects["best_zllcandidate_3p1f"], "2e2mu"
         )
 
     def select_mass_2mu2e_1fcr(self, obj_name):
         self.objects[obj_name] = select_candidate_mass(
-            self.objects["best_zllcandidate_1fcr"], "2mu2e"
+            self.objects["best_zllcandidate_3p1f"], "2mu2e"
         )
 
     def select_mass_4mu_1fcr(self, obj_name):
         self.objects[obj_name] = select_candidate_mass(
-            self.objects["best_zllcandidate_1fcr"], "4mu"
+            self.objects["best_zllcandidate_3p1f"], "4mu"
         )
 
     def select_mass_4e_2fcr(self, obj_name):
         self.objects[obj_name] = select_candidate_mass(
-            self.objects["best_zllcandidate_2fcr"], "4e"
+            self.objects["best_zllcandidate_2p2f"], "4e"
         )
 
     def select_mass_2e2mu_2fcr(self, obj_name):
         self.objects[obj_name] = select_candidate_mass(
-            self.objects["best_zllcandidate_2fcr"], "2e2mu"
+            self.objects["best_zllcandidate_2p2f"], "2e2mu"
         )
 
     def select_mass_2mu2e_2fcr(self, obj_name):
         self.objects[obj_name] = select_candidate_mass(
-            self.objects["best_zllcandidate_2fcr"], "2mu2e"
+            self.objects["best_zllcandidate_2p2f"], "2mu2e"
         )
 
     def select_mass_4mu_2fcr(self, obj_name):
         self.objects[obj_name] = select_candidate_mass(
-            self.objects["best_zllcandidate_2fcr"], "4mu"
+            self.objects["best_zllcandidate_2p2f"], "4mu"
         )
 
     def select_mass_4e_sscr(self, obj_name):
@@ -586,7 +489,7 @@ class ObjectSelector:
         self.objects["zcandidates"] = ak.combinations(
             self.objects["leptons"], 2, fields=["l1", "l2"]
         )
-        self.objects["zcandidates"].pt = (
+        self.objects["zcandidates"]["pt"] = (
             self.objects["zcandidates"].l1.pt + self.objects["zcandidates"].l2.pt
         )
 

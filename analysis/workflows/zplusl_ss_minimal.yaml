@@ -109,7 +109,7 @@ event_selection:
       - one_relaxed_lepton
 corrections:
   object:
-    - jet
+    # - jet
     - muon
     - electron
   object_shifts: false

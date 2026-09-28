@@ -1,0 +1,60 @@
+Mass window: [70, None] GeV (default)
+
+============================================================
+  Year: 2022preEE
+============================================================
+
+Loading 3P1F events...
+  Loaded 49,624 events for CR_3P1F (before SR cuts)
+  m4l window: NONE (inclusive)
+  After DATA-only filter:         563 events (1.1% were DATA)
+
+Loading 2P2F events...
+  Loaded 40,140 events for CR_2P2F (before SR cuts)
+  m4l window: NONE (inclusive)
+  After DATA-only filter:         5,577 events (13.9% were DATA)
+
+Computing ZZ correction factor...
+  Warning: could not compute qqZZ correction for 2022preEE (xs=1.39, sumw=0.0)
+  ZZ correction (CR_3P1F, m4l [70,None] GeV): N_data=563  N_qqZZ=0.00  N_ggZZ=0.00  N_ZZ_total=0.00  factor=1.0000
+
+Computing fake rate weights (nominal + Up variation)...
+
+============================================================
+  Z+X Yield Summary — 2022preEE
+============================================================
+  m4l window:                  [70,None] GeV
+  N_3P1F (DATA events):               563
+  N_ZZ_MC in 3P1F:                   0.00
+  ZZ correction factor:            1.0000
+  Sum 3P1F f/(1-f) [raw]:           41.71
+  Sum 3P1F [corrected]:             41.71
+  Sum 2P2F [subtracted]:            19.20
+  Net Z+X yield:                    22.51
+  ── error breakdown ──
+  stat (CR, sqrt(Sum w^2)):        2.5386
+  syst (fake-rate Up var.):       -0.1735
+  syst_comp (flat 30%):            6.7544
+  >>> comb (total):                7.2178  <<<
+
+  Breakdown by final state:
+  Final state     Yield      stat      syst  syst_comp      comb
+  --------------------------------------------------------------
+  4mu             9.60      1.88     -0.06       2.88      3.44
+  4e              3.27      0.50     -0.00       0.98      1.10
+  2e2mu           5.41      1.53     -0.13       1.62      2.24
+  2mu2e           4.23      0.56      0.03       1.27      1.39
+============================================================
+
+
+======================================================================
+  Z+X Background Yield — OS Method (UAntwerp-style table)
+  errors: comb = sqrt(stat^2 + syst^2 + syst_comp^2)
+======================================================================
+  Era                              4mu                  4e               2e2mu               2mu2e         Total
+  ------------------------------------------------------------------------------------------
+  2022preEE                  9.6 ± 3.4           3.3 ± 1.1           5.4 ± 2.2           4.2 ± 1.4    22.5 ± 7.2
+  ------------------------------------------------------------------------------------------
+  Total                      9.6 ± 3.4           3.3 ± 1.1           5.4 ± 2.2           4.2 ± 1.4    22.5 ± 7.2
+======================================================================
+

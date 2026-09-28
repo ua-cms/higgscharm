@@ -1,0 +1,313 @@
+# Simplified H+c Control Region config — Z+X fake-rate estimation ONLY
+#
+# Trimmed down from hplusc_mva_4class_CR.yaml to keep exactly the branches
+# consumed by estimate_zx_background.py:
+#   - l3/l4 pt, eta, pdgid, is_tight (3P1F) for fake-rate lookup + final-state tag
+#   - l3/l4 pt, eta, pdgid (2P2F) for fake-rate lookup
+#   - m4l_3p1f, m4l_2p2f for the SR mass-window cut
+#   - z1_l1_pdgid_3p1f / z1_l1_pdgid_2p2f for final-state classification
+#   - cjet_HT, kept only because SR_CJET_REQ in the script CAN be flipped on
+#     (it's False/unused by default — drop the `jets`/`cjets` object_selection
+#     and the `cjet_HT` axis below if you never plan to enable it)
+#   - weight_nominal comes from histogram_config.add_weight, not from `axes`
+#
+# Everything SS-region (_2p2f_ss), all extra MVA kinematics (Z1/Z2 4-vectors,
+# deltaR, phi, jet pt/eta/btag, nSV, etc.) has been removed since the script
+# never reads them.
+
+datasets:
+  data:
+    - muon
+    - double_muon
+    - electron
+    - double_electron
+    - muon_electron
+  mc:
+    - dy_nlo
+    - wz
+    - tt_semileptonic
+    - qqtozz
+    # - ggtozz
+
+object_selection:
+  muons:
+    field: events.Muon
+    add_cut:
+      is_loose:
+        - events.Muon.pt > 5
+        - np.abs(events.Muon.eta) < 2.4
+        - np.abs(events.Muon.dxy) < 0.5
+        - np.abs(events.Muon.dz) < 1
+        - events.Muon.isGlobal | events.Muon.isTracker
+      is_relaxed:
+        - objects['muons'].is_loose
+        - np.abs(events.Muon.sip3d) < 4
+      is_tight:
+        - objects['muons'].is_loose
+        - objects['muons'].is_relaxed
+        - events.Muon.isPFcand | ((events.Muon.highPtId > 0) & (events.Muon.pt > 200))
+  electrons:
+    field: events.Electron
+    add_cut:
+      is_loose:
+        - events.Electron.pt > 7
+        - np.abs(events.Electron.eta) < 2.5
+        - np.abs(events.Electron.dxy) < 0.5
+        - np.abs(events.Electron.dz) < 1
+      is_relaxed:
+        - objects['electrons'].is_loose
+        - np.abs(events.Electron.sip3d) < 4
+      is_tight:
+        - objects['electrons'].is_loose
+        - objects['electrons'].is_relaxed
+        - working_points.electron_id(events, 'bdt')
+    cuts:
+      - delta_r_higher(events.Electron, objects['muons'], 0.05)
+  fsr_photons:
+    field: events.FsrPhoton
+    cuts:
+      - events.FsrPhoton.pt > 2
+      - np.abs(events.FsrPhoton.eta) < 2.4
+      - events.FsrPhoton.relIso03 < 1.8
+  leptons:
+    field: select_zzto4l_leptons
+  zcandidates:
+    field: select_zcandidates
+    add_cut:
+      is_ossf:
+        - objects['zcandidates'].l1.pdgId == -objects['zcandidates'].l2.pdgId
+      is_sr:
+        - objects['zcandidates'].is_ossf
+        - objects['zcandidates'].l1.is_tight & objects['zcandidates'].l2.is_tight
+      is_1fcr:
+        - objects['zcandidates'].is_ossf
+        - objects['zcandidates'].l1.is_relaxed
+        - objects['zcandidates'].l2.is_relaxed
+        - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 1
+      is_2fcr:
+        - objects['zcandidates'].is_ossf
+        - objects['zcandidates'].l1.is_relaxed
+        - objects['zcandidates'].l2.is_relaxed
+        - (1*objects['zcandidates'].l1.is_tight + 1*objects['zcandidates'].l2.is_tight) == 0
+    cuts:
+      - (objects['zcandidates'].p4.mass > 12) & (objects['zcandidates'].p4.mass < 120)
+  zzcandidates:
+    field: select_zzcandidates
+    cuts:
+      - objects['zzcandidates'].z1.is_sr & objects['zzcandidates'].z2.is_sr
+      - (objects['zzcandidates'].z1.p4 + objects['zzcandidates'].z2.p4).mass > 70
+  zllcandidates:
+    field: select_zllcandidates_os
+    cuts:
+      - objects['zllcandidates'].z1.is_sr & (objects['zllcandidates'].z2.is_1fcr | objects['zllcandidates'].z2.is_2fcr)
+      - (objects['zllcandidates'].z1.p4 + objects['zllcandidates'].z2.p4).mass > 70
+  best_zllcandidate_3p1f:
+    field: select_best_1fcr_zllcandidate
+  best_zllcandidate_2p2f:
+    field: select_best_2fcr_zllcandidate
+  # Only needed to support the optional cjet_HT axis (SR_CJET_REQ toggle in the
+  # script). Delete this block + cjets_HT axis below if that toggle is never used.
+  cjets:
+    field: events.Jet
+    cuts:
+      - events.Jet.pt > 20
+      - np.abs(events.Jet.eta) < 2.5
+      - working_points.jet_id(events, year, 'tightlepveto')
+      - delta_r_higher(events.Jet, objects['leptons'], 0.4)
+      - working_points.jet_ctagging(events, 'loose', year)
+
+event_selection:
+  hlt_paths:
+    - SingleMu
+    - DiMu
+    - TriMu
+    - SingleEle
+    - DiEle
+    - MuEle
+  selections:
+    trigger: get_zzto4l_trigger_mask(events, hlt_paths, dataset, year)
+    lumimask: get_lumi_mask(events, year)
+    atleast_one_goodvertex: events.PV.npvsGood > 0
+    no_sr_candidate: ak.num(objects['zzcandidates']) == 0
+    atleast_one_zll: ak.num(objects['zllcandidates']) >= 1
+    has_3p1f: ak.num(objects['best_zllcandidate_3p1f']) >= 1
+    has_2p2f: ak.num(objects['best_zllcandidate_2p2f']) >= 1
+  categories:
+    CR_3P1F:
+      - trigger
+      - lumimask
+      - atleast_one_goodvertex
+      - no_sr_candidate
+      - has_3p1f
+    CR_2P2F:
+      - trigger
+      - lumimask
+      - atleast_one_goodvertex
+      - no_sr_candidate
+      - has_2p2f
+
+corrections:
+  object:
+    - jec
+    - jet_vetomaps
+    - muon_ss
+    - electon_ss
+  object_shifts: false
+  event_weights:
+    genWeight: true
+    pileupWeight: true
+    partonshowerWeight: false
+    lhepdfWeight: false
+    lhescaleWeight: false
+    nnlopsWeight: false
+    electron:
+      - id: false
+      - reco: true
+      - trigger: false
+
+histogram_config:
+  add_syst_axis: true
+  add_weight: true
+  axes:
+    # --- mass window cut variable (SR_M4L_MIN/MAX in the script) ---
+    m4l_3p1f:
+      type: Regular
+      bins: 50
+      start: 70
+      stop: 400
+      label: $m_{4\ell}$ (3P1F) [GeV]
+      expression: (objects['best_zllcandidate_3p1f'].z1.p4 + objects['best_zllcandidate_3p1f'].z2.p4).mass
+    m4l_2p2f:
+      type: Regular
+      bins: 50
+      start: 70
+      stop: 400
+      label: $m_{4\ell}$ (2P2F) [GeV]
+      expression: (objects['best_zllcandidate_2p2f'].z1.p4 + objects['best_zllcandidate_2p2f'].z2.p4).mass
+
+    # --- final-state classification (z1 flavor + l3 flavor) ---
+    z1_l1_pdgid_3p1f:
+      type: IntCategory
+      categories: [11, 13]
+      label: Z1 l1 |pdgId| (3P1F)
+      expression: np.abs(objects['best_zllcandidate_3p1f'].z1.l1.pdgId)
+    z1_l1_pdgid_2p2f:
+      type: IntCategory
+      categories: [11, 13]
+      label: Z1 l1 |pdgId| (2P2F)
+      expression: np.abs(objects['best_zllcandidate_2p2f'].z1.l1.pdgId)
+
+    # --- 3P1F failing-lepton info (fake rate lookup + tight flag) ---
+    l3_pt_3p1f:
+      type: Variable
+      edges: [5, 7, 10, 20, 30, 40, 50, 80]
+      label: $p_T(\ell_3)$ (3P1F) [GeV]
+      expression: objects['best_zllcandidate_3p1f'].z2.l1.pt
+    l3_eta_3p1f:
+      type: Regular
+      bins: 25
+      start: 0
+      stop: 2.5
+      label: $|\eta(\ell_3)|$ (3P1F)
+      expression: np.abs(objects['best_zllcandidate_3p1f'].z2.l1.eta)
+    l3_istight_3p1f:
+      type: Boolean
+      label: $\ell_3$ is_tight (3P1F)
+      expression: objects['best_zllcandidate_3p1f'].z2.l1.is_tight
+    l3_pdgid_3p1f:
+      type: IntCategory
+      categories: [11, 13]
+      label: $|\text{pdgId}(\ell_3)|$ (3P1F)
+      expression: np.abs(objects['best_zllcandidate_3p1f'].z2.l1.pdgId)
+    l4_pt_3p1f:
+      type: Variable
+      edges: [5, 7, 10, 20, 30, 40, 50, 80]
+      label: $p_T(\ell_4)$ (3P1F) [GeV]
+      expression: objects['best_zllcandidate_3p1f'].z2.l2.pt
+    l4_eta_3p1f:
+      type: Regular
+      bins: 25
+      start: 0
+      stop: 2.5
+      label: $|\eta(\ell_4)|$ (3P1F)
+      expression: np.abs(objects['best_zllcandidate_3p1f'].z2.l2.eta)
+    l4_istight_3p1f:
+      type: Boolean
+      label: $\ell_4$ is_tight (3P1F)
+      expression: objects['best_zllcandidate_3p1f'].z2.l2.is_tight
+    l4_pdgid_3p1f:
+      type: IntCategory
+      categories: [11, 13]
+      label: $|\text{pdgId}(\ell_4)|$ (3P1F)
+      expression: np.abs(objects['best_zllcandidate_3p1f'].z2.l2.pdgId)
+
+    # --- 2P2F failing-lepton info (fake rate lookup) ---
+    l3_pt_2p2f:
+      type: Variable
+      edges: [5, 7, 10, 20, 30, 40, 50, 80]
+      label: $p_T(\ell_3)$ (2P2F) [GeV]
+      expression: objects['best_zllcandidate_2p2f'].z2.l1.pt
+    l3_eta_2p2f:
+      type: Regular
+      bins: 25
+      start: 0
+      stop: 2.5
+      label: $|\eta(\ell_3)|$ (2P2F)
+      expression: np.abs(objects['best_zllcandidate_2p2f'].z2.l1.eta)
+    l3_pdgid_2p2f:
+      type: IntCategory
+      categories: [11, 13]
+      label: $|\text{pdgId}(\ell_3)|$ (2P2F)
+      expression: np.abs(objects['best_zllcandidate_2p2f'].z2.l1.pdgId)
+    l4_pt_2p2f:
+      type: Variable
+      edges: [5, 7, 10, 20, 30, 40, 50, 80]
+      label: $p_T(\ell_4)$ (2P2F) [GeV]
+      expression: objects['best_zllcandidate_2p2f'].z2.l2.pt
+    l4_eta_2p2f:
+      type: Regular
+      bins: 25
+      start: 0
+      stop: 2.5
+      label: $|\eta(\ell_4)|$ (2P2F)
+      expression: np.abs(objects['best_zllcandidate_2p2f'].z2.l2.eta)
+    l4_pdgid_2p2f:
+      type: IntCategory
+      categories: [11, 13]
+      label: $|\text{pdgId}(\ell_4)|$ (2P2F)
+      expression: np.abs(objects['best_zllcandidate_2p2f'].z2.l2.pdgId)
+
+    # --- optional: only read by the script when SR_CJET_REQ is toggled True ---
+    cjet_HT:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1000
+      label: $H_T$ (c-Jets) [GeV]
+      expression: ak.sum(objects['cjets'].pt, axis=1)
+
+  layout:
+    zll_3p1f:
+      - m4l_3p1f
+      - z1_l1_pdgid_3p1f
+    leptons_3p1f:
+      - l3_pt_3p1f
+      - l3_eta_3p1f
+      - l3_istight_3p1f
+      - l3_pdgid_3p1f
+      - l4_pt_3p1f
+      - l4_eta_3p1f
+      - l4_istight_3p1f
+      - l4_pdgid_3p1f
+    zll_2p2f:
+      - m4l_2p2f
+      - z1_l1_pdgid_2p2f
+    leptons_2p2f:
+      - l3_pt_2p2f
+      - l3_eta_2p2f
+      - l3_pdgid_2p2f
+      - l4_pt_2p2f
+      - l4_eta_2p2f
+      - l4_pdgid_2p2f
+    jet_global:
+      - cjet_HT

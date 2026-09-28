@@ -292,6 +292,26 @@ histogram_config:
       stop: 3.14159
       label: Jets $\phi$
       expression: objects['jets'].phi
+    jets_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Jets CvsL
+      expression: >-
+        objects['jets'].btagUParTAK4CvL if hasattr(objects['jets'], 'btagUParTAK4CvL') 
+        else objects['jets'].btagPNetCvL if hasattr(objects['jets'], 'btagPNetCvL') 
+        else objects['jets'].btagDeepFlavCvL
+    jets_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Jets CvsB
+      expression: >-
+        objects['jets'].btagUParTAK4CvB if hasattr(objects['jets'], 'btagUParTAK4CvB') 
+        else objects['jets'].btagPNetCvB if hasattr(objects['jets'], 'btagPNetCvB') 
+        else objects['jets'].btagDeepFlavCvB
     leadingjet_cvsl:
       type: Regular
       bins: 50
@@ -314,6 +334,27 @@ histogram_config:
         - 5
       label: Leading Jet HadronFlavour
       expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
+    gen_pt:
+      type: Regular
+      bins: 50
+      start: 10
+      stop: 500
+      label: Jets $p_T$ [GeV]
+      expression: objects['genparts'].pt
+    gen_eta:
+      type: Regular
+      bins: 50
+      start: -2.4
+      stop: 2.4
+      label: Jets $\eta$
+      expression: objects['genparts'].eta
+    gen_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: Jets $\phi$
+      expression: objects['genparts'].phi
     # subleadingjet_cvsl:
     #   type: Regular
     #   bins: 50
