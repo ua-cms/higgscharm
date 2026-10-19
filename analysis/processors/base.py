@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import awkward as ak
 from copy import deepcopy
@@ -41,11 +42,17 @@ class BaseProcessor(processor.ProcessorABC):
         year: str,
         output_format: str,
         output_location: str,
+        partition_key: str,
+        mode="virtual",
     ):
+        assert mode in ["eager", "virtual", "dask"]
+        self._mode = mode
         self.year = year
         self.workflow = workflow
         self.output_format = output_format
         self.output_location = output_location
+        self.partition_key = partition_key
+        self.run = "2" if year.startswith("201") else "3"
 
         config_builder = WorkflowConfigBuilder(workflow)
         self.workflow_config = config_builder.build_workflow_config()
@@ -74,11 +81,19 @@ class BaseProcessor(processor.ProcessorABC):
                     output["metadata"][category]["cutflow"][cut_name] = 0
 
     def process(self, events):
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        np.seterr(divide="ignore", invalid="ignore")
+
+        # identify data and simulation
         self.is_mc = hasattr(events, "genWeight")
+
+        # apply object corrections, jet veto and prepare systematic variations
         vetoed_events, shifts = object_corrector_manager(
             events=events,
             year=self.year,
-            corrections_config=self.workflow_config.corrections_config,
+            run=self.run,
+            dataset=events.metadata["dataset"],
+            workflow_config=self.workflow_config,
         )
         return processor.accumulate(
             self.process_shift(update(vetoed_events, collections), shift)
@@ -86,47 +101,45 @@ class BaseProcessor(processor.ProcessorABC):
         )
 
     def process_shift(self, events, shift):
+        # define variables required by workflow expressions evaluated with eval()
         year = self.year
         dataset = events.metadata["dataset"]
-        histograms = deepcopy(self.histograms)
+        hlt_paths = self.workflow_config.event_selection["hlt_paths"]
 
-        # initialize output dictionary to store histograms/arrays and metadata
+        # initialize output metadata
         output = {}
         output["metadata"] = {}
         if shift is None:
-            # add sum of genweights (before selection) to metadata
+            # store the initial sum of weights before object selection
             sumw = ak.sum(events.genWeight) if self.is_mc else len(events)
             output["metadata"].update({"sumw": sumw})
+            for category in self.workflow_config.event_selection["categories"]:
+                output["metadata"].update({category: {"cutflow": {"initial": sumw}}})
 
         if not self.is_mc:
             events["Jet", "hadronFlavour"] = ak.zeros_like(events.Jet.pt)
 
-        # --------------------------------------------------------------
-        # Object selection
-        # --------------------------------------------------------------
+        # object selection
         object_selection = self.workflow_config.object_selection
         object_selector = ObjectSelector(object_selection, year)
         objects = object_selector.select_objects(events)
 
-        # --------------------------------------------------------------
-        # Event selection
-        # --------------------------------------------------------------
+        # event selection
+        selection_manager = PackedSelection()
         event_selection = self.workflow_config.event_selection
-        hlt_paths = event_selection["hlt_paths"]
+        for selection, mask in event_selection["selections"].items():
+            selection_manager.add(selection, eval(mask))
+
         if not self.is_mc:
             # save (run, luminosityBlock) pairs to metadata
             lumi_mask = eval(event_selection["selections"]["lumimask"])
             dump_lumi(events[lumi_mask], output)
 
-        selection_manager = PackedSelection()
-        for selection, mask in event_selection["selections"].items():
-            selection_manager.add(selection, eval(mask))
-
+        # save cutflow to metadata
         self.add_cutflow(events, output, selection_manager)
 
-        # --------------------------------------------------------------
         # Histogram filling / array dumping
-        # --------------------------------------------------------------
+        histograms = deepcopy(self.histograms)
         categories = event_selection["categories"]
         for category, category_cuts in categories.items():
             # get selection mask by category
@@ -147,10 +160,12 @@ class BaseProcessor(processor.ProcessorABC):
                     category=category,
                     shift=shift,
                 )
-                # get analysis variables map
+                # evaluate variables required by the histogram layout
                 variables_map = {}
+                layout_axes = self.histogram_config.layout.values()
                 for variable, axis in self.histogram_config.axes.items():
-                    variables_map[variable] = eval(axis.expression)[category_mask]
+                    if variable in ak.flatten(layout_axes):
+                        variables_map[variable] = eval(axis.expression)[category_mask]
 
                 if self.output_format == "coffea":
                     fill_histograms(
@@ -172,6 +187,7 @@ class BaseProcessor(processor.ProcessorABC):
                         year=year,
                         category=category,
                         output_location=self.output_location,
+                        partition_key=self.partition_key,
                         shift=shift,
                     )
 
