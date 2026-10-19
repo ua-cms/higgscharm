@@ -68,7 +68,7 @@ if __name__ == "__main__":
         "--nfiles",
         dest="nfiles",
         type=int,
-        default=15,
+        default=10,
         help="number of root files to include in each dataset partition (default 10)",
     )
     parser.add_argument(
@@ -130,15 +130,22 @@ if __name__ == "__main__":
         short_name = fileset[sample]["metadata"]["short_name"]
         short_name_map[short_name] = sample
 
-    root_files = fileset[short_name_map[args.dataset]]
-    root_files_list = divide_list(root_files, args.nfiles)
-    for i in range(len(root_files_list)):
-        dataset_key = (
-            f"{args.dataset}_{i+1}" if len(root_files_list) > 1 else args.dataset
-        )
-        partition_dataset[i + 1] = {dataset_key: root_files_list[i]}
-        jobnum_list.append(i + 1)
+    # extract the dictionary of files {"path.root": "Events"} and the metadata
+    dataset = fileset[short_name_map[args.dataset]]
+    files_dict = dataset["files"]
+    metadata = dataset.get("metadata", {})
 
+    # convert the items to a list so we can divide them with divide_list
+    file_items = list(files_dict.items())
+    file_chunks = divide_list(file_items, args.nfiles)
+
+    for i, chunk in enumerate(file_chunks, start=1):
+        dataset_key = f"{args.dataset}_{i}" if len(file_chunks) > 1 else args.dataset
+        # reconstruct the structure for each individual job.
+        partition_dataset[i] = {
+            dataset_key: {"files": dict(chunk), "metadata": metadata}
+        }
+        jobnum_list.append(i)
     partition_file = job_dir / "partitions.json"
     with open(f"{partition_file}", "w") as json_file:
         json.dump(partition_dataset, json_file, indent=4)
