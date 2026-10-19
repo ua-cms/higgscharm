@@ -1,4 +1,3 @@
-import numba
 import numpy as np
 import awkward as ak
 from coffea.nanoevents.methods import candidate
@@ -87,6 +86,8 @@ def build_zcand(z):
         z_fields.update({"is_2fcr": z.is_2fcr})
     if hasattr(z, "is_sscr"):
         z_fields.update({"is_sscr": z.is_sscr})
+    if hasattr(z, "is_2fcr_ss"):
+        z_fields.update({"is_2fcr_ss": z.is_2fcr_ss})
     return ak.zip(z_fields)
 
 
