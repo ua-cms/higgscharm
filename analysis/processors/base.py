@@ -5,7 +5,7 @@ from coffea import processor
 from coffea.nanoevents import NanoAODSchema
 from coffea.analysis_tools import PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
-from analysis.utils import dump_lumi, update, add_cutflow, dump_parquet
+from analysis.utils import dump_lumi, dump_parquet
 from analysis.workflows.config import WorkflowConfigBuilder
 from analysis.histograms import HistBuilder, fill_histograms
 
@@ -26,6 +26,14 @@ from analysis.selections import (
 NanoAODSchema.warn_missing_crossrefs = False
 
 
+def update(events, collections):
+    """Return a shallow copy of events array with some collections swapped out"""
+    out = events
+    for name, value in collections.items():
+        out = ak.with_field(out, value, name)
+    return out
+
+
 class BaseProcessor(processor.ProcessorABC):
     def __init__(
         self,
@@ -43,6 +51,27 @@ class BaseProcessor(processor.ProcessorABC):
         self.workflow_config = config_builder.build_workflow_config()
         self.histogram_config = self.workflow_config.histogram_config
         self.histograms = HistBuilder(self.workflow_config).build_histogram()
+
+    def add_cutflow(self, events, output, selection_manager):
+        sumw = ak.sum(events.genWeight) if hasattr(events, "genWeight") else len(events)
+        for category, category_cuts in self.workflow_config.event_selection[
+            "categories"
+        ].items():
+            output["metadata"].update({category: {"cutflow": {"initial": sumw}}})
+            selections = []
+            for cut_name in category_cuts:
+                selections.append(cut_name)
+                current_selection = selection_manager.all(*selections)
+                if ak.sum(current_selection) != 0:
+                    sumw_cutflow = (
+                        ak.sum(events.genWeight[current_selection])
+                        if hasattr(events, "genWeight")
+                        else len(events[current_selection])
+                    )
+                    output["metadata"][category]["cutflow"][cut_name] = sumw_cutflow
+
+                else:
+                    output["metadata"][category]["cutflow"][cut_name] = 0
 
     def process(self, events):
         self.is_mc = hasattr(events, "genWeight")
@@ -93,7 +122,8 @@ class BaseProcessor(processor.ProcessorABC):
         for selection, mask in event_selection["selections"].items():
             selection_manager.add(selection, eval(mask))
 
-        add_cutflow(events, output, selection_manager, self.workflow_config)
+        self.add_cutflow(events, output, selection_manager)
+
         # --------------------------------------------------------------
         # Histogram filling / array dumping
         # --------------------------------------------------------------
