@@ -1,3 +1,4 @@
+import os
 import json
 import argparse
 import subprocess
@@ -7,15 +8,22 @@ from analysis.filesets.utils import get_nano_version, get_dataset_config
 
 def get_signal_fileset(query):
     query = f"file dataset=/{query}"
-    farray = subprocess.run(
+
+    env = os.environ.copy()
+    env.pop("PYTHONHOME", None)
+
+    result = subprocess.run(
         ["dasgoclient", f"-query={query} instance=prod/phys03"],
         stdout=subprocess.PIPE,
         universal_newlines=True,
+        check=True,
+        env=env,
     )
-    stdout = farray.stdout
-    stdout_array = stdout.split("\n")
-    stdout_array = stdout_array[:-1]
-    stdout_array[-1] = stdout_array[-1].replace(",", "")
+    stdout_array = result.stdout.splitlines()
+
+    if stdout_array:
+        stdout_array[-1] = stdout_array[-1].replace(",", "")
+
     return stdout_array
 
 
@@ -35,7 +43,7 @@ if __name__ == "__main__":
             "2022postEE",
             "2023preBPix",
             "2023postBPix",
-            "2024"
+            "2024",
         ],
     )
     parser.add_argument(
@@ -63,9 +71,12 @@ if __name__ == "__main__":
             if len(query.split("/")) != 1:
                 # from DAS queries
                 files = get_signal_fileset(query)
-                files = [f"{args.site}/{f}" for f in files]
-                print(f"Adding sample {sample}")
-                built_dataset[sample] = files
+                if files:
+                    files = [f"{args.site}/{f}" for f in files]
+                    print(f"Adding sample {sample}")
+                    built_dataset[sample] = files
+                else:
+                    print(f"query for '{sample}' sample did not work!")
             else:
                 # from already built signal samples
                 signal_file = filesets_dir / f"{query}.json"
@@ -74,12 +85,15 @@ if __name__ == "__main__":
                     with open(signal_file, "r") as json_file:
                         signal_json = json.load(json_file)
                     if sample not in signal_json:
-                        print(f"sample key '{sample}' was not found. Available keys are {list(signal_json.keys())}")
-                    else:
                         print(
-                            f"Adding signal sample '{sample}'"
+                            f"sample key '{sample}' was not found. Available keys are {list(signal_json.keys())}"
                         )
-                        built_dataset.update({sample: signal_json[sample]})
+                    else:
+                        print(f"Adding signal sample '{sample}'")
+                        local_samples = []
+                        for root_file in signal_json[sample]:
+                            local_samples.append(f"root://eosuser.cern.ch/{root_file}")
+                        built_dataset.update({sample: local_samples})
                 else:
                     print(f"File '{signal_file}_signal.json' was not found!")
 

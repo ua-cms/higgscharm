@@ -153,8 +153,12 @@ def fileset_checker(samples: list, year: str):
         build_input_fileset = True
     else:
         with open(fileset_file, "r") as f:
-            filesets = json.load(f)
-        build_input_fileset = any(ds not in filesets for ds in samples)
+            fileset = json.load(f)
+        samples_in_fileset = [
+            fileset[sample]["metadata"]["short_name"] for sample in fileset
+        ]
+
+        build_input_fileset = any(ds not in samples_in_fileset for ds in samples)
 
     if build_input_fileset:
         print("\nBuilding input filesets for:")
