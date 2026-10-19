@@ -16,8 +16,9 @@ from analysis.corrections.partonshower import add_partonshower_weight
 from analysis.corrections.electron_ss import apply_electron_ss_corrections
 
 
-def object_corrector_manager(events, year, corrections_config):
+def object_corrector_manager(events, year, run, dataset, workflow_config):
     """apply object level corrections"""
+    corrections_config = workflow_config.corrections_config
     objcorr_config = corrections_config["object"]
 
     shifts = []
@@ -27,11 +28,13 @@ def object_corrector_manager(events, year, corrections_config):
             shifts = apply_jerc_corrections(
                 events=events,
                 year=year,
+                dataset=dataset,
                 shifts=shifts,
                 corrections_config=corrections_config,
+                apply_junc=False,
             )
         else:
-            met_field_key = "PuppiMET" if int(get_nano_version(year)) >= 12 else "MET"
+            met_field_key = "MET" if run == "2" else "PuppiMET"
             shifts = [({"Jet": events.Jet, "MET": events[met_field_key]}, None)]
 
         if "muon" in objcorr_config:
@@ -49,7 +52,7 @@ def object_corrector_manager(events, year, corrections_config):
         if "electron" in objcorr_config:
             # electron scale and smearing corrections are applied only to run3 datasets
             # they are already applied in nanov9 datasets
-            if year.startswith("202"):
+            if run == "3":
                 shifts = apply_electron_ss_corrections(
                     events=events,
                     year=year,

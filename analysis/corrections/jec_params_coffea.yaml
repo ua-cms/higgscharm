@@ -32,6 +32,14 @@ runs:
     - C4
   2023postBPix:
     - D
+  '2024':
+    - C
+    - D
+    - E
+    - F
+    - G
+    - H
+    - I
 algorithm:
   2016preVFP: AK4PFchs
   2016postVFP: AK4PFchs
@@ -41,6 +49,7 @@ algorithm:
   2022postEE: AK4PFPuppi
   2023preBPix: AK4PFPuppi
   2023postBPix: AK4PFPuppi
+  '2024': AK4PFPuppi
 jec_levels_mc:
   2016preVFP:
     - L1FastJet
@@ -68,6 +77,9 @@ jec_levels_mc:
     - L2Relative
     - L3Absolute
   2023postBPix:
+    - L2Relative
+    - L3Absolute
+  '2024':
     - L2Relative
     - L3Absolute
 jec_levels_data:
@@ -107,6 +119,10 @@ jec_levels_data:
     - L2Relative
     - L3Absolute
     - L2L3Residual
+  '2024':
+    - L2Relative
+    - L3Absolute
+    - L2L3Residual
 jec_tags:
   2016preVFP: Summer19UL16APV_V7_MC
   2016postVFP: Summer19UL16_V7_MC
@@ -116,6 +132,7 @@ jec_tags:
   2022postEE: Summer22EE22Sep2023_V2_MC
   2023preBPix: Summer23Prompt23_V1_MC
   2023postBPix: Summer23BPixPrompt23_V1_MC
+  '2024': Summer24Prompt24_V5_MC
 jer_tags:
   2016preVFP: Summer20UL16APV_JRV3_MC
   2016postVFP: Summer20UL16_JRV3_MC
@@ -125,6 +142,7 @@ jer_tags:
   2022postEE: Summer22EE22Sep2023_JRV1_MC
   2023preBPix: Summer23Prompt23RunCv1234_JRV1_MC
   2023postBPix: Summer23BPixPrompt23RunD_JRV1_MC
+  '2024': Summer24Prompt24_JRV2_MC
 jec_data_tags:
   2016preVFP:
     Summer19UL16APV_RunBCD_V7_DATA:
@@ -180,6 +198,27 @@ jec_data_tags:
   2023postBPix:
     Summer23BPixPrompt23_RunD_V1_DATA:
       - D
+  '2024':
+    Summer24Prompt24_RunCnib1_V5_DATA:
+      - C
+    Summer24Prompt24_RunDnib1_V5_DATA:
+      - D
+    Summer24Prompt24_RunEnib1_V5_DATA:
+      - E
+    Summer24Prompt24_RunFnib1_V5_DATA:
+      - F
+    Summer24Prompt24_RunFnib2_V5_DATA:
+      - F
+    Summer24Prompt24_RunFnib3_V5_DATA:
+      - F
+    Summer24Prompt24_RunGnib1_V5_DATA:
+      - G
+    Summer24Prompt24_RunGnib2_V5_DATA:
+      - G
+    Summer24Prompt24_RunHnib1_V5_DATA:
+      - H
+    Summer24Prompt24_RunInib1_V5_DATA:
+      - I
 jec_variations:
   2016preVFP:
     - Absolute
@@ -321,6 +360,35 @@ jec_variations:
     - TimePtEta
     - Total
   2023postBPix:
+    - AbsoluteMPFBias
+    - AbsoluteScale
+    - AbsoluteStat
+    - FlavorQCD
+    - Fragmentation
+    - PileUpDataMC
+    - PileUpPtBB
+    - PileUpPtEC1
+    - PileUpPtEC2
+    - PileUpPtHF
+    - PileUpPtRef
+    - RelativeFSR
+    - RelativeJEREC1
+    - RelativeJEREC2
+    - RelativeJERHF
+    - RelativePtBB
+    - RelativePtEC1
+    - RelativePtEC2
+    - RelativePtHF
+    - RelativeBal
+    - RelativeSample
+    - RelativeStatEC
+    - RelativeStatFSR
+    - RelativeStatHF
+    - SinglePionECAL
+    - SinglePionHCAL
+    - TimePtEta
+    - Total
+  '2024':
     - AbsoluteMPFBias
     - AbsoluteScale
     - AbsoluteStat
