@@ -3,7 +3,7 @@ from analysis.utils.path_handler import Paths
 
 def make_output_directory(args) -> str:
     """builds output directories. Returns output path"""
-    paths = Paths(eos=args.eos)
+    paths = Paths()
     path_args = {}
     for arg in ["workflow", "year", "dataset"]:
         if arg in args:
