@@ -77,20 +77,21 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # set output location and partition key (used when --output_format parquet)
+    # load partition_fileset
+    with open(args.partition_json) as f:
+        partition_fileset = json.load(f)
+
+    # set output location and get partition key (used when --output_format parquet)
     output_location = f"root://eosuser.cern.ch//eos/user/{args.user[0]}/{args.user}/higgscharm_outputs/"
+    partition_key = ""
     if args.output_format == "parquet":
         factory = NanoEventsFactory.from_root(
-            partition_fileset,
+            args.partition_fileset,
             schemaclass=NanoAODSchema,
             entry_stop=1,
             mode="virtual",
         )
         partition_key = factory._partition_key
-
-    # load partition_fileset
-    with open(args.partition_json) as f:
-        partition_fileset = json.load(f)
 
     # Configure the Runner using coffea 2024+ API
     futures_run = processor.Runner(
