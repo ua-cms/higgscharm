@@ -1,13 +1,10 @@
-import os
 import json
 import argparse
 from pathlib import Path
 from coffea import processor
 from coffea.util import save
-from coffea.nanoevents import NanoAODSchema
-from analysis.utils import write_root
 from analysis.processors.base import BaseProcessor
-
+from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -36,7 +33,7 @@ if __name__ == "__main__":
             "2022postEE",
             "2023preBPix",
             "2023postBPix",
-            "2024"
+            "2024",
         ],
         help="dataset year",
     )
@@ -63,33 +60,52 @@ if __name__ == "__main__":
         "--output_format",
         type=str,
         default="coffea",
-        choices=["coffea", "root", "parquet"],
+        choices=["coffea", "parquet"],
         help="format of output histogram",
-    )
-    parser.add_argument(
-        "--eos",
-        action="store_true",
-        help="Enable saving outputs to /eos",
     )
     parser.add_argument(
         "--user",
         type=str,
         help="User name",
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+        help="change the number of workers to process the analysis",
+    )
+
     args = parser.parse_args()
 
-    # set output location (used when --output_format parquet)
-    if args.eos:
-        output_location = f"root://eosuser.cern.ch//eos/user/{args.user[0]}/{args.user}/higgscharm/outputs/"
-    else:
-        output_location = (
-            f"/afs/cern.ch/user/{args.user[0]}/{args.user}/public/higgscharm/outputs/"
+    # set output location and partition key (used when --output_format parquet)
+    output_location = f"root://eosuser.cern.ch//eos/user/{args.user[0]}/{args.user}/higgscharm_outputs/"
+    if args.output_format == "parquet":
+        factory = NanoEventsFactory.from_root(
+            partition_fileset,
+            schemaclass=NanoAODSchema,
+            entry_stop=1,
+            mode="virtual",
         )
+        partition_key = factory._partition_key
 
-    # load partition_fileset, run processor and save output
+    # load partition_fileset
     with open(args.partition_json) as f:
         partition_fileset = json.load(f)
-    out = processor.run_uproot_job(
+
+    # Configure the Runner using coffea 2024+ API
+    futures_run = processor.Runner(
+        executor=processor.FuturesExecutor(
+            workers=args.workers, compression=None, retries=6
+        ),
+        schema=NanoAODSchema,
+        # chunksize=100000,
+        savemetrics=False,
+        xrootdtimeout=120,
+        align_clusters=True,
+        skipbadfiles=False,
+    )
+    # Execute processing job using the Runner instance
+    out = futures_run(
         partition_fileset,
         treename="Events",
         processor_instance=BaseProcessor(
@@ -97,12 +113,10 @@ if __name__ == "__main__":
             year=args.year,
             output_format=args.output_format,
             output_location=output_location,
+            partition_key=partition_key,
+            mode="virtual",
         ),
-        executor=processor.futures_executor,
-        executor_args={"schema": NanoAODSchema, "workers": 4},
     )
     savepath = f"{args.output_path}/{args.dataset}"
     if args.output_format in ["coffea", "parquet"]:
         save(out, f"{savepath}.coffea")
-    elif args.output_format == "root":
-        write_root(out, savepath, args)

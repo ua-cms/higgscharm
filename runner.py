@@ -6,7 +6,6 @@ from analysis.filesets.utils import (
     get_datasets_to_run_over,
 )
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -34,7 +33,7 @@ if __name__ == "__main__":
             "2022postEE",
             "2023preBPix",
             "2023postBPix",
-            "2024"
+            "2024",
         ],
         help="dataset year",
     )
@@ -42,18 +41,13 @@ if __name__ == "__main__":
         "--nfiles",
         dest="nfiles",
         type=int,
-        default=15,
+        default=10,
         help="number of root files to include in each dataset partition (default 15)",
     )
     parser.add_argument(
         "--submit",
         action="store_true",
         help="Enable Condor job submission. If not provided, it just builds condor files",
-    )
-    parser.add_argument(
-        "--eos",
-        action="store_true",
-        help="Enable saving outputs to /eos",
     )
     parser.add_argument(
         "--output_format",
@@ -68,6 +62,13 @@ if __name__ == "__main__":
         type=str,
         default="2000",
         help="Requested memory (in MB) for the condor job",
+    )
+    parser.add_argument(
+        "--workers",
+        dest="workers",
+        type=int,
+        default=4,
+        help="change the number of workers to process the analysis",
     )
     args = parser.parse_args()
 
@@ -92,10 +93,11 @@ if __name__ == "__main__":
             "--output_format",
             args.output_format,
             "--memory",
-            args.memory
+            args.memory,
+            "--workers",
+            str(args.workers),
         ]
         if args.submit:
             cmd_args.append("--submit")
-        if args.eos:
-            cmd_args.append("--eos")
+
         subprocess.run(cmd + cmd_args)

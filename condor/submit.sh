@@ -17,15 +17,12 @@ voms-proxy-info -all -file $X509PATH
 WORKDIR=`pwd`
 
 declare -A ARGS
-for key in workflow year output_path output_format dataset eos user; do
+for key in workflow year output_path output_format dataset user workers; do
     ARGS[$key]=$(python3 -c "import json; print(json.load(open('$WORKDIR/arguments.json'))['$key'])")
 done
 
-OPTS="--workflow ${ARGS[workflow]} --year ${ARGS[year]} --output_path ${ARGS[output_path]} --output_format ${ARGS[output_format]} --dataset ${ARGS[dataset]}_$JOBID --user ${ARGS[user]}"
-
-if [ "${ARGS[eos]}" = "True" ]; then
-    OPTS="$OPTS --eos"
-fi
+# get submit command arguments
+OPTS="--workflow ${ARGS[workflow]} --year ${ARGS[year]} --output_path ${ARGS[output_path]} --output_format ${ARGS[output_format]} --dataset ${ARGS[dataset]}_$JOBID --user ${ARGS[user]} --workers ${ARGS[workers]}"
 
 # get partition fileset
 python3 -c "import json; json.dump(json.load(open('$WORKDIR/partitions.json'))['$JOBID'], open('$WORKDIR/partition_fileset.json', 'w'), indent=4)"
