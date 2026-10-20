@@ -60,19 +60,18 @@ class BaseProcessor(processor.ProcessorABC):
         self.histograms = HistBuilder(self.workflow_config).build_histogram()
 
     def add_cutflow(self, events, output, selection_manager):
-        sumw = ak.sum(events.genWeight) if hasattr(events, "genWeight") else len(events)
         for category, category_cuts in self.workflow_config.event_selection[
             "categories"
         ].items():
-            output["metadata"].update({category: {"cutflow": {"initial": sumw}}})
+            output["metadata"].update({category: {"cutflow": {"initial": self.sumw}}})
             selections = []
             for cut_name in category_cuts:
                 selections.append(cut_name)
                 current_selection = selection_manager.all(*selections)
                 if ak.sum(current_selection) != 0:
                     sumw_cutflow = (
-                        ak.sum(events.genWeight[current_selection])
-                        if hasattr(events, "genWeight")
+                        ak.sum(self.genweight[current_selection])
+                        if self.is_mc
                         else len(events[current_selection])
                     )
                     output["metadata"][category]["cutflow"][cut_name] = sumw_cutflow
@@ -86,6 +85,11 @@ class BaseProcessor(processor.ProcessorABC):
 
         # identify data and simulation
         self.is_mc = hasattr(events, "genWeight")
+
+        # compute sum of gen weights for normalization
+        self.sumw = ak.sum(events.genWeight) if self.is_mc else len(events)
+        if self.is_mc:
+            self.genweight = events.genWeight
 
         # apply object corrections, jet veto and prepare systematic variations
         vetoed_events, shifts = object_corrector_manager(
@@ -111,10 +115,7 @@ class BaseProcessor(processor.ProcessorABC):
         output["metadata"] = {}
         if shift is None:
             # store the initial sum of weights before object selection
-            sumw = ak.sum(events.genWeight) if self.is_mc else len(events)
-            output["metadata"].update({"sumw": sumw})
-            for category in self.workflow_config.event_selection["categories"]:
-                output["metadata"].update({category: {"cutflow": {"initial": sumw}}})
+            output["metadata"].update({"sumw": self.sumw})
 
         if not self.is_mc:
             events["Jet", "hadronFlavour"] = ak.zeros_like(events.Jet.pt)
