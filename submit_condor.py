@@ -92,12 +92,14 @@ if __name__ == "__main__":
         help="Requested memory (in MB) for the condor job",
     )
     parser.add_argument(
-        "--workers",
-        dest="workers",
-        type=int,
-        default=4,
-        help="change the number of workers to process the analysis",
+        "-e",
+        "--executor",
+        dest="executor",
+        type=str,
+        default="futures",
+        help="executor to run the processor",
     )
+
     args = parser.parse_args()
 
     # check if the fileset for the given year exists, generate it otherwise

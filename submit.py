@@ -69,12 +69,13 @@ if __name__ == "__main__":
         help="User name",
     )
     parser.add_argument(
-        "--workers",
-        type=int,
-        default=4,
-        help="change the number of workers to process the analysis",
+        "-e",
+        "--executor",
+        dest="executor",
+        type=str,
+        default="futures",
+        help="executor to run the processor",
     )
-
     args = parser.parse_args()
 
     # load partition_fileset
@@ -94,30 +95,47 @@ if __name__ == "__main__":
         partition_key = factory._partition_key
 
     # Configure the Runner using coffea 2024+ API
-    futures_run = processor.Runner(
-        executor=processor.FuturesExecutor(
-            workers=args.workers, compression=None, retries=6
-        ),
-        schema=NanoAODSchema,
-        # chunksize=100000,
-        savemetrics=False,
-        xrootdtimeout=120,
-        align_clusters=True,
-        skipbadfiles=False,
-    )
-    # Execute processing job using the Runner instance
-    out = futures_run(
-        partition_fileset,
-        treename="Events",
-        processor_instance=BaseProcessor(
-            workflow=args.workflow,
-            year=args.year,
-            output_format=args.output_format,
-            output_location=output_location,
-            partition_key=partition_key,
-            mode="virtual",
-        ),
-    )
+    if args.executor == "futures":
+        futures_run = processor.Runner(
+            executor=processor.FuturesExecutor(workers=4, compression=None, retries=6),
+            schema=NanoAODSchema,
+            # chunksize=100000,
+            savemetrics=False,
+            xrootdtimeout=120,
+            align_clusters=True,
+            skipbadfiles=False,
+        )
+        # Execute processing job using the Runner instance
+        out = futures_run(
+            partition_fileset,
+            treename="Events",
+            processor_instance=BaseProcessor(
+                workflow=args.workflow,
+                year=args.year,
+                output_format=args.output_format,
+                output_location=output_location,
+                partition_key=partition_key,
+                mode="virtual",
+            ),
+        )
+    elif args.executor == "iterative":
+        iterative_run = processor.Runner(
+            executor=processor.IterativeExecutor(compression=None),
+            schema=NanoAODSchema,
+            savemetrics=False,
+        )
+        out = iterative_run(
+            partition_fileset,
+            processor_instance=BaseProcessor(
+                workflow=args.workflow,
+                year=args.year,
+                output_format=args.output_format,
+                output_location=output_location,
+                partition_key=partition_key,
+                mode="virtual",
+            ),
+        )
+
     savepath = f"{args.output_path}/{args.dataset}"
     if args.output_format in ["coffea", "parquet"]:
         save(out, f"{savepath}.coffea")
