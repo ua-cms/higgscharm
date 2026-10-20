@@ -15,7 +15,7 @@ from analysis.filesets.xrootd_sites import xroot_to_site
 from analysis.filesets.utils import (
     divide_list,
     modify_site_list,
-    extract_xrootd_errors,
+    analyze_xrootd_error_logs,
     get_nano_version,
 )
 
@@ -50,11 +50,6 @@ def parse_args():
             "2024",
         ],
         help="Dataset year",
-    )
-    parser.add_argument(
-        "--eos",
-        action="store_true",
-        help="Read job outputs from EOS instead of local storage",
     )
     parser.add_argument(
         "--output_format",
@@ -206,49 +201,71 @@ def print_job_status(jobnum, jobnum_done):
     return jobnum_missing, datasets_with_missing
 
 
+def update_executor_for_dataset(job_dir, dataset, executor="iterative"):
+    """Update the executor in a dataset's arguments.json."""
+    args_json = job_dir / dataset / "arguments.json"
+
+    if not args_json.exists():
+        print(f"[{dataset}] Missing arguments.json — cannot update executor")
+        return
+
+    arguments = json.loads(args_json.read_text())
+
+    if arguments.get("executor") == executor:
+        print(f"[{dataset}] Executor is already '{executor}'")
+        return
+
+    arguments["executor"] = executor
+    args_json.write_text(json.dumps(arguments, indent=4) + "\n")
+
+    print(f"[{dataset}] Updated executor to '{executor}'")
+
+
 def analyze_xrootd_errors_by_dataset(error_files):
     """
-    Analyze xrootd-related failures on a per-dataset basis.
-
-    For each dataset, this function:
-      1. Parses its recent .err files
-      2. Extracts xrootd endpoints or error patterns
-      3. Maps them to physical sites using `xroot_to_site`
-      4. Produces a set of failing sites per dataset
-
-    This dataset-level granularity avoids the pathological behavior
-    of blacklisting a site globally when it only affects one dataset.
-
-    Parameters
-    ----------
-    error_files : dict
-        dataset -> list of Path objects pointing to .err files
+    Analyze XRootD failures per dataset.
 
     Returns
     -------
-    dict
-        dataset -> set of sites that exhibited xrootd errors
+    tuple
+        dataset_sites : dict
+            dataset -> set of failing sites
+        datasets_with_auth_errors : set
+            Datasets with authentication errors
     """
     dataset_sites = {}
+    datasets_with_auth_errors = set()
 
     for dataset, err_files in error_files.items():
-        xrootd_errs = extract_xrootd_errors(err_files)
+        endpoints, has_auth_error = analyze_xrootd_error_logs(err_files)
 
-        # Translate xrootd endpoints to site names where possible
-        sites = {xroot_to_site[err] for err in xrootd_errs if err in xroot_to_site}
+        if has_auth_error:
+            datasets_with_auth_errors.add(dataset)
+            print(f"[{dataset}] XRootD authentication error detected")
+
+        sites = {
+            xroot_to_site[endpoint]
+            for endpoint in endpoints
+            if endpoint in xroot_to_site
+        }
+
         if sites:
             dataset_sites[dataset] = sites
 
-        # Warn explicitly if some endpoints could not be mapped
-        for err in xrootd_errs:
-            if err not in xroot_to_site:
+        for endpoint in endpoints:
+            if endpoint not in xroot_to_site:
                 print(
-                    f"[{dataset}] Could not map xrootd endpoint '{err}' to a site name"
+                    f"[{dataset}] Could not map XRootD endpoint "
+                    f"'{endpoint}' to a site name"
                 )
 
     if not dataset_sites:
-        print(f"No xrootd site failures detected in recent error logs.\n")
-    return dataset_sites
+        print("No XRootD site failures detected in recent error logs.\n")
+
+    if not datasets_with_auth_errors:
+        print("No XRootD authentication errors detected in recent error logs.\n")
+
+    return dataset_sites, datasets_with_auth_errors
 
 
 def group_datasets_by_sites(dataset_sites):
@@ -346,28 +363,41 @@ def update_input_filesets_for_group(
     # Load the regenerated filesets
     nano_version = get_nano_version(year)
     fileset_path = fileset_dir / f"fileset_{year}_nanov{nano_version}_lxplus.json"
-    all_filesets = json.loads(fileset_path.read_text())
+    fileset = json.loads(fileset_path.read_text())
+
+    short_name_map = {}
+    for sample in fileset:
+        short_name = fileset[sample]["metadata"]["short_name"]
+        short_name_map[short_name] = sample
 
     # Regenerate partitions.json for each dataset in the group
     for dataset in datasets:
-        if dataset not in all_filesets:
+        if dataset not in short_name_map:
             print(f"[{dataset}] Not found in fileset JSON — skipping")
             continue
 
-        root_files = all_filesets[dataset]
         args_json = job_dir / dataset / "arguments.json"
         if not args_json.exists():
             print(f"[{dataset}] Missing arguments.json — cannot repartition")
             continue
 
-        nfiles = json.loads(args_json.read_text())["nfiles"]
-        root_files_list = divide_list(root_files, nfiles)
+        current_fileset = fileset[short_name_map[dataset]]
+        fileset_files = current_fileset["files"]
 
-        partition_dataset = {
-            i
-            + 1: {(f"{dataset}_{i+1}" if len(root_files_list) > 1 else dataset): chunk}
-            for i, chunk in enumerate(root_files_list)
-        }
+        root_files = list(fileset_files.items())
+        nfiles = json.loads(args_json.read_text())["nfiles"]
+        fileset_chunks = divide_list(root_files, nfiles)
+
+        partition_dataset = {}
+        for i, chunk in enumerate(fileset_chunks, start=1):
+            dataset_key = f"{dataset}_{i}" if len(fileset_chunks) > 1 else dataset
+            # reconstruct the structure for each individual job.
+            partition_dataset[i] = {
+                dataset_key: {
+                    "files": dict(chunk),
+                    "metadata": current_fileset.get("metadata", {}),
+                }
+            }
 
         partition_file = job_dir / dataset / "partitions.json"
         with open(partition_file, "w") as json_file:
@@ -466,8 +496,6 @@ def main():
             "--output_format",
             args.output_format,
         ]
-        if args.eos:
-            reset_cmd.append("--eos")
 
         print("Re-running full workflow via runner.py...")
         subprocess.run(reset_cmd, check=True)
@@ -491,30 +519,37 @@ def main():
     if not datasets_with_missing_jobs:
         return
 
-    # Analyze xrootd errors per dataset
-    dataset_sites = analyze_xrootd_errors_by_dataset(error_files)
+    # Analyze XRootD errors per dataset
+    dataset_sites, datasets_with_auth_errors = analyze_xrootd_errors_by_dataset(
+        error_files
+    )
 
-    # Restrict to datasets that actually have missing jobs
+    # Only process datasets with missing jobs
+    missing_dataset_set = set(datasets_with_missing_jobs)
+
     dataset_sites = {
-        d: sites
-        for d, sites in dataset_sites.items()
-        if d in datasets_with_missing_jobs
+        dataset: sites
+        for dataset, sites in dataset_sites.items()
+        if dataset in missing_dataset_set
     }
 
+    datasets_with_auth_errors &= missing_dataset_set
+
+    # Authentication errors: switch to the iterative executor
+    for dataset in sorted(datasets_with_auth_errors):
+        update_executor_for_dataset(job_dir, dataset)
+
+    # Read errors: retain the existing site-blacklisting workflow
     if not dataset_sites:
-        print("No xrootd-related failures detected for datasets with missing jobs.")
-        print("You may want to inspect other error modes or resubmit directly.\n")
+        print("No XRootD site failures detected for datasets " "with missing jobs.")
     else:
-        # Group datasets by identical failing-site sets
         groups = group_datasets_by_sites(dataset_sites)
+
         if args.single_fetch:
             all_sites = set().union(*dataset_sites.values())
             all_datasets = sorted(dataset_sites.keys())
             groups = {frozenset(all_sites): all_datasets}
-        else:
-            groups = group_datasets_by_sites(dataset_sites)
 
-        # Optional fileset regeneration
         if input("Regenerate input filesets for these groups? (y/n): ").lower() in [
             "y",
             "yes",
