@@ -8,7 +8,7 @@ from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
 from analysis.corrections.lhepdf import add_lhepdf_weight
 from analysis.corrections.electron import ElectronWeights
-from analysis.corrections.jerc import apply_jerc_corrections
+from analysis.corrections.jec import apply_jerc_corrections
 from analysis.corrections.lhescale import add_scalevar_weight
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
@@ -28,10 +28,8 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
             shifts = apply_jerc_corrections(
                 events=events,
                 year=year,
-                dataset=dataset,
                 shifts=shifts,
                 corrections_config=corrections_config,
-                apply_junc=False,
             )
         else:
             met_field_key = "MET" if run == "2" else "PuppiMET"
