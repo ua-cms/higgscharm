@@ -519,12 +519,13 @@ class ObjectSelector:
         )
 
     def select_hww_zcandidates(self, obj_name):
-        self.objects["zcandidates"] = ak.combinations(
-            self.objects["leptons"], 2, fields=["l1", "l2"]
+        zcandidates = ak.combinations(self.objects["leptons"], 2, fields=["l1", "l2"])
+        zcandidates = ak.with_field(
+            zcandidates,
+            zcandidates.l1.pt + zcandidates.l2.pt,
+            "pt",
         )
-        self.objects["zcandidates"].pt = (
-            self.objects["zcandidates"].l1.pt + self.objects["zcandidates"].l2.pt
-        )
+        self.objects["zcandidates"] = zcandidates
 
     def select_hww_mll(self, obj_name):
         self.objects["mll"] = transverse_mass(

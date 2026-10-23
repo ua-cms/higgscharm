@@ -45,14 +45,65 @@ def get_trigger_match_mask(events, hlt_paths, year, leptons):
 
 
 def get_metfilters_mask(events, year):
+    """
+    Return the event-level MET filters mask.
+
+    For 2022-2023 prompt-reco data, the stored ecalBadCalibFilter is
+    replaced by a dedicated selection to reject events affected by
+    the ECAL bad crystal (detector ID 838871812).
+
+    The additional selection is applied only to data events with
+    run numbers between 362433 and 367144. It is not applied to MC
+    or re-reconstructed datasets.
+    """
     with importlib.resources.path("analysis.data.met", "metfilters.json") as path:
         with open(path, "r") as handle:
             metfilters = json.load(handle)[year]
-    metfilters_mask = np.ones(len(events), dtype="bool")
-    metfilterkey = "mc" if hasattr(events, "genWeight") else "data"
+
+    metfilters_mask = np.ones(len(events), dtype=bool)
+    is_mc = hasattr(events, "genWeight")
+    metfilterkey = "mc" if is_mc else "data"
+
+    # Apply the standard MET filters.
     for mf in metfilters[metfilterkey]:
+        if (
+            mf == "ecalBadCalibFilter"
+            and not is_mc
+            and year.startswith(("2022", "2023"))
+        ):
+            continue
+
         if mf in events.Flag.fields:
             metfilters_mask = metfilters_mask & events.Flag[mf]
+
+    # Apply the ECAL bad crystal selection to 2022-2023 prompt-reco data.
+    if not is_mc and year.startswith(("2022", "2023")):
+        affected_runs = (events.run >= 362433) & (events.run <= 367144)
+
+        jets = events.Jet
+
+        # Identify jets pointing to the affected ECAL region.
+        # Do not apply any jetId requirement.
+        bad_jets = (
+            (jets.pt > 50)
+            & (jets.eta > -0.5)
+            & (jets.eta < -0.1)
+            & (jets.phi > -2.1)
+            & (jets.phi < -1.8)
+            & ((jets.neEmEF > 0.9) | (jets.chEmEF > 0.9))
+        )
+
+        # Require the jet to be nearly opposite to PuppiMET
+        dphi = events.PuppiMET.deltaphi(jets)
+        bad_jets = bad_jets & (dphi > 2.9)
+
+        # Reject affected events with PuppiMET > 100 GeV
+        # and at least one jet satisfying all the conditions.
+        bad_events = (
+            affected_runs & (events.PuppiMET.pt > 100) & ak.any(bad_jets, axis=1)
+        )
+        metfilters_mask = metfilters_mask & ~bad_events
+
     return metfilters_mask
 
 
