@@ -121,81 +121,171 @@ def modify_site_list(year: str, site: str, status: str) -> None:
         yaml.dump(data, f, default_flow_style=False)
 
 
-def analyze_xrootd_error_logs(error_files: list) -> tuple[set, bool]:
-    """
-    Analyze XRootD error logs to identify failing endpoints and executor errors.
+ENDPOINT_PATTERN = r"root://[a-zA-Z0-9._-]+(?::\d+)?"
 
-    The function distinguishes between two types of failures:
-    - Read errors: logs containing XRootD endpoints, which can be mapped to
-      sites and used by the existing site-blacklisting workflow.
-    - Authentication or connection errors: logs containing known XRootD
-      authentication or connection failure messages. These errors indicate
-      that the executor may need to be changed to ``iterative``.
 
-    Logs identified as authentication or connection failures are not used
-    to extract endpoints. This is appropriate when these logs do not contain
-    endpoint information, as observed in the current workflow.
-
-    Parameters
-    ----------
-    error_files : list[pathlib.Path]
-        Paths to the Condor error log files to analyze for a single dataset.
-
-    Returns
-    -------
-    tuple[set, bool]
-        A tuple containing:
-
-        - endpoints (set[str]): Unique XRootD endpoints extracted from logs
-          that do not match the authentication or connection error patterns.
-          These endpoints can subsequently be mapped to sites.
-        - has_auth_or_connection_error (bool): ``True`` if at least one log
-          contains a recognized authentication or connection error; otherwise
-          ``False``.
-
-    Notes
-    -----
-    The function recognizes the following error messages:
-    - ``Auth failed``
-    - ``No protocols left to try``
-    - ``[FATAL] Connection error``
-
-    Error matching is case-insensitive. Endpoint extraction recognizes URLs
-    in the form ``root://hostname`` or ``root://hostname:port``.
-
-    The function only identifies error types and extracts endpoints; it
-    does not modify input filesets, update executor settings, or resubmit jobs.
-    Those actions are handled by the calling workflow.
-    """
-    endpoints = set()
-    has_auth_or_connection_error = False
-
-    endpoint_pattern = r"root://[a-zA-Z0-9\-.]+(?::\d+)?"
-    executor_error_patterns = [
+EXECUTOR_ERROR_PATTERNS = {
+    "Authentication": [
         r"Auth failed",
         r"No protocols left to try",
+    ],
+    "Connection": [
         r"\[FATAL\]\s*Connection error",
-    ]
+        r"Connection reset",
+        r"Connection refused",
+        r"Network is unreachable",
+        r"XRootD error:.*Connection error",
+        r"\bConnectionError\b",
+    ],
+    "TLS": [
+        r"\bTLS error\b",
+        r"SSL error",
+    ],
+}
 
-    for error_file in error_files:
-        content = error_file.read_text(errors="replace")
 
+FILE_ERROR_PATTERNS = {
+    "File access / permission": [
+        r"\[3010\]\s*Unable to open file",
+        r"Unable to open file",
+        r"Failed to open file",
+        r"Error opening file",
+        r"Operation not permitted",
+        r"Permission denied",
+    ],
+    "File not found": [
+        r"File not found",
+        r"No such file or directory",
+        r"\bFileNotFoundError\b",
+    ],
+    "Read error": [
+        r"Read error",
+        r"Input/output error",
+        r"\bIOError\b",
+    ],
+    "Timeout": [
+        r"Operation expired",
+        r"timed?\s*out",
+        r"\btimeout\b",
+        r"\bTimeoutError\b",
+    ],
+    "Socket / network": [
+        r"Socket error",
+        r"XrdCl::",
+    ],
+    "Other I/O error": [
+        r"\bOSError\b",
+        r"XRootD error",
+    ],
+}
+
+
+def identify_error_types(content: str) -> set[str]:
+    """Identify recognized XRootD, connection, and file-access errors."""
+    patterns = {
+        **EXECUTOR_ERROR_PATTERNS,
+        **FILE_ERROR_PATTERNS,
+    }
+
+    return {
+        error_type
+        for error_type, error_patterns in patterns.items()
         if any(
             re.search(pattern, content, flags=re.IGNORECASE)
-            for pattern in executor_error_patterns
-        ):
-            has_auth_or_connection_error = True
+            for pattern in error_patterns
+        )
+    }
+
+
+def get_missing_job_partitions(job_dir: Path, dataset: str) -> set[str]:
+    """Read the missing job/partition identifiers from missing.txt."""
+    missing_path = Path(job_dir) / dataset / "missing.txt"
+
+    if not missing_path.is_file():
+        return set()
+
+    return {
+        line.strip() for line in missing_path.read_text().splitlines() if line.strip()
+    }
+
+
+def analyze_xrootd_error_logs(
+    error_files,
+    job_dir: Path,
+    dataset: str,
+    missing_partitions=None,
+    verbose: bool = False,
+) -> dict:
+    """
+    Identify error types and XRootD endpoints for one dataset.
+
+    Endpoint discovery first examines the error logs. If no endpoints
+    are found, it falls back to the files in the missing partitions.
+
+    missing_partitions can be supplied directly by jobs_status.py.
+    Otherwise, the function reads them from missing.txt.
+    """
+    dataset_dir = Path(job_dir) / dataset
+    partitions_path = dataset_dir / "partitions.json"
+
+    if missing_partitions is None:
+        missing_partitions = get_missing_job_partitions(Path(job_dir), dataset)
+
+    missing_partitions = {str(partition) for partition in missing_partitions}
+
+    if partitions_path.is_file():
+        partitions_data = json.loads(partitions_path.read_text())
+    else:
+        partitions_data = {}
+        if verbose:
+            print(f"[{dataset}] Missing partitions.json: {partitions_path}")
+
+    endpoint_pattern = re.compile(
+        ENDPOINT_PATTERN,
+        flags=re.IGNORECASE,
+    )
+
+    endpoints = set()
+    error_types = set()
+
+    # First, inspect the error logs directly.
+    for error_file in error_files:
+        error_file = Path(error_file)
+
+        try:
+            content = error_file.read_text(errors="replace")
+        except OSError as exc:
+            if verbose:
+                print(f"[{dataset}] Could not read {error_file}: {exc}")
             continue
 
-        endpoints.update(
-            re.findall(
-                endpoint_pattern,
-                content,
-                flags=re.IGNORECASE,
-            )
-        )
+        endpoints.update(endpoint_pattern.findall(content))
+        error_types.update(identify_error_types(content))
 
-    return endpoints, has_auth_or_connection_error
+    # Fallback: inspect only the currently missing partitions.
+    if not endpoints:
+        for partition_id in missing_partitions:
+            partition_data = partitions_data.get(partition_id, {})
+
+            for sample_data in partition_data.values():
+                for url in sample_data.get("files", {}):
+                    match = endpoint_pattern.match(url)
+                    if match:
+                        endpoints.add(match.group(0))
+
+        if verbose:
+            print(f"[{dataset}] Fallback endpoints: " f"{sorted(endpoints)}")
+
+    if verbose:
+        print(f"[{dataset}] Error types: {sorted(error_types)}")
+        print(f"[{dataset}] Endpoints: {sorted(endpoints)}")
+        print(f"[{dataset}] Missing partitions: " f"{sorted(missing_partitions)}")
+
+    return {
+        "endpoints": endpoints,
+        "error_types": error_types,
+        "partitions": missing_partitions,
+    }
 
 
 def fileset_checker(samples: list, year: str):
