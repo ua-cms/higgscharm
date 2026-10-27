@@ -1,11 +1,12 @@
 # taken from: https://gitlab.cern.ch/cms-muonPOG/muonscarekit/-/blob/master/scripts/MuonScaRe.py?ref_type=heads
+import copy
 import numpy as np
 import awkward as ak
 import correctionlib
 from pathlib import Path
 from random import random
 from scipy.special import erfinv, erf
-from analysis.corrections.met import update_met
+from analysis.corrections.met import corrected_polar_met
 from analysis.corrections.correctionlib_files import correction_files
 from coffea.lookup_tools import txt_converters, rochester_lookup
 
@@ -399,6 +400,8 @@ def apply_muon_ss_corrections_run3(
     shifts: list,
     corrections_config: dict,
 ):
+    # define tau pt_raw field
+    events["Muon", "pt_raw"] = ak.ones_like(events.Muon.pt) * events.Muon.pt
     muons = events.Muon
     cset = correctionlib.CorrectionSet.from_file(correction_files["muon_ss"][year])
 
@@ -437,7 +440,21 @@ def apply_muon_ss_corrections_run3(
     for i in range(len(shifts)):
         shifts[i][0]["Muon"] = muons
 
-    # systematics
+    # Propagate tau pT changes to MET
+    nominal_met, met = copy.copy(shifts[0][0]["MET"]), copy.copy(shifts[0][0]["MET"])
+    corrected_met_pt, corrected_met_phi = corrected_polar_met(
+        met_pt=nominal_met.pt,
+        met_phi=nominal_met.phi,
+        other_phi=muons.phi,
+        other_pt_old=muons.pt_raw,
+        other_pt_new=muons.pt,
+    )
+    nominal_met["pt"] = corrected_met_pt
+    nominal_met["phi"] = corrected_met_phi
+    # update nominal MET
+    shifts[0][0]["MET"] = nominal_met
+
+    # object shifts
     if hasattr(events, "genWeight") and corrections_config["object_shifts"]:
         muons_ptscalecorr_up = pt_scale_var(
             muon_ptcorr, muons.eta, muons.phi, muons.charge, "up", cset, nested=True
@@ -460,11 +477,43 @@ def apply_muon_ss_corrections_run3(
         mu_resol_up["pt"] = muons_ptcorr_resol_up
         mu_resol_down["pt"] = muons_ptcorr_resol_down
 
+        # Propagate tau pT changes to MET
+        met_up, met_down = met, met
+        met_up["pt"], met_up["phi"] = corrected_polar_met(
+            met_pt=met_up.pt,
+            met_phi=met_up.phi,
+            other_phi=mu_up.phi,
+            other_pt_old=mu_up.pt_raw,
+            other_pt_new=mu_up.pt,
+        )
+        met_down["pt"], met_down["phi"] = corrected_polar_met(
+            met_pt=met_down.pt,
+            met_phi=met_down.phi,
+            other_phi=mu_down.phi,
+            other_pt_old=mu_down.pt_raw,
+            other_pt_new=mu_down.pt,
+        )
+        met_resol_up, met_resol_down = met, met
+        met_resol_up["pt"], met_resol_up["phi"] = corrected_polar_met(
+            met_pt=met_resol_up.pt,
+            met_phi=met_resol_up.phi,
+            other_phi=mu_resol_up.phi,
+            other_pt_old=mu_resol_up.pt_raw,
+            other_pt_new=mu_resol_up.pt,
+        )
+        met_resol_down["pt"], met_resol_down["phi"] = corrected_polar_met(
+            met_pt=met_down.pt,
+            met_phi=met_down.phi,
+            other_phi=mu_resol_down.phi,
+            other_pt_old=mu_resol_down.pt_raw,
+            other_pt_new=mu_resol_down.pt,
+        )
+
         shifts += [
             (
                 {
                     "Jet": shifts[0][0]["Jet"],
-                    "MET": shifts[0][0]["MET"],
+                    "MET": met_up,
                     "Muon": mu_up,
                 },
                 f"CMS_scale_m_{year[:4]}Up",
@@ -474,7 +523,7 @@ def apply_muon_ss_corrections_run3(
             (
                 {
                     "Jet": shifts[0][0]["Jet"],
-                    "MET": shifts[0][0]["MET"],
+                    "MET": met_down,
                     "Muon": mu_down,
                 },
                 f"CMS_scale_m_{year[:4]}Down",
@@ -484,7 +533,7 @@ def apply_muon_ss_corrections_run3(
             (
                 {
                     "Jet": shifts[0][0]["Jet"],
-                    "MET": shifts[0][0]["MET"],
+                    "MET": met_resol_up,
                     "Muon": mu_resol_up,
                 },
                 f"CMS_res_m_{year[:4]}Up",
@@ -494,7 +543,7 @@ def apply_muon_ss_corrections_run3(
             (
                 {
                     "Jet": shifts[0][0]["Jet"],
-                    "MET": shifts[0][0]["MET"],
+                    "MET": met_resol_down,
                     "Muon": mu_resol_down,
                 },
                 f"CMS_res_m_{year[:4]}Down",

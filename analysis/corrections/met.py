@@ -157,6 +157,9 @@ def apply_met_phi_corrections(
                     {
                         "Jet": shifts[0][0]["Jet"],
                         "MET": met_up,
+                        "Muon": shifts[0][0]["Muon"],
+                        "Electron": shifts[0][0]["Electron"],
+                        "Tau": shifts[0][0]["Tau"],
                     },
                     f"met_xy_{year[:4]}Up",
                 )
@@ -166,12 +169,46 @@ def apply_met_phi_corrections(
                     {
                         "Jet": shifts[0][0]["Jet"],
                         "MET": met_down,
+                        "Muon": shifts[0][0]["Muon"],
+                        "Electron": shifts[0][0]["Electron"],
+                        "Tau": shifts[0][0]["Tau"],
                     },
                     f"met_xy_{year[:4]}Down",
                 )
             ]
 
     return shifts
+
+
+def corrected_polar_met(
+    met_pt,
+    met_phi,
+    other_phi,
+    other_pt_old,
+    other_pt_new,
+    positive=None,
+    dx=None,
+    dy=None,
+) -> tuple:
+    """
+    helper function to compute new MET polar components after some other object pT correction.
+
+    https://github.com/CoffeaTeam/coffea/blob/master/src/coffea/jetmet_tools/CorrectedMETFactory.py#L6
+    """
+    sin, cos = np.sin(other_phi), np.cos(other_phi)
+    met_px = met_pt * np.cos(met_phi) - ak.sum(
+        (other_pt_new - other_pt_old) * cos, axis=1
+    )
+    met_py = met_pt * np.sin(met_phi) - ak.sum(
+        (other_pt_new - other_pt_old) * sin, axis=1
+    )
+    if positive is not None and dx is not None and dy is not None:
+        met_px = met_px + dx if positive else x - dx
+        met_py = met_py + dy if positive else y - dy
+
+    corrected_met_pt = np.hypot(met_px, met_py)
+    corrected_met_phi = np.arctan2(met_py, met_px)
+    return corrected_met_pt, corrected_met_phi
 
 
 def update_met(events, other_obj, met_obj="PuppiMET") -> None:

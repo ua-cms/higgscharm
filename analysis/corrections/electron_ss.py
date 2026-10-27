@@ -1,8 +1,9 @@
+import copy
 import correctionlib
 import numpy as np
 import awkward as ak
 from pathlib import Path
-from analysis.corrections.met import update_met
+from analysis.corrections.met import corrected_polar_met
 from analysis.corrections.correctionlib_files import correction_files
 
 
@@ -23,6 +24,7 @@ def apply_electron_ss_corrections(
     """
     cset = correctionlib.CorrectionSet.from_file(correction_files["electron_ss"][year])
 
+    events["Electron", "pt_raw"] = ak.ones_like(events.Electron.pt) * events.Electron.pt
     electrons = events.Electron
     counts = ak.num(events.Electron)
 
@@ -54,6 +56,20 @@ def apply_electron_ss_corrections(
     for i in range(len(shifts)):
         shifts[i][0]["Electron"] = electrons
 
+    # Propagate tau pT changes to MET
+    nominal_met, met = copy.copy(shifts[0][0]["MET"]), copy.copy(shifts[0][0]["MET"])
+    corrected_met_pt, corrected_met_phi = corrected_polar_met(
+        met_pt=nominal_met.pt,
+        met_phi=nominal_met.phi,
+        other_phi=electrons.phi,
+        other_pt_old=electrons.pt_raw,
+        other_pt_new=electrons.pt,
+    )
+    nominal_met["pt"] = corrected_met_pt
+    nominal_met["phi"] = corrected_met_phi
+    # update nominal MET
+    shifts[0][0]["MET"] = nominal_met
+
     # uncertainties
     if corrections_config["object_shifts"]:
         ele_smear_up, ele_smear_down = events.Electron, events.Electron
@@ -80,11 +96,44 @@ def apply_electron_ss_corrections(
             ele_scale_up["pt"] = ak.unflatten(scale_up * pt_corrected, counts)
             ele_scale_down["pt"] = ak.unflatten(scale_down * pt_corrected, counts)
 
+        # Propagate tau pT changes to MET
+        met_scale_up, met_scale_down = met, met
+        met_scale_up["pt"], met_scale_up["phi"] = corrected_polar_met(
+            met_pt=met_scale_up.pt,
+            met_phi=met_scale_up.phi,
+            other_phi=ele_scale_up.phi,
+            other_pt_old=ele_scale_up.pt_raw,
+            other_pt_new=ele_scale_up.pt,
+        )
+        met_scale_down["pt"], met_scale_down["phi"] = corrected_polar_met(
+            met_pt=met_scale_down.pt,
+            met_phi=met_scale_down.phi,
+            other_phi=ele_scale_down.phi,
+            other_pt_old=ele_scale_down.pt_raw,
+            other_pt_new=ele_scale_down.pt,
+        )
+
+        met_smear_up, met_smear_down = met, met
+        met_smear_up["pt"], met_smear_up["phi"] = corrected_polar_met(
+            met_pt=met_smear_up.pt,
+            met_phi=met_smear_up.phi,
+            other_phi=ele_smear_up.phi,
+            other_pt_old=ele_smear_up.pt_raw,
+            other_pt_new=ele_smear_up.pt,
+        )
+        met_smear_down["pt"], met_smear_down["phi"] = corrected_polar_met(
+            met_pt=met_smear_down.pt,
+            met_phi=met_smear_down.phi,
+            other_phi=ele_smear_down.phi,
+            other_pt_old=ele_smear_down.pt_raw,
+            other_pt_new=ele_smear_down.pt,
+        )
+
         shifts += [
             (
                 {
                     "Jet": shifts[0][0]["Jet"],
-                    "MET": shifts[0][0]["MET"],
+                    "MET": met_scale_up,
                     "Muon": shifts[0][0]["Muon"],
                     "Electron": ele_scale_up,
                 },
@@ -95,7 +144,7 @@ def apply_electron_ss_corrections(
             (
                 {
                     "Jet": shifts[0][0]["Jet"],
-                    "MET": shifts[0][0]["MET"],
+                    "MET": met_scale_down,
                     "Muon": shifts[0][0]["Muon"],
                     "Electron": ele_scale_down,
                 },
@@ -106,7 +155,7 @@ def apply_electron_ss_corrections(
             (
                 {
                     "Jet": shifts[0][0]["Jet"],
-                    "MET": shifts[0][0]["MET"],
+                    "MET": met_smear_up,
                     "Muon": shifts[0][0]["Muon"],
                     "Electron": ele_smear_up,
                 },
@@ -117,7 +166,7 @@ def apply_electron_ss_corrections(
             (
                 {
                     "Jet": shifts[0][0]["Jet"],
-                    "MET": shifts[0][0]["MET"],
+                    "MET": met_smear_down,
                     "Muon": shifts[0][0]["Muon"],
                     "Electron": ele_smear_down,
                 },

@@ -16,6 +16,7 @@ from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
 from analysis.corrections.partonshower import add_partonshower_weight
 from analysis.corrections.electron_ss import apply_electron_ss_corrections
+from analysis.corrections.tau_energy import apply_tau_energy_scale_corrections
 
 
 def object_corrector_manager(events, year, run, dataset, workflow_config):
@@ -37,15 +38,6 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
         else:
             met_field_key = "MET" if run == "2" else "PuppiMET"
             shifts = [({"Jet": events.Jet, "MET": events[met_field_key]}, None)]
-
-        if "met" in objcorr_config:
-            # apply met phi modulation corrections
-            shifts = apply_met_phi_corrections(
-                events=events,
-                year=year,
-                shifts=shifts,
-                corrections_config=corrections_config,
-            )
 
         if "muon" in objcorr_config:
             # apply muon scale and smearing corrections
@@ -72,6 +64,26 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
         else:
             for i in range(len(shifts)):
                 shifts[i][0]["Electron"] = events.Electron
+
+        if "tau" in objcorr_config:
+            shifts = apply_tau_energy_scale_corrections(
+                events=events,
+                year=year,
+                shifts=shifts,
+                corrections_config=corrections_config,
+            )
+        else:
+            for i in range(len(shifts)):
+                shifts[i][0]["Tau"] = events.Tau
+
+        if "met" in objcorr_config:
+            # apply met phi modulation corrections
+            shifts = apply_met_phi_corrections(
+                events=events,
+                year=year,
+                shifts=shifts,
+                corrections_config=corrections_config,
+            )
 
         if "jetveto" in objcorr_config:
             event_veto = jet_veto(events, year)
