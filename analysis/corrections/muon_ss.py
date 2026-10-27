@@ -452,15 +452,13 @@ def apply_muon_ss_corrections_run3(
             muon_ptscalecorr, muon_ptcorr, muons.eta, "down", cset, nested=True
         )
 
-    if corrections_config["object_shifts"]:
         mu_up, mu_down = events.Muon, events.Muon
         mu_resol_up, mu_resol_down = events.Muon, events.Muon
 
-        if hasattr(events, "genWeight"):
-            mu_up["pt"] = muons_ptscalecorr_up
-            mu_down["pt"] = muons_ptscalecorr_down
-            mu_resol_up["pt"] = muons_ptcorr_resol_up
-            mu_resol_down["pt"] = muons_ptcorr_resol_down
+        mu_up["pt"] = muons_ptscalecorr_up
+        mu_down["pt"] = muons_ptscalecorr_down
+        mu_resol_up["pt"] = muons_ptcorr_resol_up
+        mu_resol_down["pt"] = muons_ptcorr_resol_down
 
         shifts += [
             (
@@ -580,7 +578,7 @@ def apply_muon_ss_corrections_run2(
         shifts[i][0]["Muon"] = muons
 
     # systematics
-    if corrections_config["object_shifts"]:
+    if hasattr(events, "genWeight") and corrections_config["object_shifts"]:
         pt_error = ak.where(
             flat_muons.pt <= 200, ak.flatten(errors), np.zeros_like(flat_muons.pt)
         )

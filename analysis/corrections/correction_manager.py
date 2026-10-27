@@ -3,6 +3,7 @@ from coffea.analysis_tools import Weights
 from analysis.filesets.utils import get_nano_version
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.ctag import CTagCorrector
+from analysis.corrections.ctag2d import CTag2DCorrector
 from analysis.corrections.jetvetomaps import jet_veto
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
@@ -10,6 +11,7 @@ from analysis.corrections.lhepdf import add_lhepdf_weight
 from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.jec import apply_jerc_corrections
 from analysis.corrections.lhescale import add_scalevar_weight
+from analysis.corrections.higgs_hf import add_higgs_hf_weight
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
 from analysis.corrections.partonshower import add_partonshower_weight
@@ -23,8 +25,9 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
 
     shifts = []
     if objcorr_config:
-        # apply jet energy scale and smearing corrections
+
         if "jet" in objcorr_config:
+            # apply jet energy scale and smearing corrections
             shifts = apply_jerc_corrections(
                 events=events,
                 year=year,
@@ -34,6 +37,15 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
         else:
             met_field_key = "MET" if run == "2" else "PuppiMET"
             shifts = [({"Jet": events.Jet, "MET": events[met_field_key]}, None)]
+
+        if "met" in objcorr_config:
+            # apply met phi modulation corrections
+            shifts = apply_met_phi_corrections(
+                events=events,
+                year=year,
+                shifts=shifts,
+                corrections_config=corrections_config,
+            )
 
         if "muon" in objcorr_config:
             # apply muon scale and smearing corrections
@@ -61,7 +73,6 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
             for i in range(len(shifts)):
                 shifts[i][0]["Electron"] = events.Electron
 
-        # apply jet veto
         if "jetveto" in objcorr_config:
             event_veto = jet_veto(events, year)
             vetoed_events = events[~event_veto]
@@ -206,6 +217,27 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                 ctag_corrector.add_ctag_weights(flavor="b")
                 ctag_corrector.add_ctag_weights(flavor="c")
                 ctag_corrector.add_ctag_weights(flavor="light")
+
+        if "ctagging_2d" in weights_config:
+            if weights_config["ctagging_2d"]:
+                ctag2d_corrector = CTag2DCorrector(
+                    events=pruned_ev,
+                    weights=weights_container,
+                    year=year,
+                    variation=variation,
+                )
+                ctag2d_corrector.add_weights()
+
+        if "higgsHFWeight" in weights_config:
+            if weights_config["higgsHFWeight"]:
+                # ggH/VBF only (see higgs_hf.py); per-event, keyed on gen-jet heavy
+                # flavour, replaces a flat lnN on the pooled Other_Higgs group
+                add_higgs_hf_weight(
+                    events=pruned_ev,
+                    weights_container=weights_container,
+                    dataset=dataset,
+                    flav="c",
+                )
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))
     return weights_container

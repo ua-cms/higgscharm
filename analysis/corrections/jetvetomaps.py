@@ -3,6 +3,7 @@ import numpy as np
 import awkward as ak
 from analysis.working_points import working_points
 from analysis.filesets.utils import get_nano_version
+from analysis.selections.utils import delta_r_higher
 from analysis.corrections.correctionlib_files import correction_files
 
 
@@ -48,7 +49,7 @@ def jet_veto(events, year: str, mapname: str = "jetvetomap"):
     )
     jets_em_fraction = (events.Jet.neEmEF + events.Jet.chEmEF) < 0.9
     jets_muon_overlap = (
-        delta_r_mask(events.Jet, events.Muon, 0.2)
+        delta_r_higher(events.Jet, events.Muon, 0.2)
         if run == "2"
         else np.ones_like(events.Jet.pt, dtype=bool)
     )
