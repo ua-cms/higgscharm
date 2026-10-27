@@ -77,6 +77,7 @@ def build_zcand(z):
         "idx": z.idx,
         "is_ossf": z.is_ossf,
         "is_sr": z.is_sr,
+        "charge": z.l1.charge + z.l2.charge,
     }
     if hasattr(z, "is_ss"):
         z_fields.update({"is_ss": z.is_ss})
@@ -250,6 +251,7 @@ def make_cand(zcand, kind, sort_by_mass=True, os_method=True):
     # add p4 and pT fields to ZLL candidates
     cand["p4"] = cand.z1.p4 + cand.z2.p4
     cand["pt"] = cand.p4.pt
+    cand["charge"] = cand.z1.charge + cand.z2.charge
     return cand
 
 
@@ -309,6 +311,12 @@ def select_candidate_cjet_dphi(cand, flavor, cjets):
             "eta": hcand.p4.eta,
             "phi": hcand.p4.phi,
             "mass": hcand.p4.mass,
+            "charge": (
+                hcand.z1.l1.charge
+                + hcand.z1.l2.charge
+                + hcand.z2.l1.charge
+                + hcand.z2.l2.charge
+            ),
         },
         with_name="PtEtaPhiMCandidate",
         behavior=candidate.behavior,
