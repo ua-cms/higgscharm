@@ -66,6 +66,7 @@ def parse_arguments():
             "2023postBPix",
             "2023",
             "2024",
+            "2025",
         ],
         help="Data year",
     )

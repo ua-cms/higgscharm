@@ -62,11 +62,20 @@ def assign_lepton_fsr_idx(fsr_photons, leptons):
     # compare elements within each sublist using broadcasting
     mask = ak.any(leptons.idx[:, :, None] == fsr_photons.lepton_idx[:, None, :], axis=2)
     # identify the correct positions
-    idx_positions = ak.argmax(
-        leptons.idx[:, :, None] == fsr_photons.lepton_idx[:, None, :], axis=2
+    # ak.argmax returns None when no match exists; fill with 0 so indexing stays integer-typed.
+    # The None positions always have mask=False so the fill value is never used.
+    idx_positions = ak.fill_none(
+        ak.argmax(
+            leptons.idx[:, :, None] == fsr_photons.lepton_idx[:, None, :], axis=2
+        ),
+        0,
     )
-    # create the updated fsr_idx for leptons
-    idx_updated = ak.where(mask, fsr_photons.idx[idx_positions], leptons.fsr_idx)
+    # create the updated fsr_idx for leptons. Pad the photon idx list to >= 1 entry: in events
+    # with leptons but no FSR photon the fill value 0 above indexed an EMPTY list -- an
+    # out-of-bounds read (garbage, masked out below) that segfaulted on 2025 data (2026-10-05).
+    # Values where mask is True are unchanged (argmax < n_fsr there).
+    fsr_idx = ak.fill_none(ak.pad_none(fsr_photons.idx, 1, axis=1), -1)
+    idx_updated = ak.where(mask, fsr_idx[idx_positions], leptons.fsr_idx)
     return ak.with_field(leptons, idx_updated, "fsr_idx")
 
 
@@ -87,6 +96,8 @@ def build_zcand(z):
         z_fields.update({"is_2fcr": z.is_2fcr})
     if hasattr(z, "is_sscr"):
         z_fields.update({"is_sscr": z.is_sscr})
+    if hasattr(z, "is_2fcr_ss"):
+        z_fields.update({"is_2fcr_ss": z.is_2fcr_ss})
     return ak.zip(z_fields)
 
 
@@ -313,4 +324,11 @@ def select_candidate_cjet_dphi(cand, flavor, cjets):
         behavior=candidate.behavior,
     )
     cjets = ak.firsts(cjets)
-    return hcand.delta_phi(cjets)
+    has_cjet = ~ak.is_none(cjets)
+    # Broadcast per-event mask to inner dimension to filter out hcand for events with no c-jet
+    # This avoids null-in-list when delta_phi is broadcast against a None c-jet
+    has_cjet_inner = ak.broadcast_arrays(has_cjet, hcand.phi)[0]
+    hcand_phi = hcand.phi[has_cjet_inner]
+    cjets_phi = ak.fill_none(cjets.phi, 0.0)
+    dphi = hcand_phi - cjets_phi
+    return (dphi + np.pi) % (2 * np.pi) - np.pi

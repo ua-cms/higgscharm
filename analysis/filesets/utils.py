@@ -56,7 +56,7 @@ def divide_list(lst: list, nfiles: int = 20) -> list:
 def get_nano_version(year: str):
     if year.startswith("201"):
         nano_version = "9"
-    elif year == "2024":
+    elif year in ("2024", "2025"):
         nano_version = "15"
     else:
         nano_version = "12"
@@ -161,6 +161,28 @@ def fileset_checker(samples: list, year: str):
         print(yaml.dump(samples, default_flow_style=False, sort_keys=False, indent=2))
         cmd = f"python3 fetch.py --year {year} --samples {' '.join(samples)}"
         subprocess.run(cmd, shell=True)
+
+    # Replace known-unreachable site-local redirectors with the global CMS redirector
+    # so XRootD can route to any available whitelisted site at runtime.
+    # Bad site-local endpoints: T2_BE_IIHE (maite.iihe.ac.be), T2_US_Caltech
+    # (k8s-redir.ultralight.org), T2_IN_TIFR (t2se.indiacms.res.in).
+    # These are also blacklisted in the sites YAML so Rucio should not return them,
+    # but we sanitize here in case any slip through from older cached filesets.
+    if fileset_file.exists():
+        with open(fileset_file, "r") as f:
+            content = f.read()
+        content_fixed = (
+            content
+            .replace("root://maite.iihe.ac.be:1094/", "root://cms-xrd-global.cern.ch//")
+            .replace("root://maite.iihe.ac.be:1095/", "root://cms-xrd-global.cern.ch//")
+            .replace("root://k8s-redir.ultralight.org:1094//", "root://cms-xrd-global.cern.ch//")
+            .replace("root://t2se.indiacms.res.in//", "root://cms-xrd-global.cern.ch//")
+            .replace("root://cmsxrd.gridka.de//", "root://cms-xrd-global.cern.ch//")
+        )
+        if content_fixed != content:
+            with open(fileset_file, "w") as f:
+                f.write(content_fixed)
+            print(f"Redirector normalized to global CMS redirector in {fileset_file.name}")
 
 
 def get_datasets_map(year: str):

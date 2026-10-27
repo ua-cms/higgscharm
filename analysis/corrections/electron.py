@@ -172,6 +172,7 @@ class ElectronWeights:
             "2022preEE": "2022Re-recoBCD",
             "2023preBPix": "2023PromptC",
             "2023postBPix": "2023PromptD",
+            "2025": "2025Prompt",
         }
         cset_args = [
             year_map.get(self.year, self.year),
@@ -248,6 +249,7 @@ class ElectronWeights:
             "2023preBPix": "2023PromptC",
             "2023postBPix": "2023PromptD",
             "2024": "2024Prompt",
+            "2025": "2025Prompt",
         }
         cset_args = [
             year_map.get(self.year, self.year),
@@ -328,6 +330,7 @@ class ElectronWeights:
             "2023preBPix": "2023PromptC",
             "2023postBPix": "2023PromptD",
             "2024": "2024Prompt",
+            "2025": "2025Prompt",
         }
         sf_variations_map = {"nom": "sf", "up": "sfup", "down": "sfdown"}
 

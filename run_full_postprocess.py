@@ -29,6 +29,7 @@ if __name__ == "__main__":
         "2023postBPix",
         "2023",
         "2024",
+        "2025",
     ]
     parser.add_argument(
         "-y",

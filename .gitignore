@@ -12,6 +12,7 @@ __pycache__/
 
 # Large output/data files
 outputs/
+analysis/outputs/
 *.parquet
 *.coffea
 *.root

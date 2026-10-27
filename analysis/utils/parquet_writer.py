@@ -1,6 +1,7 @@
 import os
 import json
 import shutil
+import tempfile
 import pathlib
 import awkward as ak
 from typing import List, Optional
@@ -89,11 +90,9 @@ def dump_pa_table(
             raise ImportError(
                 "Install XRootD python bindings with: conda install -c conda-forge xroot"
             ) from err
-    local_file = (
-        os.path.abspath(os.path.join(".", fname))
-        if xrootd
-        else os.path.join(".", fname)
-    )
+    # stage in a private temp dir, not the cwd: condor jobs run from the shared
+    # checkout, and 2024/2025 jobs on the same input file produce the same fname
+    local_file = os.path.join(tempfile.mkdtemp(prefix="pqstage_"), fname)
     merged_subdirs = "/".join(subdirs) if xrootd else os.path.sep.join(subdirs)
     destination = (
         location + merged_subdirs + f"/{fname}"
@@ -135,6 +134,61 @@ def dump_pa_table(
             shutil.copy(local_file, destination)
             assert os.path.isfile(destination)
         pathlib.Path(local_file).unlink()
+    os.rmdir(os.path.dirname(local_file))
+
+
+def dump_sumw_json(
+    sumw: float,
+    dataset: str,
+    fname: str,
+    location: str,
+    subdirs: Optional[List[str]] = None,
+    extra: Optional[dict] = None,
+):
+    """
+    Persist the pre-selection sum of genWeight for one processed chunk.
+
+    Written unconditionally (even when zero events survive the analysis
+    selection) so that downstream xs*lumi normalization can divide by the
+    true full-sample sum of weights rather than a post-selection subset.
+
+    extra: additional pre-selection sums stored next to "sumw" (added
+    2026-09-27 for the 3FS/4FS stitching: sumw split by number of GEN
+    c-jets, nominal and per LHE scale variation -- see base.py).
+    """
+    subdirs = subdirs or []
+    xrd_prefix = "root://"
+    xrootd = False
+    if xrd_prefix in location:
+        try:
+            import XRootD
+            import XRootD.client
+
+            xrootd = True
+        except ImportError as err:
+            raise ImportError(
+                "Install XRootD python bindings with: conda install -c conda-forge xroot"
+            ) from err
+    # stage in a private temp dir, not the cwd: condor jobs run from the shared
+    # checkout, and 2024/2025 jobs on the same input file produce the same fname
+    local_file = os.path.join(tempfile.mkdtemp(prefix="pqstage_"), fname)
+    merged_subdirs = "/".join(subdirs) if xrootd else os.path.sep.join(subdirs)
+    destination = (
+        location + merged_subdirs + f"/{fname}"
+        if xrootd
+        else os.path.join(location, os.path.join(merged_subdirs, fname))
+    )
+    with open(local_file, "w") as f:
+        json.dump({"dataset": dataset, "sumw": float(sumw), **(extra or {})}, f)
+    if xrootd:
+        _xrd_copy(local_file, destination)
+    else:
+        dirname = os.path.dirname(destination)
+        pathlib.Path(dirname).mkdir(parents=True, exist_ok=True)
+        shutil.copy(local_file, destination)
+        assert os.path.isfile(destination)
+    pathlib.Path(local_file).unlink()
+    os.rmdir(os.path.dirname(local_file))
 
 
 def dump_sumw_json(
@@ -217,11 +271,9 @@ def dump_ak_array(
             raise ImportError(
                 "Install XRootD python bindings with: conda install -c conda-forge xroot"
             ) from err
-    local_file = (
-        os.path.abspath(os.path.join(".", fname))
-        if xrootd
-        else os.path.join(".", fname)
-    )
+    # stage in a private temp dir, not the cwd: condor jobs run from the shared
+    # checkout, and 2024/2025 jobs on the same input file produce the same fname
+    local_file = os.path.join(tempfile.mkdtemp(prefix="pqstage_"), fname)
     merged_subdirs = "/".join(subdirs) if xrootd else os.path.sep.join(subdirs)
     destination = (
         location + merged_subdirs + f"/{fname}"
@@ -237,3 +289,4 @@ def dump_ak_array(
         shutil.copy(local_file, destination)
         assert os.path.isfile(destination)
     pathlib.Path(local_file).unlink()
+    os.rmdir(os.path.dirname(local_file))

@@ -174,10 +174,14 @@ class ObjectSelector:
         # update 'is_tight' selection for muons
         muons["is_tight"] = muons.is_tight & (muons.pfRelIso03_all < 0.35)
 
+        # update 'is_tight' for electrons with isolation (no FSR correction in v12)
+        electrons["is_tight"] = electrons.is_tight & (electrons.pfRelIso03_all < 0.35)
         electrons["pfRelIso03_all"] = ak.zeros_like(electrons.pt)
         # concatenate muons and electrons with corrected iso
         leptons = ak.concatenate([muons, electrons], axis=1)
-        leptons = leptons[ak.argsort(leptons.pt, axis=1, ascending=False)]
+        sort_order = ak.argsort(leptons.pt, axis=1, ascending=False)
+        leptons = leptons[sort_order]
+        helper_leptons_sorted = helper_leptons[sort_order]
         leptons = ak.zip(
             {
                 "pt": leptons.pt,
@@ -187,8 +191,8 @@ class ObjectSelector:
                 "charge": leptons.charge,
                 "pdgId": leptons.pdgId,
                 "pfRelIso03_all": leptons.pfRelIso03_all,
-                "idx": helper_leptons.idx,
-                "fsr_idx": helper_leptons.fsr_idx,
+                "idx": helper_leptons_sorted.idx,
+                "fsr_idx": helper_leptons_sorted.fsr_idx,
                 "is_loose": leptons.is_loose,
                 "is_relaxed": leptons.is_relaxed,
                 "is_tight": leptons.is_tight,
@@ -249,15 +253,25 @@ class ObjectSelector:
             behavior=candidate.behavior,
         )
         # concatenate leptons with and without matched FSR photons after FSR recovery
-        leptons = ak.where(
-            # concatenate only events with matched FSR photons
-            # to avoid including None values from 'leptons_with_matched_fsrphotons'
-            ak.sum(leptons.fsr_idx > -1, axis=1) == 0,
-            leptons_without_matched_fsrphotons,
-            ak.concatenate(
-                [leptons_with_matched_fsrphotons, leptons_without_matched_fsrphotons],
-                axis=1,
-            ),
+        #
+        # NOTE: previously this used ak.where(cond, leptons_without_matched_fsrphotons,
+        # ak.concatenate([leptons_with_matched_fsrphotons, leptons_without_matched_fsrphotons])).
+        # leptons_with_matched_fsrphotons is ak.pad_none'd to length >=1, so its 'p4'
+        # field is option-typed; leptons_without_matched_fsrphotons's 'p4' is not. The
+        # two ak.where branches therefore have mismatched types, which ak's 1.x indexer
+        # resolves by building an "irreducible" union array that crashes on later direct
+        # boolean-mask indexing (select_other_relaxed_leptons's
+        # `self.objects["leptons"][self.objects["leptons"].is_relaxed]`). Fix: drop the
+        # None-padding rows from leptons_with_matched_fsrphotons and unconditionally
+        # concatenate -- for events with zero matched-FSR leptons this contributes
+        # nothing, exactly matching the original ak.where's intent, without ever
+        # needing type-mismatched branches.
+        leptons_with_matched_fsrphotons = leptons_with_matched_fsrphotons[
+            ~ak.is_none(leptons_with_matched_fsrphotons, axis=1)
+        ]
+        leptons = ak.concatenate(
+            [leptons_with_matched_fsrphotons, leptons_without_matched_fsrphotons],
+            axis=1,
         )
         self.objects[obj_name] = leptons
 
@@ -277,8 +291,14 @@ class ObjectSelector:
     def select_best_zcandidate(self, obj_name):
         """selects best Z candidate as the one closest to the nominal Z mass"""
         zmass = 91.1876
+        # mask_identity=False: events with zero surviving zcandidates (common under a
+        # narrow mass window, e.g. zplusl_os's OS Z-tag cut) must get a sentinel index
+        # (-1) instead of None. None here upgrades the downstream boolean mask/select
+        # to an option/list union type that ak's older indexing can't handle
+        # ("cannot apply jagged slices to irreducible union arrays").
         best_zcand_idx = ak.argmin(
-            np.abs(self.objects["zcandidates"].p4.mass - zmass), axis=1
+            np.abs(self.objects["zcandidates"].p4.mass - zmass), axis=1,
+            mask_identity=False,
         )
         best_zcand = self.objects["zcandidates"][
             best_zcand_idx == self.objects["zcandidates"].idx
@@ -403,6 +423,12 @@ class ObjectSelector:
         """selects best Zll candidates for SS CR"""
         self.objects[obj_name] = select_best_zzcandidate(
             self.objects["zllcandidates"], "is_sscr"
+        )
+
+    def select_best_2fcr_ss_zllcandidate(self, obj_name):
+        """selects best Zll candidates for 2P2F SS CR (AN-18-340 Eq. 11)"""
+        self.objects[obj_name] = select_best_zzcandidate(
+            self.objects["zllcandidates"], "is_2fcr_ss"
         )
 
     # 2026-09-21: OS/SS-split-aware variants for hplusc_mva_4class_CR_merged.yaml
@@ -532,6 +558,11 @@ class ObjectSelector:
     def select_dphi_inclusive(self, obj_name):
         self.objects[obj_name] = select_candidate_cjet_dphi(
             self.objects["best_zzcandidate"], "inclusive", self.objects["cjets"]
+        )
+
+    def select_jet_dphi_inclusive(self, obj_name):
+        self.objects[obj_name] = select_candidate_cjet_dphi(
+            self.objects["best_zzcandidate"], "inclusive", self.objects["jets"]
         )
 
     # --------------------------------------------------------------------------------

@@ -10,3 +10,7 @@
 '2023preBPix': 17794.0
 '2023postBPix': 9450.0
 '2024': 108960.0
+# 2025: brilcalc on Cert_Collisions2025_391658_398903_Golden.json --begin 392113 (Runs C-G;
+# Run B, 24 golden runs / 0.259 fb-1, excluded -- no B in JEC/vetomap), STABLE BEAMS,
+# NO normtag (normtag_PHYSICS does not cover 2025 yet, 2026-10-05) -- preliminary, revisit.
+'2025': 110931.5

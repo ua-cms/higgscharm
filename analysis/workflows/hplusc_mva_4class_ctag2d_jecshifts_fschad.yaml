@@ -526,14 +526,16 @@ histogram_config:
       start: 0
       stop: 1
       label: Jets ParT B
-      expression: objects['jets'].btagRobustParTAK4B
+      # NanoAOD v15 (2024/2025) has no RobustParTAK4 -> store UParTAK4 there (2026-10-05)
+      expression: objects['jets'].btagRobustParTAK4B if 'btagRobustParTAK4B' in objects['jets'].fields else objects['jets'].btagUParTAK4B
     jet_btagRobustParTAK4CvB:
       type: Regular
       bins: 50
       start: 0
       stop: 1
       label: Jets ParT CvB
-      expression: objects['jets'].btagRobustParTAK4CvB
+      # NanoAOD v15 (2024/2025) has no RobustParTAK4 -> store UParTAK4 there (2026-10-05)
+      expression: objects['jets'].btagRobustParTAK4CvB if 'btagRobustParTAK4CvB' in objects['jets'].fields else objects['jets'].btagUParTAK4CvB
     jet_hadronFlavour:
       type: IntCategory
       categories:

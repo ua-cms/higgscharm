@@ -24,6 +24,7 @@ def apply_jetvetomaps(events, year: str, mapname: str = "jetvetomap"):
         "2023preBPix": "Summer23Prompt23_RunC_V1",
         "2023postBPix": "Summer23BPixPrompt23_RunD_V1",
         "2024": "Summer24Prompt24_RunBCDEFGHI_V1",
+        "2025": "Summer24Prompt25_RunCDEFG_V1",
     }
     cset = correctionlib.CorrectionSet.from_file(correction_files["jetvetomaps"][year])
 

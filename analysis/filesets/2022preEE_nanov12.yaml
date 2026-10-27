@@ -1,46 +1,46 @@
-DoubleMuonRun2022C:
+DoubleMuonC:
   era: C
   query: DoubleMuon/Run2022C-22Sep2023-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-SingleMuonRun2022C:
+SingleMuonC:
   era: C
   query: SingleMuon/Run2022C-22Sep2023-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonRun2022C:
+MuonC:
   era: C
   query: Muon/Run2022C-22Sep2023-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonRun2022D:
+MuonD:
   era: D
   query: Muon/Run2022D-22Sep2023-v1/NANOAOD
   process: Data
   key: muon
   xsec: None
-MuonEGRun2022C:
+MuonEGC:
   era: C
   query: MuonEG/Run2022C-22Sep2023-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-MuonEGRun2022D:
+MuonEGD:
   era: D
   query: MuonEG/Run2022D-22Sep2023-v1/NANOAOD
   process: Data
   key: muon_electron
   xsec: None
-EGammaRun2022C:
+EGammaC:
   era: C
   query: EGamma/Run2022C-22Sep2023-v1/NANOAOD
   process: Data
   key: electron
   xsec: None
-EGammaRun2022D:
+EGammaD:
   era: D
   query: EGamma/Run2022D-22Sep2023-v1/NANOAOD
   process: Data
@@ -401,9 +401,65 @@ WplusH_Hto2Zto4L:
 ZHto2Zto4L:
   era: mc
   query: ZHto2Zto4L_M125_TuneCP5_13p6TeV_powheg2-minlo-HZJ-JHUGenV752-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.000775
+# H+c signal samples for MVA
+SomeSMSignal:
+  era: signal
+  query: 2022preEE_signal
+  key: smsignal
+  process: smsignal
+  xsec: 0.000026381
+# H+b background samples
+2022preEEHB:
+  era: signal
+  query: 2022preEEHB
+  key: hb
+  process: hb
+  xsec: 0.000173299
+# H+b background samples (from DAS - phys03)
+HPlusBottom_2022preEE:
+  era: signal
+  query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2022_realistic_ForNanov13_v1-v1la-00000000000000000000000000000000/USER
+  key: hb
+  process: hb
+  xsec: 0.000173299
+HPlusBottom_new_2022preEE:
+  era: signal
+  query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
+  key: hb
+  process: hb
+  xsec: 0.000173299
+# H+c signal samples (from DAS - phys03)
+HPlusCharm_2022preEE:
+  era: signal
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2022_realistic_ForNanov13_v1-v1la-00000000000000000000000000000000/USER
+  key: smsignal
+  process: smsignal
+  xsec: 0.000026381
+# H+c signal samples - new muR/muF scale (from DAS - phys03)
+HPlusCharm_new_2022preEE:
+  era: signal
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
+  key: smsignal
+  process: smsignal
+  xsec: 0.000026381
+# H+c 3FS (massive charm, pp -> h c c~) for the 3FS/4FS stitching, added 2026-09-27.
+# 2026-10-07: switched to the NEW production from the rebuilt gridpack (nf_3 PDF 321900,
+# maxjetflavor 3, scale reweighting on; "-pythia8new"/"-v1new"). The July sample (4FS PDF,
+# broken scale weights) is retired. Validated vs the official H->gamgam 3FS: second-brain
+# Notes/hczz-3fs-new-2022-validation-2026-10-07.md.
+# Deliberately NOT named HPlusCharm*: the datacard builders map any name containing
+# "HPlusCharm" to Signal. xsec = 55.0 fb (gridpack / LHCHWG Table 3, production only)
+# x BR(H->ZZ->4l incl. tau) 2.694e-4; the stitching builder renormalises anyway.
+Stitch3FS_cH_2022preEE:
+  era: signal
+  query: HPlusCharm_3FS_MuRFScaleDynX0p50_HToZZTo4L_M125_TuneCP5_13p6TeV_amcatnlo-JHUGen-pythia8new/snandaku-Run3Summer22NanoAODv13-3FS-HToZZTo4L-JHUGen-133X_mcRun3_2022_realistic_ForNanov13_v1-v1new-00000000000000000000000000000000/USER
+  key: smsignal
+  process: smsignal
+  xsec: 0.0000148
+
 # ─── SMEFT H+c samples (4FS, LO+MLM, JHUGen H→ZZ→4ℓ, NanoAODv13, 2022preEE) ─
 SMEFT_SM_HplusC_2022preEE:
   era: signal

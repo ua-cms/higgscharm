@@ -124,6 +124,10 @@ object_selection:
       - working_points.jet_ctagging(events, 'loose', year)
   zzcandidate_cjet_dphi_inclusive:
     field: select_dphi_inclusive
+  # all-jets analogue (MVA input jet_h_dphi_inclusive, added 2026-07-31; registration lost
+  # from this file afterwards, restored 2026-10-05)
+  zzcandidate_jet_dphi_inclusive:
+    field: select_jet_dphi_inclusive
   zzcandidate_cjet_dphi_4e:
     field: select_dphi_4e
   zzcandidate_cjet_dphi_4mu:
@@ -515,20 +519,46 @@ histogram_config:
       stop: 1
       label: Jets PNet QvG
       expression: objects['jets'].btagPNetQvG
+    # UParT continuous scores: 2024/2025 MVA inputs (hc_zzto4l_mw_training_4class_nomass_2024.yml).
+    # Present in the 2026-08-01 2024 parquets but missing from this file since; restored 2026-10-05.
+    # -1 on NanoAOD v12 (2022/2023), which has no UParT branches.
+    jet_btagUParTAK4B:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Jets UParT B
+      expression: objects['jets'].btagUParTAK4B if 'btagUParTAK4B' in objects['jets'].fields else ak.full_like(objects['jets'].pt, -1)
+    jet_btagUParTAK4CvL:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Jets UParT CvL
+      expression: objects['jets'].btagUParTAK4CvL if 'btagUParTAK4CvL' in objects['jets'].fields else ak.full_like(objects['jets'].pt, -1)
+    jet_btagUParTAK4CvB:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Jets UParT CvB
+      expression: objects['jets'].btagUParTAK4CvB if 'btagUParTAK4CvB' in objects['jets'].fields else ak.full_like(objects['jets'].pt, -1)
     jet_btagRobustParTAK4B:
       type: Regular
       bins: 50
       start: 0
       stop: 1
       label: Jets ParT B
-      expression: objects['jets'].btagRobustParTAK4B
+      # NanoAOD v15 (2024/2025) has no RobustParTAK4 -> store UParTAK4 there (2026-10-05)
+      expression: objects['jets'].btagRobustParTAK4B if 'btagRobustParTAK4B' in objects['jets'].fields else objects['jets'].btagUParTAK4B
     jet_btagRobustParTAK4CvB:
       type: Regular
       bins: 50
       start: 0
       stop: 1
       label: Jets ParT CvB
-      expression: objects['jets'].btagRobustParTAK4CvB
+      # NanoAOD v15 (2024/2025) has no RobustParTAK4 -> store UParTAK4 there (2026-10-05)
+      expression: objects['jets'].btagRobustParTAK4CvB if 'btagRobustParTAK4CvB' in objects['jets'].fields else objects['jets'].btagUParTAK4CvB
     jet_hadronFlavour:
       type: IntCategory
       categories:
@@ -686,6 +716,13 @@ histogram_config:
       stop: 3.14159
       label: $|\Delta \phi(\text{c-Jet}, H_{4\ell})|$
       expression: np.abs(objects['zzcandidate_cjet_dphi_inclusive'])
+    jet_h_dphi_inclusive:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 3.14159
+      label: $|\Delta \phi(\text{Jet}, H_{4\ell})|$
+      expression: np.abs(objects['zzcandidate_jet_dphi_inclusive'])
 
     # =========================================================================
     # Secondary Vertex observables
@@ -886,7 +923,7 @@ histogram_config:
       start: 0
       stop: 2
       label: is_ggZZ
-      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if (('GluGluToContinto2Z' in dataset or 'GluGlutoContinto2Z' in dataset) and 'GluGluHtoZZ' not in dataset and not ('SomeSMSignal' in dataset or 'HPlusCharm' in dataset) and not ('HPlusBottom' in dataset or 'HB_' in dataset or dataset.endswith('HB')) and not ('VBFHto' in dataset or 'ZHto' in dataset or 'WminusH' in dataset or 'WplusH' in dataset or 'TTH_' in dataset or 'bbH_' in dataset)) else 0.0)
+      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if (('GluGluToContinto2Z' in dataset or 'GluGlutoContinto2Z' in dataset or 'GluGlu2Zto' in dataset) and 'GluGluHtoZZ' not in dataset and not ('SomeSMSignal' in dataset or 'HPlusCharm' in dataset) and not ('HPlusBottom' in dataset or 'HB_' in dataset or dataset.endswith('HB')) and not ('VBFHto' in dataset or 'ZHto' in dataset or 'WminusH' in dataset or 'WplusH' in dataset or 'TTH_' in dataset or 'bbH_' in dataset)) else 0.0)
     is_Signal:
       type: Integer
       start: 0
@@ -925,6 +962,7 @@ histogram_config:
       - jet_multiplicity
       - jet_ht
       - nSV
+      - jet_h_dphi_inclusive
     jet:
       - jet_pt
       - jet_eta

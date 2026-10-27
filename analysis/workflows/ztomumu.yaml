@@ -40,6 +40,20 @@ object_selection:
       - objects['dimuons'].l1.delta_r(objects['dimuons'].l2) > 0.3
       - objects['dimuons'].l1.charge * objects['dimuons'].l2.charge < 0
       - (objects['dimuons'].p4.mass > 60.0) & (objects['dimuons'].p4.mass < 120.0)
+  # c-tagged subset of jets, used only by the CR_Zplusc category (Z+c control region,
+  # see second-brain/Tasks/HcZZ-fake-rate.md 2026-08-09 entry for the caveat: does not
+  # constrain the same flavour-scheme/PDF systematic broken for HPlusCharm Signal, but
+  # useful as a c-tag-modeling / mistag-rate data-vs-MC cross-check)
+  cjets:
+    field: events.Jet
+    cuts:
+      - events.Jet.pt > 20
+      - np.abs(events.Jet.eta) < 2.5
+      - working_points.jet_id(events, year, 'tightlepveto')
+      - working_points.jet_pileup_id(events, year, 'tight')
+      - delta_r_higher(events.Jet, objects['muons'], 0.4)
+      - delta_r_higher(events.Jet, objects['electrons'], 0.4)
+      - working_points.jet_ctagging(events, 'loose', year)
 event_selection:
   hlt_paths:
     Muon:
@@ -54,6 +68,7 @@ event_selection:
     electron_veto: ak.num(objects['electrons']) == 0
     two_muons: ak.num(objects['muons']) == 2
     one_dimuon: ak.num(objects['dimuons']) == 1
+    atleast_one_cjet: ak.num(objects['cjets']) >= 1
   categories:
     base:
       - trigger
@@ -65,8 +80,21 @@ event_selection:
       - two_muons
       - one_dimuon
       - electron_veto
+    CR_Zplusc:
+      - trigger
+      - trigger_match
+      - lumimask
+      - atleast_one_goodvertex
+      - leading_muon_pt
+      - subleading_muon_pt
+      - two_muons
+      - one_dimuon
+      - electron_veto
+      - atleast_one_cjet
 corrections:
   objects:
+    - jec
+    - jet_vetomaps
     - muon_ss
     - electon_ss
   event_weights:
@@ -285,6 +313,56 @@ histogram_config:
       stop: 60
       label: vertex multiplicity
       expression: events.PV.npvsGood
+    n_cjet:
+      type: Integer
+      start: 0
+      stop: 14
+      label: c-Jet Multiplicity
+      expression: ak.num(objects['cjets'])
+    cjets_pt:
+      type: Variable
+      edges:
+        - 20
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: c-Jet $p_T$ [GeV]
+      expression: objects['cjets'].pt
+    cjets_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: c-Jet $\eta$
+      expression: objects['cjets'].eta
+    cjets_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: c-Jet HadronFlavour
+      expression: objects['cjets'].hadronFlavour
+    cjets_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: c-Jet CvsL
+      expression: objects['cjets'].btagUParTAK4CvL if hasattr(objects['cjets'], 'btagUParTAK4CvL') else objects['cjets'].btagPNetCvL if hasattr(objects['cjets'], 'btagPNetCvL') else objects['cjets'].btagDeepFlavCvL
+    cjets_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: c-Jet CvsB
+      expression: objects['cjets'].btagUParTAK4CvB if hasattr(objects['cjets'], 'btagUParTAK4CvB') else objects['cjets'].btagPNetCvB if hasattr(objects['cjets'], 'btagPNetCvB') else objects['cjets'].btagDeepFlavCvB
   layout:
     vertex:
       - npvs
@@ -328,3 +406,10 @@ histogram_config:
       - leadingjet_flavour
       - leadingjet_cvsb
       - leadingjet_cvsl
+    cjets:
+      - n_cjet
+      - cjets_pt
+      - cjets_eta
+      - cjets_flavour
+      - cjets_cvsl
+      - cjets_cvsb

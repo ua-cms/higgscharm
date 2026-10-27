@@ -36,7 +36,8 @@ if __name__ == "__main__":
             "2022postEE",
             "2023preBPix",
             "2023postBPix",
-            "2024"
+            "2024",
+            "2025",
         ],
         help="dataset year",
     )
@@ -99,7 +100,7 @@ if __name__ == "__main__":
             output_location=output_location,
         ),
         executor=processor.futures_executor,
-        executor_args={"schema": NanoAODSchema, "workers": 4},
+        executor_args={"schema": NanoAODSchema, "workers": 2},
     )
     savepath = f"{args.output_path}/{args.dataset}"
     if args.output_format in ["coffea", "parquet"]:

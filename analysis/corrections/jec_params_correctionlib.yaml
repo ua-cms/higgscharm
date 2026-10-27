@@ -22,3 +22,11 @@
   Run2024G: "Summer24Prompt24_V2"
   Run2024H: "Summer24Prompt24_V2"
   Run2024I: "Summer24Prompt24_V2"
+'2025':
+  # Run3-25Prompt-Summer24-NanoAODv15 (2025 data analysed against Summer24 MC)
+  MC: "Summer24Prompt25_V3 Summer24Prompt25_JRV2"
+  Run2025C: "Summer24Prompt25_V3"
+  Run2025D: "Summer24Prompt25_V3"
+  Run2025E: "Summer24Prompt25_V3"
+  Run2025F: "Summer24Prompt25_V3"
+  Run2025G: "Summer24Prompt25_V3"

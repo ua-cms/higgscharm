@@ -20,6 +20,7 @@ if __name__ == "__main__":
             "2023preBPix",
             "2023postBPix",
             "2024",
+            "2025",
         ],
     )
     parser.add_argument(
@@ -62,10 +63,19 @@ if __name__ == "__main__":
             subprocess.run(cmd, shell=True)
 
         samples_str = " ".join(args.samples) if args.samples else ""
-        cmd = f"singularity exec -B /afs -B /cvmfs {args.image} python3 -m analysis.filesets.make_filesets --year {args.year} --samples {samples_str}"
+        # get proxy path and forward it into the singularity container
+        proxy_result = subprocess.run("voms-proxy-info -path", shell=True,
+                                      capture_output=True, text=True)
+        proxy_path = proxy_result.stdout.strip()
+        proxy_dir = str(Path(proxy_path).parent) if proxy_path else "/tmp"
+        proxy_env = f"--env X509_USER_PROXY={proxy_path}" if proxy_path else ""
+        cmd = (f"singularity exec -B /afs -B /cvmfs -B {proxy_dir} "
+               f"{proxy_env} {args.image} "
+               f"python3 -m analysis.filesets.make_filesets --year {args.year} --samples {samples_str}")
         subprocess.run(cmd, shell=True)
 
-    if args.signal or args.onlysignal:
-        # add signal samples
-        signal_cmd = f"python3 -m analysis.filesets.make_signal_filesets --year {args.year} --site {args.site}"
-        subprocess.run(signal_cmd, shell=True)
+    # always run make_signal_filesets to fetch USER (phys03) datasets outside singularity
+    samples_str = " ".join(args.samples) if args.samples else ""
+    samples_arg = f"--samples {samples_str}" if samples_str else ""
+    signal_cmd = f"python3 -m analysis.filesets.make_signal_filesets --year {args.year} --site {args.site} {samples_arg}"
+    subprocess.run(signal_cmd, shell=True)

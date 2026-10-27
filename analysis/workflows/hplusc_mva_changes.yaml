@@ -532,6 +532,12 @@ histogram_config:
       stop: 14
       label: c-Jet Multiplicity
       expression: ak.num(objects['cjets'])
+    cjets_multiplicity:
+      type: Integer
+      start: 0
+      stop: 14
+      label: c-Jet Multiplicity
+      expression: ak.num(objects['cjets'])
     cjet_HT:
       type: Regular
       bins: 50
@@ -595,6 +601,14 @@ histogram_config:
       stop: 1
       label: c-Jets PNet QvG
       expression: objects['cjets'].btagPNetQvG
+    cjets_hadronFlavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: c-Jets HadronFlavour
+      expression: objects['cjets'].hadronFlavour
     cjets_h_dphi_inclusive:
       type: Regular
       bins: 50
@@ -602,6 +616,16 @@ histogram_config:
       stop: 3.14159
       label: $|\Delta \phi(\text{c-Jet}, H_{4\ell})|$
       expression: np.abs(objects['zzcandidate_cjet_dphi_inclusive'])
+
+    # =========================================================================
+    # Secondary Vertex observables
+    # =========================================================================
+    nSV:
+      type: Integer
+      start: 0
+      stop: 10
+      label: Number of Secondary Vertices
+      expression: ak.num(events.SV)
 
     # =========================================================================
     # Lepton kinematics (Z1 leptons)
@@ -775,37 +799,44 @@ histogram_config:
 
     # =========================================================================
     # MVA Truth Labels (5-class classification)
+    # Labels are MUTUALLY EXCLUSIVE - each dataset gets exactly ONE label.
+    # Helper functions defined inline to check patterns:
+    #   _is_ggH: 'GluGluHtoZZ' in dataset
+    #   _is_qqgg: 'ZZto4L' or 'GluGluToContinto2Z' or 'GluGlutoContinto2Z' (excludes ggH)
+    #   _is_signal: 'SomeSMSignal' or 'HPlusCharm'
+    #   _is_hplusb: 'HPlusBottom' or 'HB_' or endswith('HB')
+    #   _is_other: 'VBFHto' or 'ZHto' or 'WminusH' or 'WplusH' or 'TTH_' or 'bbH_'
     # =========================================================================
-    is_qqgg_toZZ:
-      type: Integer
-      start: 0
-      stop: 2
-      label: is_qqgg_toZZ
-      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if ('ZZto4L' in dataset or 'GluGluToContinto2Z' in dataset or 'GluGlutoContinto2Z' in dataset) else 0.0)
     is_ggH:
       type: Integer
       start: 0
       stop: 2
       label: is_ggH
-      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if 'GluGluHtoZZ' in dataset else 0.0)
+      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if ('GluGluHtoZZ' in dataset and not ('SomeSMSignal' in dataset or 'HPlusCharm' in dataset) and not ('HPlusBottom' in dataset or 'HB_' in dataset or dataset.endswith('HB')) and not ('VBFHto' in dataset or 'ZHto' in dataset or 'WminusH' in dataset or 'WplusH' in dataset or 'TTH_' in dataset or 'bbH_' in dataset)) else 0.0)
+    is_qqgg_toZZ:
+      type: Integer
+      start: 0
+      stop: 2
+      label: is_qqgg_toZZ
+      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if (('ZZto4L' in dataset or 'GluGluToContinto2Z' in dataset or 'GluGlutoContinto2Z' in dataset) and 'GluGluHtoZZ' not in dataset and not ('SomeSMSignal' in dataset or 'HPlusCharm' in dataset) and not ('HPlusBottom' in dataset or 'HB_' in dataset or dataset.endswith('HB')) and not ('VBFHto' in dataset or 'ZHto' in dataset or 'WminusH' in dataset or 'WplusH' in dataset or 'TTH_' in dataset or 'bbH_' in dataset)) else 0.0)
     is_Signal:
       type: Integer
       start: 0
       stop: 2
       label: is_Signal
-      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if ('SomeSMSignal' in dataset or 'HPlusCharm' in dataset) else 0.0)
+      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if (('SomeSMSignal' in dataset or 'HPlusCharm' in dataset) and not ('HPlusBottom' in dataset or 'HB_' in dataset or dataset.endswith('HB'))) else 0.0)
     is_HPlusB:
       type: Integer
       start: 0
       stop: 2
       label: is_HPlusB
-      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if ('HPlusBottom' in dataset or 'HB_' in dataset or dataset.endswith('HB')) else 0.0)
+      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if (('HPlusBottom' in dataset or 'HB_' in dataset or dataset.endswith('HB')) and not ('SomeSMSignal' in dataset or 'HPlusCharm' in dataset)) else 0.0)
     is_Other:
       type: Integer
       start: 0
       stop: 2
       label: is_Other
-      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if ('VBFHto' in dataset or 'ZHto' in dataset or 'WminusH' in dataset or 'WplusH' in dataset or 'TTH_' in dataset or 'bbH_' in dataset) else 0.0)
+      expression: ak.ones_like(objects['best_zzcandidate'].p4.pt) * (1.0 if (('VBFHto' in dataset or 'ZHto' in dataset or 'WminusH' in dataset or 'WplusH' in dataset or 'TTH_' in dataset or 'bbH_' in dataset) and 'GluGluHtoZZ' not in dataset and not ('SomeSMSignal' in dataset or 'HPlusCharm' in dataset) and not ('HPlusBottom' in dataset or 'HB_' in dataset or dataset.endswith('HB'))) else 0.0)
 
   layout:
     zz_inclusive:
@@ -831,6 +862,7 @@ histogram_config:
     jet_global:
       - jet_multiplicity
       - jet_ht
+      - nSV
     jet:
       - jet_pt
       - jet_eta

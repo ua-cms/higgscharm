@@ -51,9 +51,12 @@ class MuonWeights:
         self.cset = correctionlib.CorrectionSet.from_file(
             correction_files["muon"][year]
         )
-        # get muon HLT eff correction set
-        self.cset_eff = correctionlib.CorrectionSet.from_file(
-            correction_files["muon_hlt"][year]
+        # get muon HLT eff correction set (none for 2025 yet; only the trigger
+        # weights read it, and those are off in every current workflow)
+        self.cset_eff = (
+            correctionlib.CorrectionSet.from_file(correction_files["muon_hlt"][year])
+            if year in correction_files["muon_hlt"]
+            else None
         )
 
     def add_id_weights(self, id_wp):
@@ -267,6 +270,7 @@ class MuonWeights:
             "2023preBPix": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
             "2023postBPix": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
             "2024": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
+            "2025": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
         }
 
         if not ((id_wp == "tight") & (iso_wp == "tight")):

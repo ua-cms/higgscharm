@@ -346,10 +346,44 @@ WplusH_Hto2Zto4L:
   xsec: 0.000244
 ZHto2Zto4L:
   era: mc
-  query: ZH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM
-  process: H(125) 
+  query: ZH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v2/NANOAODSIM
+  process: H(125)
   key: higgs
   xsec: 0.000775
+# H+c signal samples for MVA
+SomeSMSignal:
+  era: signal
+  query: 2023preBPix_signal
+  key: smsignal
+  process: smsignal
+  xsec: 0.000026381
+# H+b background samples (from JSON)
+2023preBPixHB:
+  era: signal
+  query: 2023preBPixHB
+  key: hb
+  process: hb
+  xsec: 0.000173299
+# H+b background samples (from DAS - phys03)
+HPlusBottom_2023preBPix:
+  era: signal
+  query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
+  key: hb
+  process: hb
+  xsec: 0.000173299
+# H+c signal samples (from DAS - phys03)
+HPlusCharm_2023preBPix:
+  era: signal
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1la-00000000000000000000000000000000/USER
+  key: smsignal
+  process: smsignal
+  xsec: 0.000026381
+HPlusCharm_new_2023preBPix:
+  era: signal
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
+  key: smsignal
+  process: smsignal
+  xsec: 0.000026381
 # H+c 3FS (massive charm, pp -> h c c~) for the 3FS/4FS stitching, added 2026-09-27.
 # 2026-10-09: switched to the NEW production from the rebuilt gridpack ("-pythia8new"/"-v1new"),
 # as for 2022 on 2026-10-07. The July sample is retired.

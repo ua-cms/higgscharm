@@ -264,21 +264,34 @@ def get_corr_inputs(input_dict, corr_obj, jersyst="nom"):
     return input_values
 
 
+def get_jec_data_tag(params, dataset, year):
+    """JEC tag for a data dataset from a jec_params_correctionlib.yaml year block.
+
+    Fileset eras are short ("C", "C123", "C4") while the yaml keys are "Run<YYYY><X>",
+    so params[era] alone raised KeyError for data (found 2026-10-05).
+    """
+    era = get_dataset_era(dataset, year)
+    for key in (era, f"Run{year[:4]}{era}", f"Run{year[:4]}{era[:1]}"):
+        if key in params:
+            return params[key]
+    raise KeyError(
+        f"No JEC data tag for dataset '{dataset}' (era '{era}') in year '{year}': "
+        f"available {list(params)}"
+    )
+
+
 def apply_jerc_correctionlib(events, year, dataset):
-    jec_params = {
-        "2024": {
-            # For the time being, use the Summer23BPix JERs for 2024 data (November 2025)
-            "MC": "Summer24Prompt24_V1 Summer23BPixPrompt23_RunD_JRV1",
-            "Data": "Summer24Prompt24_V1",
-        }
-    }
+    # tags come from jec_params_correctionlib.yaml (same as get_corrected_jets_with_shifts);
+    # the hard-coded dict that used to live here asked for Summer24Prompt24_V1 while
+    # the yaml (and the shift production) used V2 -- replaced 2026-10-05.
+    params = JEC_PARAMS_CORRECTIONLIB[year]
 
     cset_jersmear_paths = [
         "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/JER-Smearing/latest/jer_smear.json.gz",
         "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/jer_smear.json.gz",
     ]
     for _jersmear_path in cset_jersmear_paths:
-        if Path(_jersmear_path).exists:
+        if Path(_jersmear_path).exists():
             cset_jersmear = correctionlib.CorrectionSet.from_file(_jersmear_path)
             break
     else:
@@ -292,20 +305,7 @@ def apply_jerc_correctionlib(events, year, dataset):
 
     cset = correctionlib.CorrectionSet.from_file(correction_files["jerc"][year])
 
-    for d in jec_params[year].keys():
-        if (
-            np.all(
-                np.char.find(
-                    np.array(list(cset.keys())),
-                    jec_params[year][d],
-                )
-            )
-            == -1
-        ):
-            raise (f"{d} has no JEC map : {jec_params[year][d]} available")
-
     is_mc = hasattr(events, "genWeight")
-    jecname = ""
     # https://cms-jerc.web.cern.ch/JECUncertaintySources/, currently no recommendation of reduced/full split sources
     syst_list = [
         i.split("_")[3]
@@ -317,10 +317,22 @@ def apply_jerc_correctionlib(events, year, dataset):
         and i.split("_")[3] != "MC"
     ]
     if is_mc:
-        jecname = jec_params[year]["MC"].split(" ")[0] + "_MC"
-        jrname = jec_params[year]["MC"].split(" ")[1] + "_MC"
+        jecname, jrname = params["MC"].split(" ")
+        jecname += "_MC"
+        jrname += "_MC"
+        required = [
+            f"{jecname}_L1L2L3Res_AK4PFPuppi",
+            f"{jrname}_ScaleFactor_AK4PFPuppi",
+            f"{jrname}_PtResolution_AK4PFPuppi",
+        ]
     else:
-        jecname = jec_params[year]["Data"] + "_DATA"
+        jecname = get_jec_data_tag(params, dataset, year) + "_DATA"
+        required = [f"{jecname}_L1L2L3Res_AK4PFPuppi"]
+    # (the old np.char.find existence check compared a bool to -1, so it never fired)
+    available = set(cset.keys()) | set(cset.compound.keys())
+    missing = [name for name in required if name not in available]
+    if missing:
+        raise KeyError(f"{correction_files['jerc'][year]} has no {missing}")
 
     # store the original jet info
     nocorrjet = events.Jet
@@ -388,7 +400,7 @@ def apply_jerc_correctionlib(events, year, dataset):
 
 
 def apply_jerc_corrections(events, year, dataset):
-    if year == "2024":
+    if year in ("2024", "2025"):
         apply_jerc_correctionlib(events, year, dataset)
     else:
         apply_jerc_coffea(events, year, dataset)
@@ -432,8 +444,7 @@ def get_corrected_jets_with_shifts(events, year):
         jecname += "_MC"
         jrname += "_MC"
     else:
-        era = get_dataset_era(dataset, year)
-        jecname = params[era] + "_DATA"
+        jecname = get_jec_data_tag(params, dataset, year) + "_DATA"
 
     nocorrjet = events.Jet
     nocorrjet["pt_raw"] = (1 - nocorrjet["rawFactor"]) * nocorrjet["pt"]
@@ -557,7 +568,7 @@ def apply_jerc_shifts(events, year, dataset):
     """Return a list of (collections_dict, shift_name) tuples: nominal plus, for MC
     only, CMS_scale_j_<year>Up/Down and CMS_res_j_<year>Up/Down. Mirrors
     apply_jerc_correctionlib's era coverage (correctionlib-based eras only --
-    2022preEE/2022postEE/2023preBPix/2023postBPix/2024; the coffea/.txt-file eras
+    2022preEE/2022postEE/2023preBPix/2023postBPix/2024/2025; the coffea/.txt-file eras
     have no shift production wired, same as before this addition).
     """
     if year not in correction_files["jerc"]:

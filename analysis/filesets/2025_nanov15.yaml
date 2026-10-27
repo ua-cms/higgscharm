@@ -1,0 +1,571 @@
+# 2025 (Run3-25Prompt-Summer24-NanoAODv15), created 2026-10-05.
+# Data: PromptReco NANOAOD, Runs C-G (Run B excluded: 24 golden runs / 0.259 fb-1, no B
+# in the JEC or jet-veto-map tags). C and F have PromptReco-v1 and -v2 with disjoint runs.
+# MC: 2025 is analysed against the Summer24 samples, so everything below the data block
+# is copied verbatim from 2024_nanov15.yaml (keys *_2024 renamed *_2025).
+
+Muon0v1C:
+  era: C
+  query: Muon0/Run2025C-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon0v2C:
+  era: C
+  query: Muon0/Run2025C-PromptReco-v2/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon1v1C:
+  era: C
+  query: Muon1/Run2025C-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon1v2C:
+  era: C
+  query: Muon1/Run2025C-PromptReco-v2/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+MuonEGv1C:
+  era: C
+  query: MuonEG/Run2025C-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon_electron
+  xsec: None
+MuonEGv2C:
+  era: C
+  query: MuonEG/Run2025C-PromptReco-v2/NANOAOD
+  process: Data
+  key: muon_electron
+  xsec: None
+EGamma0v1C:
+  era: C
+  query: EGamma0/Run2025C-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma0v2C:
+  era: C
+  query: EGamma0/Run2025C-PromptReco-v2/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma1v1C:
+  era: C
+  query: EGamma1/Run2025C-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma1v2C:
+  era: C
+  query: EGamma1/Run2025C-PromptReco-v2/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma2v1C:
+  era: C
+  query: EGamma2/Run2025C-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma2v2C:
+  era: C
+  query: EGamma2/Run2025C-PromptReco-v2/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma3v1C:
+  era: C
+  query: EGamma3/Run2025C-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma3v2C:
+  era: C
+  query: EGamma3/Run2025C-PromptReco-v2/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+Muon0D:
+  era: D
+  query: Muon0/Run2025D-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon1D:
+  era: D
+  query: Muon1/Run2025D-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+MuonEGD:
+  era: D
+  query: MuonEG/Run2025D-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon_electron
+  xsec: None
+EGamma0D:
+  era: D
+  query: EGamma0/Run2025D-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma1D:
+  era: D
+  query: EGamma1/Run2025D-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma2D:
+  era: D
+  query: EGamma2/Run2025D-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma3D:
+  era: D
+  query: EGamma3/Run2025D-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+Muon0E:
+  era: E
+  query: Muon0/Run2025E-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon1E:
+  era: E
+  query: Muon1/Run2025E-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+MuonEGE:
+  era: E
+  query: MuonEG/Run2025E-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon_electron
+  xsec: None
+EGamma0E:
+  era: E
+  query: EGamma0/Run2025E-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma1E:
+  era: E
+  query: EGamma1/Run2025E-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma2E:
+  era: E
+  query: EGamma2/Run2025E-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma3E:
+  era: E
+  query: EGamma3/Run2025E-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+Muon0v1F:
+  era: F
+  query: Muon0/Run2025F-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon0v2F:
+  era: F
+  query: Muon0/Run2025F-PromptReco-v2/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon1v1F:
+  era: F
+  query: Muon1/Run2025F-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon1v2F:
+  era: F
+  query: Muon1/Run2025F-PromptReco-v2/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+MuonEGv1F:
+  era: F
+  query: MuonEG/Run2025F-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon_electron
+  xsec: None
+MuonEGv2F:
+  era: F
+  query: MuonEG/Run2025F-PromptReco-v2/NANOAOD
+  process: Data
+  key: muon_electron
+  xsec: None
+EGamma0v1F:
+  era: F
+  query: EGamma0/Run2025F-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma0v2F:
+  era: F
+  query: EGamma0/Run2025F-PromptReco-v2/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma1v1F:
+  era: F
+  query: EGamma1/Run2025F-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma1v2F:
+  era: F
+  query: EGamma1/Run2025F-PromptReco-v2/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma2v1F:
+  era: F
+  query: EGamma2/Run2025F-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma2v2F:
+  era: F
+  query: EGamma2/Run2025F-PromptReco-v2/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma3v1F:
+  era: F
+  query: EGamma3/Run2025F-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma3v2F:
+  era: F
+  query: EGamma3/Run2025F-PromptReco-v2/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+Muon0G:
+  era: G
+  query: Muon0/Run2025G-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+Muon1G:
+  era: G
+  query: Muon1/Run2025G-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon
+  xsec: None
+MuonEGG:
+  era: G
+  query: MuonEG/Run2025G-PromptReco-v1/NANOAOD
+  process: Data
+  key: muon_electron
+  xsec: None
+EGamma0G:
+  era: G
+  query: EGamma0/Run2025G-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma1G:
+  era: G
+  query: EGamma1/Run2025G-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma2G:
+  era: G
+  query: EGamma2/Run2025G-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+EGamma3G:
+  era: G
+  query: EGamma3/Run2025G-PromptReco-v1/NANOAOD
+  process: Data
+  key: electron
+  xsec: None
+DYto2Mu:
+  era: mc
+  query: DYto2Mu-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v6/NANOAODSIM
+  process: DYJetsToLL
+  key: dy_nlo
+  xsec: 6662
+DYto2E:
+  era: mc
+  query: DYto2E-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v4/NANOAODSIM
+  process: DYJetsToLL
+  key: dy_nlo
+  xsec: 6639
+DYto2Tau:
+  era: mc
+  query: DYto2Tau-2Jets_Bin-MLL-50_TuneCP5_13p6TeV_amcatnloFXFX-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v7/NANOAODSIM
+  process: DYJetsToLL
+  key: dy_nlo
+  xsec: null
+TTto2L2Nu:
+  era: mc
+  query: TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
+  process: tt
+  key:
+    - tt
+    - tt_semileptonic
+  xsec: 97.78
+TTto4Q:
+  era: mc
+  query: TTto4Q_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: tt
+  key: tt
+  xsec: 418.61
+TTtoLNu2Q:
+  era: mc
+  query: TTtoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: tt
+  key: tt
+  xsec: 404.63
+TWminusto2L2Nu:
+  era: mc
+  query: TWminusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 4.66
+TWminusto4Q:
+  era: mc
+  query: TWminusto4Q_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 19.98
+TWminustoLNu2Q:
+  era: mc
+  query: TWminustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 19.31
+TbarBQto2Q:
+  era: mc
+  query: TbarBQto2Q-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 46.73
+TbarBQtoLNu:
+  era: mc
+  query: TbarBQtoLNu-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 23.34
+TbarWplusto2L2Nu:
+  era: mc
+  query: TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 4.66
+TbarWplusto4Q:
+  era: mc
+  query: TbarWplusto4Q_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 19.98
+TbarWplustoLNu2Q:
+  era: mc
+  query: TbarWplustoLNu2Q_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 19.31
+TBbarQto2Q:
+  era: mc
+  query: TBbarQto2Q-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 77.26
+TBbarQtoLNu:
+  era: mc
+  query: TBbarQtoLNu-t-channel-4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Single Top
+  key: singletop
+  xsec: 38.6
+WW:
+  era: mc
+  query: WW_TuneCP5_13p6TeV_pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Diboson
+  key: diboson
+  xsec: 122.30
+WZ:
+  era: mc
+  query: WZ_TuneCP5_13p6TeV_pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Diboson
+  key: diboson
+  xsec: 54.30
+ZZ:
+  era: mc
+  query: ZZ_TuneCP5_13p6TeV_pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: Diboson
+  key: 
+    - diboson
+    - zz
+  xsec: 16.70
+WZto3LNu:
+  era: mc
+  query: WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: WZ
+  key: wz
+  xsec: 4.924
+ZZZ:
+  era: mc
+  query: ZZZ-5F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: EW
+  key: electroweak
+  xsec: 0.016
+WZZ:
+  era: mc
+  query: WZZ-5F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: EW
+  key: electroweak
+  xsec: 0.062
+WWZ:
+  era: mc
+  query: WWZ-4F_TuneCP5_13p6TeV_amcatnlo-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: EW
+  key: electroweak
+  xsec: 0.185
+TTWW:
+  era: mc
+  query: TTWW_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: EW
+  key: electroweak
+  xsec: 0.008
+TTZZ:
+  era: mc
+  query: TTZZ_TuneCP5_13p6TeV_madgraph-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: EW
+  key: electroweak
+  xsec: 0.002
+TTZ:
+  era: mc
+  query: TTZ-ZtoQQ-1Jets_TuneCP5_13p6TeV_amcatnloFXFXold-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: EW
+  key: electroweak
+  xsec: 1.39
+ZZto4L:
+  era: mc
+  query: ZZto4L_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: qqToZZ
+  key: qqtozz
+  xsec: 1.39
+GluGlu2Zto2E2Mu:
+  era: mc
+  query: GluGlu2Zto2E2Mu_TuneCP5_13p6TeV_mcfm-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: ggToZZ
+  key: ggtozz
+  xsec: 0.006
+GluGlu2Zto2E2Tau:
+  era: mc
+  query: GluGlu2Zto2E2Tau_TuneCP5_13p6TeV_mcfm-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: ggToZZ
+  key: ggtozz
+  xsec: 0.006
+GluGlu2Zto2Mu2Tau:
+  era: mc
+  query: GluGlu2Zto2Mu2Tau_TuneCP5_13p6TeV_mcfm-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: ggToZZ
+  key: ggtozz
+  xsec: 0.006
+GluGlu2Zto4E:
+  era: mc
+  query: GluGlu2Zto4E_TuneCP5_13p6TeV_mcfm-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: ggToZZ
+  key: ggtozz
+  xsec: 0.003
+GluGlu2Zto4Mu:
+  era: mc
+  query: GluGlu2Zto4Mu_TuneCP5_13p6TeV_mcfm-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: ggToZZ
+  key: ggtozz
+  xsec: 0.003
+GluGlu2Zto4Tau:
+  era: mc
+  query: GluGlu2Zto4Tau_TuneCP5_13p6TeV_mcfm-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: ggToZZ
+  key: ggtozz
+  xsec: 0.003
+bbH_Hto2Zto4L:
+  era: mc
+  query: BBH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: H(125)
+  key: higgs
+  xsec: 0.000144
+GluGluHtoZZto4L:
+  era: mc
+  query: GluGluH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: H(125) 
+  key: higgs
+  xsec: 0.01434
+VBFHto2Zto4L:
+  era: mc
+  query: VBFH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: H(125) 
+  key: higgs
+  xsec: 0.00112
+ZHto2Zto4L:
+  era: mc
+  query: ZH-Hto2Z_Fil-4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: H(125) 
+  key: higgs
+  xsec: 0.000775
+WminusH_Hto2Zto4L:
+  era: mc
+  query: WminusH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: H(125)
+  key: higgs
+  xsec: 0.000156
+WplusH_Hto2Zto4L:
+  era: mc
+  query: WplusH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: H(125) 
+  key: higgs
+  xsec: 0.000244
+TTH_Hto2Z:
+  era: mc
+  query: TTH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  process: H(125)
+  key: higgs
+  xsec: 0.0004437  # 2026-10-16: was 0.00312 (7x too high); same filter type as 2023 (GenPart, 4284 ev: 37.0% pure H->4l, rest 1 H-Z->ll + 2 leptonic tops); sigma_ttH 0.5700 pb x BR(H->ZZ) 0.02641 x filter 0.029474
+# =============================================================================
+# H+c and H+b signal samples (private, USER instance prod/phys03)
+# Run3Summer24NanoAOD, 150X_mcRun3_2024_realistic_v2
+# Handled by make_signal_filesets.py (not make_filesets.py)
+# =============================================================================
+HPlusCharm:
+  era: mc
+  query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v1-00000000000000000000000000000000/USER
+  process: smsignal
+  key: smsignal
+  xsec: 0.000026381
+# H+c 4FS v2 (CRAB task 260812_121119, 4803 files, 9.94M events), added 2026-10-05.
+# v1 above (HPlusCharm, task 260728_144233) is a separate 334-file / 345k-event production.
+# Both contain "HPlusCharm" -> both map to Signal in the datacard builders: do NOT feed
+# both into one datacard as-is (each is normalised to the full xsec -> double count).
+HPlusCharm_v2_2025:
+  era: mc
+  query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v2-00000000000000000000000000000000/USER
+  process: smsignal
+  key: smsignal
+  xsec: 0.000026381
+HPlusBottom_2025:
+  era: mc
+  query: HPlusBottom_5FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v1-00000000000000000000000000000000/USER
+  process: hb
+  key: hb
+  xsec: 0.000173299

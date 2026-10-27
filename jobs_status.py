@@ -17,6 +17,7 @@ from analysis.filesets.utils import (
     modify_site_list,
     extract_xrootd_errors,
     get_nano_version,
+    fileset_checker,
 )
 from submit_condor import move_proxy
 
@@ -49,6 +50,7 @@ def parse_args():
             "2023preBPix",
             "2023postBPix",
             "2024",
+            "2025",
         ],
         help="Dataset year",
     )
@@ -126,17 +128,58 @@ def get_jobs_info(job_dir, output_dir, log_dir, output_format, hours_ago=3):
         dataset = dataset_dir.name
         jobnum_path = dataset_dir / "jobnum.txt"
         if not jobnum_path.exists():
-            raise FileNotFoundError(
-                f"Missing jobnum.txt for dataset '{dataset}'. "
-                f"Expected at: {jobnum_path}"
-            )
+            # submit_condor.py never writes jobnum.txt for a dataset DAS reports
+            # zero files for (e.g. bbH_Hto2Zto4L) -- nothing was ever submitted,
+            # so there's nothing missing to check here.
+            print(f"Skipping '{dataset}': no jobnum.txt (DAS found zero files, never submitted).")
+            continue
 
         # Read expected job numbers
         jobnum[dataset] = jobnum_path.read_text().splitlines()
 
-        # Discover completed jobs by looking for output files
-        output_files = list((output_dir / dataset).glob(f"*.{output_format}"))
-        jobnum_done[dataset] = [f.stem.replace(f"{dataset}_", "") for f in output_files]
+        # Discover completed jobs by looking for output files.
+        #
+        # Two layouts are supported:
+        #
+        # 1. Flat layout (coffea, or simple parquet workflows):
+        #    output_dir/DatasetName/DatasetName_N.{ext}
+        #    → match with glob("*.{ext}"), extract N from filename stem.
+        #
+        # 2. Partitioned layout (parquet workflows like hplusc_mva_4class_CR):
+        #    Each job N writes to output_dir/DatasetName_N/**/*.{ext}
+        #    where DatasetName_N is the per-partition dataset key in partitions.json.
+        #    → read partitions.json to map job N → partition dataset name, then
+        #      check if output_dir/DatasetName_N/ contains any output files.
+        partitions_path = dataset_dir / "partitions.json"
+        if partitions_path.exists() and output_format == "parquet":
+            # Partitioned parquet layout: job N → DatasetName_N sub-directory
+            partitions = json.loads(partitions_path.read_text())
+            done_jobs = []
+            for job_n, partition_dict in partitions.items():
+                partition_dataset = next(iter(partition_dict))  # e.g. "DYJetsToLL_10to50_3"
+                partition_out = output_dir / partition_dataset
+                if any(partition_out.rglob(f"*.{output_format}")):
+                    done_jobs.append(job_n)
+                    continue
+                # Fallback: submit.py always writes a flat per-job
+                # "{dataset}_{N}.coffea" metadata file at the end of a
+                # successful run, regardless of --output_format (see
+                # submit.py's final `save(out, f"{savepath}.coffea")`).
+                # A job whose chunk has zero events surviving the final
+                # category selection legitimately writes no parquet at
+                # all -- confirmed 2026-08-27 via real cutflow metadata
+                # (incl. a MuonEG data job, not just low-yield MC), so
+                # this is not a failure and must not count as missing.
+                # Without this fallback, such jobs are indistinguishable
+                # from ones that never ran or crashed.
+                flat_coffea = output_dir / dataset / f"{dataset}_{job_n}.coffea"
+                if flat_coffea.exists():
+                    done_jobs.append(job_n)
+            jobnum_done[dataset] = done_jobs
+        else:
+            # Flat layout: output files named DatasetName_N.{ext} in dataset directory
+            output_files = list((output_dir / dataset).glob(f"*.{output_format}"))
+            jobnum_done[dataset] = [f.stem.replace(f"{dataset}_", "") for f in output_files]
 
         # Collect recent error logs for this dataset
         x_hours_ago = datetime.now() - timedelta(hours=hours_ago)
@@ -343,6 +386,11 @@ def update_input_filesets_for_group(
         ["python3", "fetch.py", "--year", year, "--samples", samples_str],
         check=True,
     )
+
+    # Sanitize known-unreachable site-local redirectors (e.g. T2_BE_IIHE)
+    # that may have slipped into the fileset despite the blacklist -- the
+    # same safety net every other fileset-building path already gets.
+    fileset_checker(samples=datasets, year=year)
 
     # Load the regenerated filesets
     nano_version = get_nano_version(year)
