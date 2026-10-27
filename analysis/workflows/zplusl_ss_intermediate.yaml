@@ -108,10 +108,11 @@ event_selection:
       - atleast_one_zcandidate
       - one_relaxed_lepton
 corrections:
-  objects:
-    - jec
-    - muon_ss
-    - electon_ss
+  object:
+    - jet
+    - muon
+    - electron
+  object_shifts: false
   event_weights:
     genWeight: true
     pileupWeight: true

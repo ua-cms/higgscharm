@@ -124,10 +124,11 @@ event_selection:
       - no_sr_candidate
       - atleast_one_zll
 corrections:
-  objects:
-    - jec
-    - muon_ss
-    - electon_ss
+  object:
+    - jet
+    - muon
+    - electron
+  object_shifts: false
   event_weights:
     genWeight: true
     pileupWeight: true

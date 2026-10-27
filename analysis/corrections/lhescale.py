@@ -1,6 +1,7 @@
 import numpy as np
 
-def add_scalevar_weight(events, weights_container, variation="nominal"):
+
+def add_scalevar_weight(events, weights_container, shift):
     """
     Twiki: https://twiki.cern.ch/twiki/bin/viewauth/CMS/TopSystematics#Factorization_and_renormalizatio
 
@@ -18,7 +19,7 @@ def add_scalevar_weight(events, weights_container, variation="nominal"):
     """
     lhe_weights = events.LHEScaleWeight
     nom = np.ones(len(weights_container.weight()))
-    if variation == "nominal":
+    if shift is None:
         if len(lhe_weights) > 0:
             if len(lhe_weights[0]) == 9:
                 nom = lhe_weights[:, 4]
@@ -60,4 +61,11 @@ def add_scalevar_weight(events, weights_container, variation="nominal"):
             weights_container.add("scalevar_muR_muF", nom, nom, nom)
 
     else:
+        # object-shift pass: no scale variations, but the same nominal factor as the
+        # nominal pass, which adds the central LHE weight (index 4) once per variation
+        # above, i.e. three times -> nom**3, so shifted templates share the nominal
+        # normalisation exactly. (Applying it three times is itself questionable; it
+        # is kept for consistency with the nominal pass and the existing production.)
+        if len(lhe_weights) > 0 and len(lhe_weights[0]) == 9:
+            nom = lhe_weights[:, 4] ** 3
         weights_container.add("scalevar_3pt", nom)

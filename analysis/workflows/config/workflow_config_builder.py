@@ -57,7 +57,13 @@ class WorkflowConfigBuilder:
 
     def parse_corrections_config(self):
         corrections = {}
-        corrections["objects"] = self.config["corrections"]["objects"]
+        if "objects" in self.config["corrections"]:
+            # HcZZ schema (objects: [jec | jec_shifts, jet_vetomaps, muon_ss, electon_ss,
+            # met_phi]); handled by analysis/corrections/hczz_legacy
+            corrections["objects"] = self.config["corrections"]["objects"]
+        else:
+            corrections["object"] = self.config["corrections"]["object"]
+            corrections["object_shifts"] = self.config["corrections"]["object_shifts"]
         corrections["event_weights"] = {}
         for name, vals in self.config["corrections"]["event_weights"].items():
             if isinstance(vals, bool):

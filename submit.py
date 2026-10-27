@@ -1,13 +1,10 @@
-import os
 import json
 import argparse
 from pathlib import Path
 from coffea import processor
 from coffea.util import save
-from coffea.nanoevents import NanoAODSchema
-from analysis.utils import write_root
 from analysis.processors.base import BaseProcessor
-
+from coffea.nanoevents import NanoEventsFactory, NanoAODSchema
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -64,46 +61,86 @@ if __name__ == "__main__":
         "--output_format",
         type=str,
         default="coffea",
-        choices=["coffea", "root", "parquet"],
+        choices=["coffea", "parquet"],
         help="format of output histogram",
-    )
-    parser.add_argument(
-        "--eos",
-        action="store_true",
-        help="Enable saving outputs to /eos",
     )
     parser.add_argument(
         "--user",
         type=str,
         help="User name",
     )
+    parser.add_argument(
+        "-e",
+        "--executor",
+        dest="executor",
+        type=str,
+        default="futures",
+        help="executor to run the processor",
+    )
     args = parser.parse_args()
 
-    # set output location (used when --output_format parquet)
-    if args.eos:
-        output_location = f"root://eosuser.cern.ch//eos/user/{args.user[0]}/{args.user}/higgscharm/outputs/"
-    else:
-        output_location = (
-            f"/afs/cern.ch/user/{args.user[0]}/{args.user}/public/higgscharm/outputs/"
-        )
-
-    # load partition_fileset, run processor and save output
+    # load partition_fileset
     with open(args.partition_json) as f:
         partition_fileset = json.load(f)
-    out = processor.run_uproot_job(
-        partition_fileset,
-        treename="Events",
-        processor_instance=BaseProcessor(
-            workflow=args.workflow,
-            year=args.year,
-            output_format=args.output_format,
-            output_location=output_location,
-        ),
-        executor=processor.futures_executor,
-        executor_args={"schema": NanoAODSchema, "workers": 2},
-    )
+
+    # set output location and get partition key (used when --output_format parquet)
+    output_location = f"root://eosuser.cern.ch//eos/user/{args.user[0]}/{args.user}/higgscharm_outputs/"
+    partition_key = ""
+    if args.output_format == "parquet":
+        # job-level key (fallback only: the processor names parquet files per chunk)
+        _files = next(iter(partition_fileset.values()))
+        _files = _files["files"] if isinstance(_files, dict) else _files
+        first_file = next(iter(_files))
+        factory = NanoEventsFactory.from_root(
+            {first_file: "Events"},
+            schemaclass=NanoAODSchema,
+            entry_stop=1,
+            mode="virtual",
+        )
+        partition_key = factory._partition_key
+
+    # Configure the Runner using coffea 2024+ API
+    if args.executor == "futures":
+        futures_run = processor.Runner(
+            executor=processor.FuturesExecutor(workers=4, compression=None, retries=6),
+            schema=NanoAODSchema,
+            # chunksize=100000,
+            savemetrics=False,
+            xrootdtimeout=120,
+            align_clusters=True,
+            skipbadfiles=False,
+        )
+        # Execute processing job using the Runner instance
+        out = futures_run(
+            partition_fileset,
+            treename="Events",
+            processor_instance=BaseProcessor(
+                workflow=args.workflow,
+                year=args.year,
+                output_format=args.output_format,
+                output_location=output_location,
+                partition_key=partition_key,
+                mode="virtual",
+            ),
+        )
+    elif args.executor == "iterative":
+        iterative_run = processor.Runner(
+            executor=processor.IterativeExecutor(compression=None),
+            schema=NanoAODSchema,
+            savemetrics=False,
+        )
+        out = iterative_run(
+            partition_fileset,
+            processor_instance=BaseProcessor(
+                workflow=args.workflow,
+                year=args.year,
+                output_format=args.output_format,
+                output_location=output_location,
+                partition_key=partition_key,
+                mode="virtual",
+            ),
+        )
+
     savepath = f"{args.output_path}/{args.dataset}"
     if args.output_format in ["coffea", "parquet"]:
         save(out, f"{savepath}.coffea")
-    elif args.output_format == "root":
-        write_root(out, savepath, args)

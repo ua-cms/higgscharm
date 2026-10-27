@@ -1,7 +1,6 @@
-import numba
 import numpy as np
 import awkward as ak
-from coffea.nanoevents.methods import candidate
+from coffea.nanoevents.methods import candidate, vector
 
 
 def delta_r_higher(first, second, threshold=0.4):
@@ -320,8 +319,9 @@ def select_candidate_cjet_dphi(cand, flavor, cjets):
             "phi": hcand.p4.phi,
             "mass": hcand.p4.mass,
         },
-        with_name="PtEtaPhiMCandidate",
-        behavior=candidate.behavior,
+        # kinematics only (delta_phi); the candidate behaviour requires a 'charge' field
+        with_name="PtEtaPhiMLorentzVector",
+        behavior=vector.behavior,
     )
     cjets = ak.firsts(cjets)
     has_cjet = ~ak.is_none(cjets)

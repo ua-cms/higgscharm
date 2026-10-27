@@ -1,3 +1,5 @@
+import warnings
+from urllib.parse import quote
 import numpy as np
 import awkward as ak
 from copy import deepcopy
@@ -5,11 +7,9 @@ from coffea import processor
 from coffea.nanoevents import NanoAODSchema
 from coffea.analysis_tools import PackedSelection
 from coffea.nanoevents.methods.vector import LorentzVector
-from analysis.utils import dump_lumi, dump_pa_table, dump_sumw_json
-from analysis.filesets.utils import get_nano_version
+from analysis.utils import dump_lumi, dump_parquet, dump_sumw_json
 from analysis.workflows.config import WorkflowConfigBuilder
 from analysis.histograms import HistBuilder, fill_histograms
-from analysis.corrections.jetvetomaps import apply_jetvetomaps
 from analysis.corrections.correction_manager import (
     object_corrector_manager,
     weight_manager,
@@ -113,6 +113,14 @@ def sumw_by_genc(events, n_genc, prefix="genc"):
     return out
 
 
+def update(events, collections):
+    """Return a shallow copy of events array with some collections swapped out"""
+    out = events
+    for name, value in collections.items():
+        out = ak.with_field(out, value, name)
+    return out
+
+
 class BaseProcessor(processor.ProcessorABC):
     def __init__(
         self,
@@ -120,57 +128,54 @@ class BaseProcessor(processor.ProcessorABC):
         year: str,
         output_format: str,
         output_location: str,
+        partition_key: str,
+        mode="virtual",
     ):
+        assert mode in ["eager", "virtual", "dask"]
+        self._mode = mode
         self.year = year
         self.workflow = workflow
         self.output_format = output_format
         self.output_location = output_location
+        self.partition_key = partition_key
+        self.run = "2" if year.startswith("201") else "3"
 
         config_builder = WorkflowConfigBuilder(workflow)
         self.workflow_config = config_builder.build_workflow_config()
         self.histogram_config = self.workflow_config.histogram_config
         self.histograms = HistBuilder(self.workflow_config).build_histogram()
+        # HcZZ workflows (corrections: objects: ...) keep the 2022/2023 production
+        # bookkeeping: metadata "sumw" after the jet veto, sumw_preveto, GEN c-jet /
+        # c-hadron splits, the per-chunk sumw sidecar and the n_genc10/chad columns
+        self.hczz = "objects" in self.workflow_config.corrections_config
 
-    @staticmethod
-    def _partition_fname(events, suffix):
-        return (
-            events.behavior["__events_factory__"]._partition_key.replace("/", "_")
-            + suffix
-        )
+    def _chunk_key(self, events):
+        """Per-chunk output name '<file uuid>_%2F<tree>%3B1_<start>-<stop>' (the uproot
+        partition key of coffea 0.7). The job-level partition_key is the same for every
+        chunk of a job, so it cannot name per-chunk parquet/sidecar files."""
+        md = events.metadata
+        if all(k in md for k in ("fileuuid", "treename", "entrystart", "entrystop")):
+            uuid = md["fileuuid"]
+            if isinstance(uuid, bytes):
+                uuid = uuid.hex()
+            tree = quote(f"/{md['treename'].strip('/').split(';')[0]};1", safe="")
+            return f"{uuid}_{tree}_{md['entrystart']}-{md['entrystop']}"
+        return self.partition_key.replace("/", "_")
 
-    def add_cutflow(
-        self, events, output, objects, selection_manager, weight_manager, dataset
-    ):
-        sumw = ak.sum(events.genWeight) if hasattr(events, "genWeight") else len(events)
+    def add_cutflow(self, events, output, selection_manager):
         for category, category_cuts in self.workflow_config.event_selection[
             "categories"
         ].items():
-            output["metadata"].update({category: {"cutflow": {"initial": sumw}}})
+            output["metadata"].update({category: {"cutflow": {"initial": self.sumw}}})
             selections = []
             for cut_name in category_cuts:
                 selections.append(cut_name)
                 current_selection = selection_manager.all(*selections)
                 if ak.sum(current_selection) != 0:
-                    """
-                    pruned_ev_cutflow = events[current_selection]
-                    for obj in objects:
-                        pruned_ev_cutflow[f"selected_{obj}"] = objects[obj][
-                            current_selection
-                        ]
-                    weights_container_cutflow = weight_manager(
-                        pruned_ev=pruned_ev_cutflow,
-                        year=self.year,
-                        workflow_config=self.workflow_config,
-                        variation="nominal",
-                        dataset=dataset,
-                    )
-                    output["metadata"][category]["cutflow"][cut_name] = ak.sum(
-                        weights_container_cutflow.weight()
-                    )
-                    """
+                    # events after the jet veto: index their own genWeight
                     sumw_cutflow = (
                         ak.sum(events.genWeight[current_selection])
-                        if hasattr(events, "genWeight")
+                        if self.is_mc
                         else len(events[current_selection])
                     )
                     output["metadata"][category]["cutflow"][cut_name] = sumw_cutflow
@@ -178,245 +183,179 @@ class BaseProcessor(processor.ProcessorABC):
                     output["metadata"][category]["cutflow"][cut_name] = 0
 
     def process(self, events):
-        year = self.year
-        dataset = events.metadata["dataset"]
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        np.seterr(divide="ignore", invalid="ignore")
 
-        object_selections = self.workflow_config.object_selection
-        event_selection = self.workflow_config.event_selection
-        hlt_paths = event_selection["hlt_paths"]
-        histograms = deepcopy(self.histograms)
+        # identify data and simulation
+        self.is_mc = hasattr(events, "genWeight")
 
-        # genWeight sum BEFORE the event-level jet veto below (added 2026-10-02). The
-        # sidecar "sumw" is computed after the veto, so it misses the vetoed events
-        # (memory hczz_jetveto_before_sumw); this extra key lets that bias be measured
-        # and corrected without changing what the builders read today.
-        sumw_preveto = float(ak.sum(events.genWeight)) if hasattr(events, "genWeight") else None
-        # Same GEN c-jet split BEFORE the veto (added 2026-10-05, test for the direct 3FS+4FS
-        # stitching): sumw_preveto_genc{0,1,2p} (+ _scalevar). Purely additive: the existing
-        # post-veto keys (sumw, sumw_genc*, sumw_chad*) are unchanged, so builders that do not
-        # ask for the new keys behave exactly as before. GenJets do not depend on the veto.
-        # Revert: base.py.bak_20261005_preveto_genc; second-brain
-        # Notes/hczz-preveto-genc-sumw-and-jec-pershift-sumw-2026-10-05.md.
-        sumw_preveto_genc = {}
-        if hasattr(events, "genWeight") and "GenJet" in events.fields:
-            sumw_preveto_genc = sumw_by_genc(events, count_gen_cjets(events), prefix="preveto_genc")
-        if self.workflow_config.corrections_config["objects"]:
-            if "jet_vetomaps" in self.workflow_config.corrections_config["objects"]:
-                events = apply_jetvetomaps(events, year)
+        # compute sum of gen weights for normalization (before the jet veto)
+        self.sumw = ak.sum(events.genWeight) if self.is_mc else len(events)
 
-        # check if dataset is MC or Data
-        is_mc = hasattr(events, "genWeight")
-        if not is_mc:
-            events["Jet", "hadronFlavour"] = ak.zeros_like(events.Jet.pt)
-
-        # initialize output dictionary
-        output = {}
-
-        # initialize metadata info with sumw before selection
-        output["metadata"] = {}
-        sumw = ak.sum(events.genWeight) if is_mc else len(events)
-        output["metadata"].update({"sumw": sumw})
-
-        # GEN c-jet count for the 3FS/4FS stitching (MC with GenJet only)
-        n_genc = None
         sumw_extra = {}
-        if is_mc and "GenJet" in events.fields:
-            n_genc = count_gen_cjets(events)
-            sumw_extra = sumw_by_genc(events, n_genc)
-            output["metadata"].update(sumw_extra)
-        # GEN c-hadron variables (MC with GenPart only); the sidecar also gets the
-        # pre-selection sumw split by c-hadron multiplicity (sumw_chad<T>{0,1,2p})
-        chad = None
-        if is_mc and "GenPart" in events.fields:
-            chad = gen_chadron_info(events)
-            for t in CHAD_PT_THRESHOLDS:
-                sumw_extra.update(sumw_by_genc(events, chad[f"n_chad{t}"], prefix=f"chad{t}_"))
-            output["metadata"].update(sumw_extra)
-        if is_mc and sumw_preveto is not None:
-            sumw_extra["sumw_preveto"] = sumw_preveto
-            output["metadata"]["sumw_preveto"] = sumw_preveto
-        if is_mc and sumw_preveto_genc:
-            sumw_extra.update(sumw_preveto_genc)
-            output["metadata"].update(sumw_preveto_genc)
+        if self.hczz and self.is_mc:
+            sumw_extra["sumw_preveto"] = float(self.sumw)
+            # GEN c-jet split before the veto (3FS+4FS stitching); GenJets do not
+            # depend on the veto
+            if "GenJet" in events.fields:
+                sumw_extra.update(
+                    sumw_by_genc(events, count_gen_cjets(events), prefix="preveto_genc")
+                )
 
-        # --------------------------------------------------------------
-        # Object corrections
-        # --------------------------------------------------------------
-        object_shifts = object_corrector_manager(
+        # apply object corrections, jet veto and prepare systematic variations
+        vetoed_events, shifts = object_corrector_manager(
             events=events,
-            year=year,
-            dataset=dataset,
+            year=self.year,
+            run=self.run,
+            dataset=events.metadata["dataset"],
             workflow_config=self.workflow_config,
         )
-        # object_shifts is None for every workflow that doesn't request "jec_shifts"
-        # (JES/JER shift production, added 2026-08-18) -- in that case run exactly
-        # one pass with events as object_corrector_manager already left them
-        # (nominal-only, mutated in place, unchanged from before shift support
-        # existed). When shifts ARE requested, object_corrector_manager instead
-        # returns [(collections, shift_name), ...] (nominal first, then one entry
-        # per JES/JER Up/Down variant) and every entry below reruns the FULL
-        # selection/weight/output block -- required because shifted jet kinematics
-        # can change which events pass selection and every jet-derived MVA feature,
-        # not just a per-event weight.
-        if object_shifts is None:
-            object_shifts = [({}, None)]
 
-        met_field_key = "PuppiMET" if int(get_nano_version(year)) >= 12 else "MET"
+        self.n_genc = None
+        self.chad = None
+        if self.hczz:
+            # HcZZ convention: metadata "sumw" (and the cutflow "initial") after the veto
+            self.sumw = (
+                ak.sum(vetoed_events.genWeight) if self.is_mc else len(vetoed_events)
+            )
+            if self.is_mc and "GenJet" in vetoed_events.fields:
+                self.n_genc = count_gen_cjets(vetoed_events)
+                sumw_extra.update(sumw_by_genc(vetoed_events, self.n_genc))
+            if self.is_mc and "GenPart" in vetoed_events.fields:
+                self.chad = gen_chadron_info(vetoed_events)
+                for t in CHAD_PT_THRESHOLDS:
+                    sumw_extra.update(
+                        sumw_by_genc(
+                            vetoed_events, self.chad[f"n_chad{t}"], prefix=f"chad{t}_"
+                        )
+                    )
 
-        for shift_collections, shift_name in object_shifts:
-            if shift_collections:
-                if "Jet" in shift_collections:
-                    events["Jet"] = shift_collections["Jet"]
-                if "MET" in shift_collections:
-                    events[met_field_key] = shift_collections["MET"]
-                if "Muon" in shift_collections:
-                    # added 2026-08-19 for CMS_scale_m/CMS_res_m shift
-                    # production (see correction_manager.py's jec_shifts
-                    # branch) -- every entry from that branch carries Muon
-                    # explicitly (nominal or varied) for the same
-                    # no-stale-inheritance reason Jet/MET already do.
-                    events["Muon"] = shift_collections["Muon"]
+        output = processor.accumulate(
+            self.process_shift(update(vetoed_events, collections), shift)
+            for collections, shift in shifts
+        )
 
-            # --------------------------------------------------------------
-            # Object selection
-            # --------------------------------------------------------------
-            object_selector = ObjectSelector(object_selections, year)
-            objects = object_selector.select_objects(events)
+        if self.hczz and self.is_mc:
+            output["metadata"].update(sumw_extra)
+            if self.output_format == "parquet":
+                # pre-selection sumw sidecar for every MC chunk (also when no event is
+                # selected): the datacard builders read <dataset>/sumw/*.json. Written
+                # last, so a chunk that crashes part-way leaves no sidecar.
+                dataset = events.metadata["dataset"]
+                dump_sumw_json(
+                    float(self.sumw),
+                    dataset,
+                    self._chunk_key(events) + ".json",
+                    self.output_location,
+                    [self.workflow, self.year, dataset, "sumw"],
+                    extra=sumw_extra,
+                )
+        return output
 
-            # --------------------------------------------------------------
-            # Event selection
-            # --------------------------------------------------------------
-            if not is_mc and shift_name is None:
-                # save (run, luminosityBlock) pairs to metadata (nominal pass only --
-                # identical across shifts, no point repeating it)
+    def process_shift(self, events, shift):
+        # define variables required by workflow expressions evaluated with eval()
+        year = self.year
+        dataset = events.metadata["dataset"]
+        hlt_paths = self.workflow_config.event_selection["hlt_paths"]
+
+        # initialize output metadata
+        output = {}
+        output["metadata"] = {}
+        if shift is None:
+            # store the initial sum of weights before object selection
+            output["metadata"].update({"sumw": self.sumw})
+
+        if not self.is_mc:
+            events["Jet", "hadronFlavour"] = ak.zeros_like(events.Jet.pt)
+
+        # object selection
+        object_selection = self.workflow_config.object_selection
+        object_selector = ObjectSelector(object_selection, year)
+        objects = object_selector.select_objects(events)
+
+        # event selection
+        selection_manager = PackedSelection()
+        event_selection = self.workflow_config.event_selection
+        for selection, mask in event_selection["selections"].items():
+            selection_manager.add(selection, eval(mask))
+
+        # lumi sections and cutflow from the nominal pass only (identical across
+        # shifts; accumulating them over shifts would count them once per shift)
+        if shift is None:
+            if not self.is_mc:
+                # save (run, luminosityBlock) pairs to metadata
                 lumi_mask = eval(event_selection["selections"]["lumimask"])
                 dump_lumi(events[lumi_mask], output)
+            self.add_cutflow(events, output, selection_manager)
 
-            # initialize selection manager
-            selection_manager = PackedSelection()
-            # add all selections to selector manager
-            for selection, mask in event_selection["selections"].items():
-                selection_manager.add(selection, eval(mask))
-
-            # add cutflow to metadata (nominal pass only)
-            if shift_name is None:
-                self.add_cutflow(
-                    events, output, objects, selection_manager, weight_manager, dataset
+        # Histogram filling / array dumping
+        histograms = deepcopy(self.histograms)
+        categories = event_selection["categories"]
+        for category, category_cuts in categories.items():
+            # get selection mask by category
+            category_mask = selection_manager.all(*category_cuts)
+            nevents_after = ak.sum(category_mask)
+            if nevents_after > 0:
+                # get pruned events
+                pruned_ev = events[category_mask]
+                # add each selected object to 'pruned_ev' as a new field
+                for obj in objects:
+                    pruned_ev[f"selected_{obj}"] = objects[obj][category_mask]
+                # get weights container
+                weights_container = weight_manager(
+                    pruned_ev=pruned_ev,
+                    year=year,
+                    dataset=dataset,
+                    workflow_config=self.workflow_config,
+                    category=category,
+                    shift=shift,
                 )
-            # --------------------------------------------------------------
-            # Histogram filling / array dumping
-            # --------------------------------------------------------------
-            categories = event_selection["categories"]
-            for category, category_cuts in categories.items():
-                # get selection mask by category
-                category_mask = selection_manager.all(*category_cuts)
-                nevents_after = ak.sum(category_mask)
-                if nevents_after > 0:
-                    # get pruned events
-                    pruned_ev = events[category_mask]
-                    # add each selected object to 'pruned_ev' as a new field
-                    for obj in objects:
-                        pruned_ev[f"selected_{obj}"] = objects[obj][category_mask]
-                    # get weights container
-                    weights_container = weight_manager(
-                        pruned_ev=pruned_ev,
-                        year=year,
-                        dataset=dataset,
-                        workflow_config=self.workflow_config,
+                if self.hczz and shift is None:
+                    # events written per category (bookkeeping job check)
+                    output["metadata"][category].update(
+                        {
+                            "weighted_final_nevents": ak.sum(weights_container.weight()),
+                            "raw_final_nevents": nevents_after,
+                        }
                     )
-                    # save number of events after selection to metadata (nominal only
-                    # -- per-shift yields aren't tracked in the cutflow/metadata dict)
-                    if shift_name is None:
-                        weighted_final_nevents = ak.sum(weights_container.weight())
-                        output["metadata"][category].update(
-                            {
-                                "weighted_final_nevents": weighted_final_nevents,
-                                "raw_final_nevents": nevents_after,
-                            }
-                        )
-                    # get analysis variables map
-                    variables_map = {}
-                    for variable, axis in self.histogram_config.axes.items():
+                # histograms: only the variables of the layout; parquet: every axis
+                variables_map = {}
+                layout_axes = self.histogram_config.layout.values()
+                for variable, axis in self.histogram_config.axes.items():
+                    if self.output_format == "parquet" or variable in ak.flatten(
+                        layout_axes
+                    ):
                         variables_map[variable] = eval(axis.expression)[category_mask]
 
-                    if self.output_format == "coffea":
-                        fill_histograms(
-                            histogram_config=self.histogram_config,
-                            weights_container=weights_container,
-                            variables_map=variables_map,
-                            histograms=histograms,
-                            variation="nominal",
-                            category=category,
-                            is_mc=is_mc,
-                            flow=True,
-                        )
-                    elif self.output_format == "parquet":
-                        # add weights to variables map
-                        if is_mc:
-                            if shift_name is None:
-                                # nominal pass: keep every per-event weight-systematic
-                                # variation, exactly as before shift support existed
-                                variations = ["nominal"] + list(
-                                    weights_container.variations
-                                )
-                                for variation in variations:
-                                    if variation == "nominal":
-                                        variables_map[f"weight_nominal"] = (
-                                            weights_container.weight()
-                                        )
-                                        for (
-                                            partial_weight
-                                        ) in weights_container.weightStatistics:
-                                            variables_map[f"weight_{partial_weight}"] = (
-                                                weights_container.partial_weight(
-                                                    include=[partial_weight]
-                                                )
-                                            )
-                                    else:
-                                        variables_map[f"weight_{variation}"] = (
-                                            weights_container.weight(modifier=variation)
-                                        )
-                            else:
-                                # object-shift pass (CMS_scale_j/CMS_res_j Up/Down):
-                                # only the nominal per-event weight is needed -- this
-                                # pass's own shifted kinematics/selection ARE the
-                                # systematic, not a reweighting of the nominal sample
-                                variables_map[f"weight_nominal"] = (
-                                    weights_container.weight()
-                                )
-                        if n_genc is not None:
-                            variables_map["n_genc10"] = n_genc[
-                                ak.to_numpy(category_mask)
-                            ]
-                        if chad is not None:
-                            for key, val in chad.items():
-                                variables_map[key] = val[ak.to_numpy(category_mask)]
-                        # save parquet files
-                        fname = self._partition_fname(events, ".parquet")
-                        subdirs = [self.workflow, self.year, dataset, category]
-                        if shift_name is not None:
-                            subdirs = subdirs + [shift_name]
-                        dump_pa_table(
-                            variables_map, fname, self.output_location, subdirs
-                        )
-
-        # pre-selection sumw sidecar, written for every MC chunk (even when no event
-        # passes the selection): the datacard builders read <dataset>/sumw/*.json as the
-        # xs*lumi denominator. The call was lost when this method was reworked for
-        # jec_shifts on 2026-08-18 and restored 2026-09-27 (see the 2026-07-31 entry in
-        # second-brain Tasks/HcZZ-fake-rate.md). Written LAST, after every parquet of
-        # this chunk, so that a chunk which crashes part-way leaves no sidecar and its
-        # sumw can't enter the denominator without its events.
-        if is_mc and self.output_format == "parquet":
-            dump_sumw_json(
-                sumw,
-                dataset,
-                self._partition_fname(events, ".json"),
-                self.output_location,
-                [self.workflow, self.year, dataset, "sumw"],
-                extra=sumw_extra,
-            )
-
+                if self.output_format == "coffea":
+                    fill_histograms(
+                        histogram_config=self.histogram_config,
+                        weights_container=weights_container,
+                        variables_map=variables_map,
+                        histograms=histograms,
+                        category=category,
+                        is_mc=self.is_mc,
+                        shift=shift,
+                        flow=True,
+                    )
+                elif self.output_format == "parquet":
+                    mask_np = ak.to_numpy(category_mask)
+                    if self.n_genc is not None:
+                        variables_map["n_genc10"] = self.n_genc[mask_np]
+                    if self.chad is not None:
+                        for key, val in self.chad.items():
+                            variables_map[key] = val[mask_np]
+                    dump_parquet(
+                        events=events,
+                        weights_container=weights_container,
+                        variables_map=variables_map,
+                        workflow=self.workflow,
+                        year=year,
+                        category=category,
+                        output_location=self.output_location,
+                        partition_key=self._chunk_key(events),
+                        shift=shift,
+                    )
         # add histograms to output dictionary
         if self.output_format == "coffea":
             output["histograms"] = histograms

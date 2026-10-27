@@ -69,13 +69,8 @@ if __name__ == "__main__":
         "--nfiles",
         dest="nfiles",
         type=int,
-        default=15,
+        default=10,
         help="number of root files to include in each dataset partition (default 10)",
-    )
-    parser.add_argument(
-        "--eos",
-        action="store_true",
-        help="Enable saving outputs to /eos",
     )
     parser.add_argument(
         "--submit",
@@ -86,16 +81,26 @@ if __name__ == "__main__":
         "--output_format",
         type=str,
         default="coffea",
-        choices=["coffea", "root", "parquet"],
+        choices=["coffea", "parquet"],
         help="format of output histogram",
     )
-    parser.add_argument(
-        "--image",
-        dest="image",
-        type=str,
-        default="/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-base-almalinux9:0.7.30-py3.10",
-    )
     parser.add_argument("--jobflavor", dest="jobflavor", type=str, default="longlunch")
+    parser.add_argument(
+        "-m",
+        "--memory",
+        type=str,
+        default="4000",
+        help="Requested memory (in MB) for the condor job",
+    )
+    parser.add_argument(
+        "-e",
+        "--executor",
+        dest="executor",
+        type=str,
+        default="futures",
+        help="executor to run the processor",
+    )
+
     args = parser.parse_args()
 
     # check if the fileset for the given year exists, generate it otherwise
@@ -117,21 +122,33 @@ if __name__ == "__main__":
     # save partitions json and jobnums to job directory
     jobnum_list = []
     partition_dataset = {}
-    fileset_path = Path.cwd() / "analysis" / "filesets"
-
     nano_version = get_nano_version(args.year)
-    with open(
-        f"{fileset_path}/fileset_{args.year}_nanov{nano_version}_lxplus.json", "r"
-    ) as f:
-        root_files = json.load(f)[args.dataset]
-    root_files_list = divide_list(root_files, args.nfiles)
-    for i in range(len(root_files_list)):
-        dataset_key = (
-            f"{args.dataset}_{i+1}" if len(root_files_list) > 1 else args.dataset
-        )
-        partition_dataset[i + 1] = {dataset_key: root_files_list[i]}
-        jobnum_list.append(i + 1)
+    fileset_dir = Path.cwd() / "analysis" / "filesets"
+    fileset_file = fileset_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
+    with open(fileset_file) as f:
+        fileset = json.load(f)
 
+    short_name_map = {}
+    for sample in fileset:
+        short_name = fileset[sample]["metadata"]["short_name"]
+        short_name_map[short_name] = sample
+
+    # extract the dictionary of files {"path.root": "Events"} and the metadata
+    dataset = fileset[short_name_map[args.dataset]]
+    files_dict = dataset["files"]
+    metadata = dataset.get("metadata", {})
+
+    # convert the items to a list so we can divide them with divide_list
+    file_items = list(files_dict.items())
+    file_chunks = divide_list(file_items, args.nfiles)
+
+    for i, chunk in enumerate(file_chunks, start=1):
+        dataset_key = f"{args.dataset}_{i}" if len(file_chunks) > 1 else args.dataset
+        # reconstruct the structure for each individual job.
+        partition_dataset[i] = {
+            dataset_key: {"files": dict(chunk), "metadata": metadata}
+        }
+        jobnum_list.append(i)
     partition_file = job_dir / "partitions.json"
     with open(f"{partition_file}", "w") as json_file:
         json.dump(partition_dataset, json_file, indent=4)
@@ -163,7 +180,7 @@ if __name__ == "__main__":
             )
             line = line.replace("JOBNUM_FILE", str(jobnum_file))
             line = line.replace("JOBFLAVOR", f'"{args.jobflavor}"')
-            line = line.replace("IMAGE", f'"{args.image}"')
+            line = line.replace("MEMORY", args.memory)
             condor_file.write(line)
 
     if args.submit:

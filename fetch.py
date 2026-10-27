@@ -24,12 +24,6 @@ if __name__ == "__main__":
         ],
     )
     parser.add_argument(
-        "--image",
-        dest="image",
-        type=str,
-        default="/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask-almalinux9:2025.10.1-py3.10",        
-    )
-    parser.add_argument(
         "--samples",
         nargs="*",
         type=str,
@@ -63,15 +57,7 @@ if __name__ == "__main__":
             subprocess.run(cmd, shell=True)
 
         samples_str = " ".join(args.samples) if args.samples else ""
-        # get proxy path and forward it into the singularity container
-        proxy_result = subprocess.run("voms-proxy-info -path", shell=True,
-                                      capture_output=True, text=True)
-        proxy_path = proxy_result.stdout.strip()
-        proxy_dir = str(Path(proxy_path).parent) if proxy_path else "/tmp"
-        proxy_env = f"--env X509_USER_PROXY={proxy_path}" if proxy_path else ""
-        cmd = (f"singularity exec -B /afs -B /cvmfs -B {proxy_dir} "
-               f"{proxy_env} {args.image} "
-               f"python3 -m analysis.filesets.make_filesets --year {args.year} --samples {samples_str}")
+        cmd = f"python3 -m analysis.filesets.make_filesets --year {args.year} --samples {samples_str}"
         subprocess.run(cmd, shell=True)
 
     # always run make_signal_filesets to fetch USER (phys03) datasets outside singularity

@@ -78,41 +78,4 @@ if __name__ == "__main__":
         query_results_strategy="all",
         replicas_strategy="round-robin",
     )
-    ddc.do_save(f"dataset_discovery_{args.year}.json")
-
-    # load and reformat generated fileset
-    with open(f"dataset_discovery_{args.year}.json", "r") as f:
-        dataset_discovery = json.load(f)
-    if not dataset_discovery:
-        print("WARNING: Rucio returned no results. Check grid proxy and site availability.")
-        dataset_discovery = {}
-
-    # load existing fileset to preserve already-fetched entries (e.g. phys03 samples)
-    fileset_file = filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
-    if fileset_file.exists():
-        with open(fileset_file, "r") as f:
-            new_dataset = json.load(f)
-    else:
-        new_dataset = {key: [] for key in das_queries}
-
-    for dataset in dataset_discovery:
-        root_files = list(dataset_discovery[dataset]["files"].keys())
-        dataset_key = dataset_discovery[dataset]["metadata"]["short_name"]
-        if dataset_key.startswith("Single"):
-            new_dataset[dataset_key.split("_")[0]] += root_files
-        else:
-            new_dataset[dataset_key] = root_files
-
-    # normalize redirectors: replace IIHE-local xrootd endpoints (unreachable from CERN Condor)
-    # with the global redirector so XRootD can route to any available whitelisted site.
-    # Note: T2_BE_IIHE is blacklisted in the sites file, so Rucio should not return IIHE replicas,
-    # but we sanitize here in case any slip through.
-    for key in new_dataset:
-        new_dataset[key] = [
-            f.replace("root://maite.iihe.ac.be:1094/", "root://cms-xrd-global.cern.ch//")
-             .replace("root://maite.iihe.ac.be:1095/", "root://cms-xrd-global.cern.ch//")
-            for f in new_dataset[key]
-        ]
-
-    with open(fileset_file, "w") as json_file:
-        json.dump(new_dataset, json_file, indent=4, sort_keys=True)
+    ddc.do_save(filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json")

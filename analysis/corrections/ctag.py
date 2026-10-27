@@ -7,8 +7,8 @@ from typing import Type
 from pathlib import Path
 from coffea.analysis_tools import Weights
 from analysis.filesets.utils import get_nano_version
-from analysis.corrections.utils import correction_files
 from analysis.working_points.utils import get_ctag_mask
+from analysis.corrections.correctionlib_files import correction_files
 
 
 class CTagCorrector:
@@ -27,7 +27,7 @@ class CTagCorrector:
             dataset year {2022preEE, 2022postEE, 2023preBPix, 2023PostBPix, 2024}
         category:
             selection category name
-        variation:
+        shift:
             if 'nominal' (default) add 'nominal', 'up' and 'down' variations to weights container
     """
 
@@ -37,13 +37,13 @@ class CTagCorrector:
         weights: Type[Weights],
         worging_point: str,
         year: str,
-        category: str = "base",
-        variation: str = "nominal",
+        category: str,
+        shift: str,
     ) -> None:
         self._year = year
         self._wp = worging_point
         self._weights = weights
-        self._variation = variation
+        self._shift = shift
 
         # set tagger
         self._nano_version = get_nano_version(year)
@@ -127,7 +127,7 @@ class CTagCorrector:
         # nominal weights
         ctag_weight = self.get_ctag_weight(eff, ctag_sf, pass_ctag)
 
-        if self._variation == "nominal":
+        if self._shift is None:
             # systematics
             # up and down scale factors
             ctag_sf_up = self.get_scale_factors(flavor=flavor, syst="up")

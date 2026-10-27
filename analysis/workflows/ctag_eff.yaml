@@ -104,11 +104,12 @@ event_selection:
       - atleast_one_goodvertex
       - atleast_one_zz
 corrections:
-  objects:
-    - jec
-    - jet_vetomaps
-    - muon_ss
-    - electon_ss
+  object:
+    - jet
+    - jetveto
+    - muon
+    - electron
+  object_shifts: false
   event_weights:
     genWeight: true
     pileupWeight: true
