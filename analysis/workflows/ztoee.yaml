@@ -78,6 +78,7 @@ corrections:
     lhepdfWeight: true
     lhescaleWeight: true
     nnlopsWeight: false
+    topPtWeight: true
     electron:
       - id: wp80iso
       - reco: true

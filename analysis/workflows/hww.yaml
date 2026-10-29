@@ -85,6 +85,7 @@ corrections:
     - jetveto
     - muon
     - electron
+    - tau
     - met
   object_shifts: false
   event_weights:
@@ -94,6 +95,7 @@ corrections:
     lhepdfWeight: true
     lhescaleWeight: true
     nnlopsWeight: true
+    topPtWeight: true
     muon:
       - id: tight
       - iso: tight

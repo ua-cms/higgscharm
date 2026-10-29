@@ -8,6 +8,7 @@ from analysis.corrections.jetvetomaps import jet_veto
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
 from analysis.corrections.lhepdf import add_lhepdf_weight
+from analysis.corrections.top_pt import add_top_pt_weight
 from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.jec import apply_jerc_corrections
 from analysis.corrections.lhescale import add_scalevar_weight
@@ -230,25 +231,13 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                 ctag_corrector.add_ctag_weights(flavor="c")
                 ctag_corrector.add_ctag_weights(flavor="light")
 
-        if "ctagging_2d" in weights_config:
-            if weights_config["ctagging_2d"]:
-                ctag2d_corrector = CTag2DCorrector(
+        if "topPtWeight" in weights_config:
+            if weights_config["topPtWeight"]:
+                add_top_pt_weight(
                     events=pruned_ev,
-                    weights=weights_container,
                     year=year,
-                    variation=variation,
-                )
-                ctag2d_corrector.add_weights()
-
-        if "higgsHFWeight" in weights_config:
-            if weights_config["higgsHFWeight"]:
-                # ggH/VBF only (see higgs_hf.py); per-event, keyed on gen-jet heavy
-                # flavour, replaces a flat lnN on the pooled Other_Higgs group
-                add_higgs_hf_weight(
-                    events=pruned_ev,
                     weights_container=weights_container,
                     dataset=dataset,
-                    flav="c",
                 )
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))

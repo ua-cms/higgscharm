@@ -1,0 +1,359 @@
+datasets:
+  data:
+    - muon_electron
+  mc:
+    - dy_nlo
+    - tt
+    - singletop
+    - diboson
+object_selection:
+  muons:
+    field: events.Muon
+    cuts:
+      - events.Muon.pt > 10
+      - np.abs(events.Muon.eta) < 2.4
+      - np.abs(events.Muon.dxy) < 0.5
+      - np.abs(events.Muon.dz) < 1
+      - working_points.muon_iso(events, 'tight')
+      - working_points.muon_id(events, 'tight')
+  electrons:
+    field: events.Electron
+    cuts:
+      - events.Electron.pt > 10
+      - np.abs(events.Electron.eta) < 2.4
+      - np.abs(events.Electron.dxy) < 0.5
+      - np.abs(events.Electron.dz) < 1
+      - working_points.electron_id(events, 'wp80iso')
+      - delta_r_higher(events.Electron, objects['muons'], 0.4)
+  jets:
+    field: events.Jet
+    cuts:
+      - events.Jet.pt > 20
+      - np.abs(events.Jet.eta) < 2.5
+      - working_points.jet_id(events, year, 'tightlepveto')
+      - working_points.jet_pileup_id(events, year, 'tight')
+      - delta_r_higher(events.Jet, objects['muons'], 0.4)
+      - delta_r_higher(events.Jet, objects['electrons'], 0.4)
+  bjets:
+    field: events.Jet
+    cuts:
+      - events.Jet.pt > 20
+      - np.abs(events.Jet.eta) < 2.5
+      - working_points.jet_id(events, year, 'tightlepveto')
+      - working_points.jet_pileup_id(events, year, 'tight')
+      - working_points.jets_btagging(events, "medium", year)
+      - delta_r_higher(events.Jet, objects['muons'], 0.4)
+      - delta_r_higher(events.Jet, objects['electrons'], 0.4)
+  dileptons:
+    field: select_dileptons
+    cuts:
+      - objects['dileptons'].l1.delta_r(objects['dileptons'].l2) > 0.3
+      - objects['dileptons'].l1.charge * objects['dileptons'].l2.charge < 0
+      - (objects['dileptons'].p4.mass > 20.0) & (objects['dileptons'].p4.mass < 60.0)
+  met:
+     field: events.MET
+event_selection:
+  hlt_paths:
+    Muon:
+      - MuEle
+  selections:
+    trigger: get_trigger_mask(events, hlt_paths, dataset, year)
+    lumimask: get_lumi_mask(events, year)
+    atleast_one_goodvertex: events.PV.npvsGood > 0
+    leading_lepton_pt: ak.all(objects['dileptons'].l1.pt > 27, axis=1)
+    subleading_lepton_pt: ak.all(objects['dileptons'].l2.pt > 15, axis=1)
+    electron_muon_pair: ak.any((np.abs(objects['dileptons'].l1.pdgId) == 11) & (np.abs(objects['dileptons'].l2.pdgId) == 13), axis=1)
+    muon_electron_pair: ak.any((np.abs(objects['dileptons'].l1.pdgId) == 13) & (np.abs(objects['dileptons'].l2.pdgId) == 11), axis=1)
+    one_dilepton: ak.num(objects['dileptons'], axis=1) == 1
+    bjets_veto: ak.num(objects['bjets']) == 0
+    transvers_mass: ak.all(np.sqrt(2.0 * objects['dileptons'].pt * objects['met'].pt* (ak.ones_like(objects['met'].pt) - np.cos(objects['dileptons'].delta_phi(objects['met'])))) < 60, axis=1)
+  categories:
+    emu:
+      - trigger
+      - lumimask
+      - atleast_one_goodvertex
+      - leading_lepton_pt
+      - subleading_lepton_pt
+      - electron_muon_pair
+      - one_dilepton
+      - bjets_veto
+      - transvers_mass
+    mue:
+      - trigger
+      - lumimask
+      - atleast_one_goodvertex
+      - leading_lepton_pt
+      - subleading_lepton_pt
+      - muon_electron_pair
+      - one_dilepton
+      - bjets_veto
+      - transvers_mass
+corrections:
+  object:
+    - jet
+    - muon
+    - electron
+  object_shifts: true
+  event_weights:
+    genWeight: true
+    pileupWeight: true
+    partonshowerWeight: true
+    lhepdfWeight: true
+    lhescaleWeight: true
+    nnlopsWeight: false
+    topPtWeight: true
+    electron:
+      - id: wp80iso
+      - reco: true
+      - trigger: false
+    muon: 
+      - id: tight
+      - iso: tight
+      - trigger: false
+histogram_config:
+  add_syst_axis: true
+  add_weight: true
+  axes:
+    dilepton_mass:
+      type: Regular
+      bins: 50
+      start: 20
+      stop: 60
+      label: $m(\ell\ell)$ [GeV]
+      expression: objects['dileptons'].p4.mass
+    dilepton_pt:
+      type: Variable
+      edges:
+        - 20
+        - 40
+        - 60
+        - 80
+        - 100
+        - 120
+        - 140
+        - 160
+        - 180
+        - 200
+        - 225
+        - 250
+        - 275
+        - 300
+        - 325
+        - 350
+        - 375
+        - 400
+        - 450
+        - 500
+        - 550
+        - 600
+        - 700
+        - 800
+        - 1000
+      label: $p_T(\ell\ell)$ [GeV]
+      expression: objects['dileptons'].p4.pt
+    dilepton_eta:
+      type: Regular
+      bins: 50
+      start: -10
+      stop: 10
+      label: $\eta(\ell\ell)$
+      expression: objects['dileptons'].p4.eta
+    dilepton_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell\ell)$
+      expression: objects['dileptons'].p4.phi
+    dilepton_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(\ell_1, \ell_2)$
+      expression: objects['dileptons'].l1.delta_r(objects['dileptons'].l2)
+    dilepton_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(\ell_1, \ell_2)|$
+      expression: np.abs(objects['dileptons'].l1.eta - objects['dileptons'].l2.eta)
+    leading_lepton_pt:
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(\ell_1)$ [GeV]
+      expression: objects['dileptons'].l1.pt
+    subleading_lepton_pt:
+      type: Variable
+      edges:
+        - 30
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(\ell_2)$ [GeV]
+      expression: objects['dileptons'].l2.pt
+    leading_lepton_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_1)$
+      expression: objects['dileptons'].l1.eta
+    subleading_lepton_eta:
+      type: Regular
+      bins: 50
+      start: -2.5
+      stop: 2.5
+      label: $\eta(\ell_2)$
+      expression: objects['dileptons'].l2.eta
+    leading_lepton_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_1)$
+      expression: objects['dileptons'].l1.phi
+    subleading_lepton_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(\ell_2)$
+      expression: objects['dileptons'].l2.phi
+    jet_pt:
+      type: Variable
+      edges:
+        - 20
+        - 60
+        - 90
+        - 120
+        - 150
+        - 180
+        - 210
+        - 240
+        - 300
+        - 500
+      label: $p_T(j)$ [GeV]
+      expression: objects['jets'].pt
+    jet_eta:
+      type: Regular
+      bins: 50
+      start: -2.4
+      stop: 2.4
+      label: $\eta(j)$
+      expression: objects['jets'].eta
+    jet_phi:
+      type: Regular
+      bins: 50
+      start: -3.14159
+      stop: 3.14159
+      label: $\phi(j)$
+      expression: objects['jets'].phi
+    jet_multiplicity:
+      type: Integer
+      start: 0
+      stop: 14
+      label: $N(j)$
+      expression: ak.num(objects['jets'])
+    jet_dr:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $\Delta R(j_1, j_2)$
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].delta_r(ak.pad_none(objects['jets'], target=2)[:, 1])
+    jet_deta:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 5
+      label: $|\Delta \eta(j_1, j_2)|$
+      expression: np.abs(ak.pad_none(objects['jets'], target=2)[:, 0].eta - ak.pad_none(objects['jets'], target=2)[:, 1].eta)
+    leadingjet_flavour:
+      type: IntCategory
+      categories:
+        - 0
+        - 4
+        - 5
+      label: HadronFlavour
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].hadronFlavour
+    leadingjet_cvsl:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsL
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagUParTAK4CvL if hasattr(objects['jets'], 'btagUParTAK4CvL') else ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvL if hasattr(objects['jets'], 'btagPNetCvL') else ak.pad_none(objects['jets'], target=2)[:, 0].btagDeepFlavCvL
+    leadingjet_cvsb:
+      type: Regular
+      bins: 50
+      start: 0
+      stop: 1
+      label: Leading Jet CvsB
+      expression: ak.pad_none(objects['jets'], target=2)[:, 0].btagUParTAK4CvB if hasattr(objects['jets'], 'btagUParTAK4CvB') else ak.pad_none(objects['jets'], target=2)[:, 0].btagPNetCvB if hasattr(objects['jets'], 'btagPNetCvB') else ak.pad_none(objects['jets'], target=2)[:, 0].btagDeepFlavCvB
+    npvs:
+      type: Integer
+      start: 0
+      stop: 60
+      label: vertex multiplicity
+      expression: events.PV.npvsGood
+  layout:
+    vertex:
+      - npvs
+    dilepton_mass:
+      - dilepton_mass
+    dilepton_pt:
+      - dilepton_pt
+    dilepton_eta:
+      - dilepton_eta
+    dilepton_phi:
+      - dilepton_phi
+    dilepton_dr:
+      - dilepton_dr
+    dilepton_deta:
+      - dilepton_deta
+    leading_lepton_pt:
+      - leading_lepton_pt
+    leading_lepton_eta:
+      - leading_lepton_eta
+    leading_lepton_phi:
+      - leading_lepton_phi
+    subleading_lepton_pt:
+      - subleading_lepton_pt
+    subleading_lepton_eta:
+      - subleading_lepton_eta
+    subleading_lepton_phi:
+      - subleading_lepton_phi
+    jet_pt: 
+      - jet_pt
+    jet_eta:
+      - jet_eta
+    jet_phi:
+      - jet_phi
+    jet_dr: 
+      - jet_dr
+    jet_deta:
+      - jet_deta
+    jet_multiplicity:
+      - jet_multiplicity
+    leading_jet:
+      - leadingjet_flavour
+      - leadingjet_cvsb
+      - leadingjet_cvsl
