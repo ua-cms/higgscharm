@@ -175,7 +175,9 @@ class CoffeaPlotter:
                         )
                         if f"{variation}Up" in histogram_info[key]["variations"]:
                             histogram_info[key]["variations"][f"{variation}Up"] += up
-                            histogram_info[key]["variations"][f"{variation}Down"] += down
+                            histogram_info[key]["variations"][
+                                f"{variation}Down"
+                            ] += down
                         else:
                             histogram_info[key]["variations"][f"{variation}Up"] = up
                             histogram_info[key]["variations"][f"{variation}Down"] = down
@@ -506,14 +508,26 @@ class CoffeaPlotter:
                 for i, label in enumerate(rax.get_xticklabels()):
                     if i % 5 != 0:  # Show only every 5th tick
                         label.set_visible(False)
+
         # add CMS info
-        lumi = self.luminosities[self.year] * 1e-3
         energy = "13" if self.year.startswith("201") else "13.6"
-        hep.cms.lumitext(
-            f"{lumi:.1f} fb$^{{-1}}$ ({self.year}, {energy} TeV)",
+        hep.cms.label(
             ax=ax,
+            lumi=round(self.luminosities[self.year] * 1e-3, 1),
+            com=energy,
+            data=True,
+            year=self.year,
         )
-        hep.cms.text("Preliminary", ax=ax)
+        ax.text(
+            0.1,
+            1.00,
+            r"$\mathit{Preliminary}$",
+            verticalalignment="bottom",
+            horizontalalignment="left",
+            transform=ax.transAxes,
+            fontsize=18,
+        )
+
         # save histograms
         output_path = Path(f"{self.output_dir}/{category}")
         if not output_path.exists():
@@ -717,10 +731,22 @@ class CoffeaPlotter:
             fontsize=15,
             ncols=2,
         )
-        hep.cms.text("Preliminary", ax=ax)
-        hep.cms.lumitext(
-            f"{self.luminosities[self.year] * 1e-3:.1f} fb$^{{-1}}$ ({self.year}, 13.6 TeV)",
+        energy = "13" if self.year.startswith("201") else "13.6"
+        hep.cms.label(
             ax=ax,
+            lumi=round(self.luminosities[self.year] * 1e-3, 1),
+            com=energy,
+            data=True,
+            year=self.year,
+        )
+        ax.text(
+            0.1,
+            1.00,
+            r"$\mathit{Preliminary}$",
+            verticalalignment="bottom",
+            horizontalalignment="left",
+            transform=ax.transAxes,
+            fontsize=18,
         )
         xlabel = "$p_T(e)$ [GeV]" if category == "electron" else "$p_T(\mu)$ [GeV]"
         ax.set(ylim=ylim, xlabel=xlabel)
