@@ -58,13 +58,18 @@ if __name__ == "__main__":
     dataset_definition = {}
     for dataset_key, query in das_queries.items():
         dataset_definition[f"/{query}"] = {"short_name": dataset_key}
-    # the dataset definition is passed to a DataDiscoveryCLI
-    ddc = DataDiscoveryCLI()
+
     # set the allow sites to look for replicas
     sites_file = filesets_dir / f"{args.year}_sites.yaml"
     with open(sites_file, "r") as f:
-        sites = yaml.safe_load(f)["white"]
-    ddc.do_allowlist_sites(sites)
+        sites = yaml.safe_load(f)
+    white_sites = sites["white"]
+    black_sites = sites["black"]
+
+    # the dataset definition is passed to a DataDiscoveryCLI
+    ddc = DataDiscoveryCLI()
+    ddc.do_allowlist_sites(white_sites)
+    ddc.do_blocklist_sites(black_sites)
     # query rucio and get replicas
     ddc.load_dataset_definition(
         dataset_definition,

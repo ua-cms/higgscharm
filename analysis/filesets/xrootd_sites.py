@@ -1,4 +1,5 @@
-xroot_to_site =  {
+xroot_to_site = {
+    "root://lyoeos.in2p3.fr:1094": "T3_FR_IPNL",
     "root://cmseos.fnal.gov": "T3_US_FNALLPC",
     "root://cmsdcadisk.fnal.gov": "T1_US_FNAL_Disk",
     "root://xrootd-vanderbilt.sites.opensciencegrid.org:1094": "T2_US_Vanderbilt",
@@ -43,6 +44,7 @@ xroot_to_site =  {
     "root://cms-t2-se01.sdfarm.kr:1094": "T2_KR_KISTI",
     "root://eos01.grid.cyfronet.pl:1094": "T2_PL_Cyfronet",
     "root://xroot02.ncg.ingrid.pt:1094": "T2_PT_NCG_Lisbon",
-    "root://xroot01.ncg.ingrid.pt:1094": "T2_PT_NCG_Lisbon",
     "root://se01.grid.nchc.org.tw": "T2_TW_NCHC",
+    "root://xrootd01.jinr-t1.ru:1094": "T1_RU_JINR_Disk",
+    "root://xroot01.ncg.ingrid.pt:1094": "T2_PT_NCG_Lisbon",
 }
