@@ -3,7 +3,6 @@ from coffea.analysis_tools import Weights
 from analysis.filesets.utils import get_nano_version
 from analysis.corrections.muon import MuonWeights
 from analysis.corrections.ctag import CTagCorrector
-from analysis.corrections.ctag2d import CTag2DCorrector
 from analysis.corrections.jetvetomaps import jet_veto
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
@@ -12,7 +11,6 @@ from analysis.corrections.top_pt import add_top_pt_weight
 from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.jec import apply_jerc_corrections
 from analysis.corrections.lhescale import add_scalevar_weight
-from analysis.corrections.higgs_hf import add_higgs_hf_weight
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
 from analysis.corrections.partonshower import add_partonshower_weight
