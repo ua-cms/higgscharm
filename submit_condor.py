@@ -157,7 +157,7 @@ if __name__ == "__main__":
         print(*jobnum_list, sep="\n", file=f)
 
     # build and save arguments json
-    args.output_path = make_output_directory(args)
+    args.output_path = str(make_output_directory(args))
     args.user = os.environ["USER"]
     args_file = job_dir / "arguments.json"
     with open(args_file, "w") as json_file:

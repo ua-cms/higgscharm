@@ -902,7 +902,7 @@ def main():
     args = parse_args()
 
     base_dir = Path.cwd()
-    output_dir = Path(make_output_directory(args))
+    output_dir = make_output_directory(args)
 
     condor_dir = base_dir / "condor"
     job_dir = condor_dir / args.workflow / args.year

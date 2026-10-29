@@ -11,4 +11,4 @@ def make_output_directory(args) -> str:
         else:
             path_args[arg] = None
     workflow_output_path = paths.workflow_path(**path_args)
-    return str(workflow_output_path)
+    return workflow_output_path
