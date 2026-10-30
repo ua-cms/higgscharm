@@ -41,6 +41,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--signal", action="store_true", help="Build signal input filesets"
     )
+    parser.add_argument("--update_sites", action="store_true", help="Update sites file")
     args = parser.parse_args()
 
     try:
@@ -51,7 +52,7 @@ if __name__ == "__main__":
         )
     if not args.onlysignal:
         sites_file = Path.cwd() / "analysis" / "filesets" / f"{args.year}_sites.yaml"
-        if not sites_file.exists():
+        if not sites_file.exists() or args.update_sites:
             cmd = f"python3 analysis/filesets/build_sites.py --year {args.year}"
             subprocess.run(cmd, shell=True)
 

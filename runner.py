@@ -78,7 +78,7 @@ if __name__ == "__main__":
     datasets_to_run_over = get_datasets_to_run_over(args.workflow, args.year)
 
     # check if the input fileset for the given year exists, generate it otherwise
-    fileset_checker(samples=datasets_to_run_over, year=args.year)
+    fileset_checker(samples=datasets_to_run_over, year=args.year, update_sites=True)
 
     # submit (or prepare) a job for each dataset using the given arguments
     cmd = ["python3", "submit_condor.py"]

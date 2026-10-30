@@ -93,7 +93,7 @@ def get_dataset_era(dataset: str, year: str):
             return dataset_config[dataset_key]["era"]
 
 
-def fileset_checker(samples: list, year: str):
+def fileset_checker(samples: list, year: str, update_sites: bool = False):
     """check if the fileset for the given year exists, generate it otherwise"""
     nano_version = get_nano_version(year)
     filesets_path = Path.cwd() / "analysis" / "filesets"
@@ -115,6 +115,8 @@ def fileset_checker(samples: list, year: str):
         print("\nBuilding input filesets for:")
         print(yaml.dump(samples, default_flow_style=False, sort_keys=False, indent=2))
         cmd = f"python3 fetch.py --year {year} --samples {' '.join(samples)}"
+        if update_sites:
+            cmd += " --update_sites"
         subprocess.run(cmd, shell=True)
 
 
