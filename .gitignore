@@ -45,3 +45,7 @@ dataset_discovery_*.json
 # Reconstruct with combine/setup_cmssw.sh, never commit the built tree.
 # (combine/outputs/ is already covered by the outputs//*.root rules above.)
 combine/CMSSW_14_1_0_pre4/
+
+# EOS versioning directories
+.sys.v#*/
+**/.sys.v#*/

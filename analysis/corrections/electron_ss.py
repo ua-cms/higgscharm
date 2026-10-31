@@ -11,21 +11,11 @@ def filter_boundaries(pt_corr, pt, nested=True):
         pt_corr = np.asarray(pt_corr)
         pt = np.asarray(pt)
 
-    # Check for pt values outside the range
-    outside_bounds = (pt < 20) | (pt > 250)
-
-    if nested:
-        n_pt_outside = ak.sum(ak.any(outside_bounds, axis=-1))
-    else:
-        n_pt_outside = np.sum(outside_bounds)
-
-    if n_pt_outside > 0:
-        print(
-            f"There are {n_pt_outside} events with muon pt outside of [26,200] GeV. "
-            "Setting those entries to their initial value."
-        )
-        pt_corr = np.where(pt > 250, pt, pt_corr)
-        pt_corr = np.where(pt < 20, pt, pt_corr)
+    # 2026-10-30: no pt window any more. The [20, 250] GeV window was copied
+    # from the muon code (its message even said "muon"); the EGM EtDependent
+    # jsons are binned in pt from 0 to 9999 GeV (flow clamp), and the EGM
+    # example applies no window, so electrons below 20 GeV (most of the 4e /
+    # 2e2mu subleading electrons) were left uncorrected.
 
     # Check for NaN entries in pt_corr
     nan_entries = np.isnan(pt_corr)
@@ -75,6 +65,9 @@ def apply_electron_ss_corrections(
             rng = np.random.default_rng(seed=42)
             random_numbers = rng.normal(loc=0.0, scale=1.0, size=len(pt))
             correction_factor = 1 + smear * random_numbers
+            # kept so apply_electron_ss_shifts reuses the same random number
+            # (EGM recipe: the smearing variations use the nominal one)
+            events["Electron", "ss_rndm"] = ak.unflatten(random_numbers, counts)
         else:
             correction_factor = cset.compound["Scale"].evaluate(
                 "scale", run, sceta, r9, pt, seedgain
@@ -91,4 +84,81 @@ def apply_electron_ss_corrections(
             met_obj="MET" if year.startswith("201") else "PuppiMET",
         )
 
-        # TO DO: ADD UNCERTAINTIES https://gitlab.cern.ch/cms-analysis-corrections/EGM/examples/-/blob/latest/egmScaleAndSmearingExample.py
+
+
+def apply_electron_ss_shifts(events, year, met_field_key):
+    """Return [(collections_dict, shift_name), ...] for the electron energy
+    scale/resolution systematics CMS_scale_e_<year>, CMS_res_e_<year> (added
+    2026-10-30), with the same contract as muon_ss.py::apply_muon_ss_shifts:
+    nominal entry first, then Up/Down for scale and resolution; collections_dict
+    carries {"Electron": ..., met_field_key: ...}.
+
+    Follows the EGM example (cms-analysis-corrections/EGM/examples,
+    egmScaleAndSmearingExample.py) for the EtDependent jsons:
+      resolution: smear +- esmear (down clipped at 0), with the SAME random
+                  number as the nominal smearing, applied to the raw pt
+      scale:      (1 +- escale) applied to the nominally smeared pt
+    All inputs are the original MC variables (raw pt, r9, ScEta).
+
+    MUST be called after apply_electron_ss_corrections(variation="nominal") in
+    the same pass (needs Electron.pt_raw and Electron.ss_rndm). Data: nominal
+    entry only.
+    """
+    nominal_entry = (
+        {"Electron": events.Electron, met_field_key: events[met_field_key]},
+        None,
+    )
+    if not hasattr(events, "genWeight"):
+        return [nominal_entry]
+
+    cset = correctionlib.CorrectionSet.from_file(correction_files["electron_ss"][year])
+    sas = cset["SmearAndSyst"]
+    electrons = ak.flatten(events.Electron)
+    counts = ak.num(events.Electron)
+    pt_raw = np.asarray(electrons.pt_raw)
+    pt_nom = np.asarray(electrons.pt)
+    rndm = np.asarray(electrons.ss_rndm)
+    sceta = np.asarray(electrons.eta + electrons.deltaEtaSC)
+    r9 = np.asarray(electrons.r9)
+
+    smear = sas.evaluate("smear", pt_raw, r9, sceta)
+    unc_smear = sas.evaluate("esmear", pt_raw, r9, sceta)
+    unc_scale = sas.evaluate("escale", pt_raw, r9, sceta)
+    pt_var = {
+        "CMS_res_e_{}Up": pt_raw * (1 + (smear + unc_smear) * rndm),
+        "CMS_res_e_{}Down": pt_raw * (1 + np.maximum(smear - unc_smear, 0.0) * rndm),
+        "CMS_scale_e_{}Up": pt_nom * (1 + unc_scale),
+        "CMS_scale_e_{}Down": pt_nom * (1 - unc_scale),
+    }
+    nested_nom = events.Electron.pt
+    nested_raw = events.Electron.pt_raw
+    variants = []
+    for name in [
+        "CMS_scale_e_{}Up",
+        "CMS_scale_e_{}Down",
+        "CMS_res_e_{}Up",
+        "CMS_res_e_{}Down",
+    ]:
+        # same NaN guard as the nominal correction (no pt window); a fresh
+        # array per variant (no aliasing between Up and Down)
+        pt_v = filter_boundaries(ak.unflatten(pt_var[name], counts), nested_raw)
+        ele = ak.with_field(events.Electron, pt_v, "pt")
+        met = _met_with_ele_delta(events, met_field_key, nested_nom, pt_v, events.Electron.phi)
+        variants.append(
+            ({"Electron": ele, met_field_key: met}, name.format(year[:4]))
+        )
+    return [nominal_entry] + variants
+
+
+def _met_with_ele_delta(events, met_field_key, pt_from, pt_to, phi):
+    """events' CURRENT met_field_key moved from electron pt `pt_from` to `pt_to`,
+    without mutating events -- same met.py::update_met reuse as
+    muon_ss.py::_met_with_muon_delta"""
+    tmp = ak.Array(
+        {
+            "Electron": ak.zip({"pt_raw": pt_from, "pt": pt_to, "phi": phi}),
+            met_field_key: events[met_field_key],
+        }
+    )
+    update_met(tmp, other_obj="Electron", met_obj=met_field_key)
+    return tmp[met_field_key]

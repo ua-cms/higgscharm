@@ -109,20 +109,37 @@ class CrystallBall:
         return result
 
 
-def get_rndm(eta, nL, cset, nested=False):
+def get_rndm(eta, phi, nL, evtNr, lumiNr, cset, nested=False):
     # obtain parameters from correctionlib
     if nested:
-        eta_f, nL_f, nmuons = ak.flatten(eta), ak.flatten(nL), ak.num(nL)
+        eta_f, phi_f, nL_f, nmuons = (
+            ak.flatten(eta),
+            ak.flatten(phi),
+            ak.flatten(nL),
+            ak.num(nL),
+        )
+        evtNr_f = np.repeat(np.asarray(evtNr), nmuons)
+        lumiNr_f = np.repeat(np.asarray(lumiNr), nmuons)
     else:
-        eta_f, nL_f, nmuons = eta, nL, np.ones_like(eta)
+        eta_f, phi_f, nL_f, nmuons = eta, phi, nL, np.ones_like(eta)
+        evtNr_f, lumiNr_f = evtNr, lumiNr
 
     mean_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 0)
     sigma_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 1)
     n_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 2)
     alpha_f = cset.get("cb_params").evaluate(abs(eta_f), nL_f, 3)
 
-    # get random number following the CB
-    rndm_f = [random() for i in nmuons for j in range(int(i))]
+    # get random number following the CB. 2026-10-30: deterministic per muon
+    # (event, lumi, phi) from the json, as in the official muonscarekit
+    # (1c7426b). The old python random() was unseeded, so the smearing (and the
+    # CMS_res_m shift built on it) changed from run to run; the pre-2026-04-28
+    # jsons also had the MUO seed bug (same random number for muons with the
+    # same properties).
+    if "RandomSmearing" not in list(cset.keys()):
+        raise ValueError(
+            "muon_ss json has no RandomSmearing (pre-2026-04-28 MUO file?)"
+        )
+    rndm_f = cset.get("RandomSmearing").evaluate(evtNr_f, lumiNr_f, phi_f)
 
     cb_f = CrystallBall(mean_f, sigma_f, alpha_f, n_f)
 
@@ -188,6 +205,13 @@ def get_k(eta, var, cset, nested=False):
     return result
 
 
+def _unc(corr, args, source):
+    """stat, syst or total (= stat (+) syst) uncertainty of a k-type parameter"""
+    if source != "total":
+        return corr.evaluate(*args, source)
+    return np.sqrt(corr.evaluate(*args, "stat") ** 2 + corr.evaluate(*args, "syst") ** 2)
+
+
 def filter_boundaries(pt_corr, pt, nested):
     if not nested:
         pt_corr = np.asarray(pt_corr)
@@ -228,7 +252,7 @@ def filter_boundaries(pt_corr, pt, nested):
     return pt_corr
 
 
-def pt_resol(pt, eta, nL, cset, nested=False):
+def pt_resol(pt, eta, phi, nL, evtNr, lumiNr, cset, nested=False):
     """ "
     Function for the calculation of the resolution correction
     Input:
@@ -239,7 +263,7 @@ def pt_resol(pt, eta, nL, cset, nested=False):
 
     This function should only be applied to reco muons in MC!
     """
-    rndm = get_rndm(eta, nL, cset, nested)
+    rndm = get_rndm(eta, phi, nL, evtNr, lumiNr, cset, nested)
     std = get_std(pt, eta, nL, cset, nested)
     k = get_k(eta, "nom", cset, nested)
 
@@ -247,10 +271,14 @@ def pt_resol(pt, eta, nL, cset, nested=False):
 
     pt_corr = filter_boundaries(pt_corr, pt, nested)
 
+    # official muonscarekit filter (2026-10-30)
+    pt_filter = (pt_corr / pt > 2) | (pt_corr / pt < 0.1) | (pt_corr < 0)
+    pt_corr = ak.where(pt_filter, pt, pt_corr)
+
     return pt_corr
 
 
-def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
+def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False, source="total"):
     """
     Function for the calculation of the resolution uncertainty
     Input:
@@ -270,7 +298,11 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
         eta_f, nmuons = eta, 1
         pt_wresol_f, pt_woresol_f = pt_wresol, pt_woresol
 
-    k_unc_f = cset.get("k_mc").evaluate(abs(eta_f), "stat")
+    # 2026-10-30: source "total" = stat (+) syst in quadrature. The official
+    # example uses "stat" only, but the 2026-04-28 jsons also give "syst",
+    # ~3x larger (README: "statistical and systematic variations of A, M and k
+    # are provided").
+    k_unc_f = _unc(cset.get("k_mc"), [abs(eta_f)], source)
     k_f = cset.get("k_mc").evaluate(abs(eta_f), "nom")
 
     pt_var_f = pt_wresol_f
@@ -294,6 +326,12 @@ def pt_resol_var(pt_woresol, pt_wresol, eta, updn, cset, nested=False):
         )
     else:
         print("ERROR: updn must be 'up' or 'dn'")
+
+    # official muonscarekit filter (2026-10-30)
+    pt_filter = (
+        (pt_var_f / pt_woresol_f > 2) | (pt_var_f / pt_woresol_f < 0.1) | (pt_var_f < 0)
+    )
+    pt_var_f = ak.where(pt_filter, pt_woresol_f, pt_var_f)
 
     if nested:
         pt_var = ak.unflatten(pt_var_f, nmuons)
@@ -342,7 +380,7 @@ def pt_scale(is_data, pt, eta, phi, charge, cset, nested=False):
     return pt_corr
 
 
-def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
+def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False, source="total"):
     """
     Function for the calculation of the scale uncertainty
     Input:
@@ -361,27 +399,26 @@ def pt_scale_var(pt, eta, phi, charge, updn, cset, nested=False):
     else:
         eta_f, phi_f, pt_f, nmuons = eta, phi, pt, 1
 
-    stat_a_f = cset.get("a_mc").evaluate(eta_f, phi_f, "stat")
-    stat_m_f = cset.get("m_mc").evaluate(eta_f, phi_f, "stat")
-    stat_rho_f = cset.get("m_mc").evaluate(eta_f, phi_f, "rho_stat")
-
-    if nested:
-        stat_a, stat_m, stat_rho = (
-            ak.unflatten(stat_a_f, nmuons),
-            ak.unflatten(stat_m_f, nmuons),
-            ak.unflatten(stat_rho_f, nmuons),
+    # 2026-10-30: source "total" = stat (+) syst, each with its own A-M
+    # correlation (rho_stat / rho_syst), added in quadrature
+    srcs = ["stat", "syst"] if source == "total" else [source]
+    unc2 = 0
+    for src in srcs:
+        a_f = cset.get("a_mc").evaluate(eta_f, phi_f, src)
+        m_f = cset.get("m_mc").evaluate(eta_f, phi_f, src)
+        rho_f = cset.get("m_mc").evaluate(eta_f, phi_f, "rho_" + src)
+        if nested:
+            a_u, m_u, rho = (
+                ak.unflatten(a_f, nmuons),
+                ak.unflatten(m_f, nmuons),
+                ak.unflatten(rho_f, nmuons),
+            )
+        else:
+            a_u, m_u, rho = a_f, m_f, rho_f
+        unc2 = unc2 + pt**4 * (
+            m_u * m_u / (pt * pt) + a_u * a_u + 2 * charge * rho * m_u / pt * a_u
         )
-
-    unc = (
-        pt
-        * pt
-        * (
-            stat_m * stat_m / (pt * pt)
-            + stat_a * stat_a
-            + 2 * charge * stat_rho * stat_m / pt * stat_a
-        )
-        ** 0.5
-    )
+    unc = unc2**0.5
 
     pt_var = pt
 
@@ -417,7 +454,10 @@ def apply_muon_ss_corrections_run3(
         ptcorr = pt_resol(
             ptscalecorr,
             events.Muon.eta,
+            events.Muon.phi,
             events.Muon.nTrackerLayers,
+            events.event,
+            events.luminosityBlock,
             cset,
             nested=True,
         )

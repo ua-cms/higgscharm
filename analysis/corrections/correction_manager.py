@@ -15,7 +15,10 @@ from analysis.corrections.lhescale import add_scalevar_weight
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections, apply_muon_ss_shifts
 from analysis.corrections.partonshower import add_partonshower_weight
-from analysis.corrections.electron_ss import apply_electron_ss_corrections
+from analysis.corrections.electron_ss import (
+    apply_electron_ss_corrections,
+    apply_electron_ss_shifts,
+)
 from analysis.corrections.higgs_hf import add_higgs_hf_weight
 
 
@@ -73,13 +76,33 @@ def object_corrector_manager(events, year, dataset, workflow_config):
                 ]
             nominal_muon = muon_variants[0][0]["Muon"]
 
+            # electron energy scale/resolution shifts (CMS_scale_e/CMS_res_e,
+            # added 2026-10-30); Run3 MC only, as the nominal electon_ss
+            if (
+                "electon_ss" in objcorr_config
+                and year.startswith("202")
+                and hasattr(events, "genWeight")
+            ):
+                electron_variants = apply_electron_ss_shifts(events, year, met_field_key)
+            else:
+                electron_variants = [({"Electron": events.Electron}, None)]
+            nominal_electron = electron_variants[0][0]["Electron"]
+
             # Every returned entry explicitly carries Jet/MET/Muon, even where
             # unchanged from nominal: base.py's shift loop mutates `events`
             # cumulatively across iterations rather than resetting to nominal
             # each time, so an entry that omitted a key would silently inherit
             # whatever the PREVIOUS iteration left behind instead of nominal.
             final_variants = [
-                ({"Jet": nominal_jet, met_field_key: nominal_met, "Muon": nominal_muon}, None)
+                (
+                    {
+                        "Jet": nominal_jet,
+                        met_field_key: nominal_met,
+                        "Muon": nominal_muon,
+                        "Electron": nominal_electron,
+                    },
+                    None,
+                )
             ]
             for collections, shift_name in jec_variants[1:]:
                 final_variants.append(
@@ -88,6 +111,7 @@ def object_corrector_manager(events, year, dataset, workflow_config):
                             "Jet": collections["Jet"],
                             met_field_key: collections["MET"],
                             "Muon": nominal_muon,
+                            "Electron": nominal_electron,
                         },
                         shift_name,
                     )
@@ -99,6 +123,19 @@ def object_corrector_manager(events, year, dataset, workflow_config):
                             "Jet": nominal_jet,
                             met_field_key: collections[met_field_key],
                             "Muon": collections["Muon"],
+                            "Electron": nominal_electron,
+                        },
+                        shift_name,
+                    )
+                )
+            for collections, shift_name in electron_variants[1:]:
+                final_variants.append(
+                    (
+                        {
+                            "Jet": nominal_jet,
+                            met_field_key: collections[met_field_key],
+                            "Muon": nominal_muon,
+                            "Electron": collections["Electron"],
                         },
                         shift_name,
                     )

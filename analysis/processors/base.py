@@ -276,6 +276,10 @@ class BaseProcessor(processor.ProcessorABC):
                     # explicitly (nominal or varied) for the same
                     # no-stale-inheritance reason Jet/MET already do.
                     events["Muon"] = shift_collections["Muon"]
+                if "Electron" in shift_collections:
+                    # added 2026-10-30 for CMS_scale_e/CMS_res_e (every entry of
+                    # the jec_shifts branch carries Electron, nominal or shifted)
+                    events["Electron"] = shift_collections["Electron"]
 
             # --------------------------------------------------------------
             # Object selection

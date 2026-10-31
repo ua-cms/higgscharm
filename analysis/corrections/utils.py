@@ -60,11 +60,11 @@ correction_files = {
         "2016postVFP": f"{Path.cwd()}/analysis/data/rochester/RoccoR2016postVFPUL.txt",
         "2017": f"{Path.cwd()}/analysis/data/rochester/RoccoR2017UL.txt",
         "2018": f"{Path.cwd()}/analysis/data/rochester/RoccoR2018UL.txt",
-        "2022preEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22CDSep23-Summer22-NanoAODv12/2025-08-14/muon_scalesmearing.json.gz",
-        "2022postEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12/2025-08-14/muon_scalesmearing.json.gz",
-        "2023preBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23CSep23-Summer23-NanoAODv12/2025-08-14/muon_scalesmearing.json.gz",
-        "2023postBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12/2025-08-14/muon_scalesmearing.json.gz",
-        "2024": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-10-17/muon_scalesmearing.json.gz",
+        "2022preEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22CDSep23-Summer22-NanoAODv12/2026-04-28/muon_scalesmearing.json.gz",  # 2026-10-30: was pre-fix file (MUO 2026-04-28: random seed bug, adds RandomSmearing + syst)
+        "2022postEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12/2026-04-28/muon_scalesmearing.json.gz",  # 2026-10-30: was pre-fix file (MUO 2026-04-28: random seed bug, adds RandomSmearing + syst)
+        "2023preBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23CSep23-Summer23-NanoAODv12/2026-04-28/muon_scalesmearing.json.gz",  # 2026-10-30: was pre-fix file (MUO 2026-04-28: random seed bug, adds RandomSmearing + syst)
+        "2023postBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12/2026-04-28/muon_scalesmearing.json.gz",  # 2026-10-30: was pre-fix file (MUO 2026-04-28: random seed bug, adds RandomSmearing + syst)
+        "2024": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing.json.gz",  # 2026-10-30: was pre-fix file (MUO 2026-04-28: random seed bug, adds RandomSmearing + syst)
         "2025": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing.json.gz",
     },
     "electron_id": {
