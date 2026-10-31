@@ -100,7 +100,8 @@ def _object_corrector_manager_hczz(events, year, dataset, objcorr_config):
 
     Jet veto map first (event veto on the NanoAOD jets). With "jec_shifts": muon/electron
     scale and smearing, then JEC/JER nominal + CMS_scale_j/CMS_res_j shifts, plus
-    CMS_scale_m/CMS_res_m for MC; every shift entry carries Jet, MET and Muon. Otherwise
+    CMS_scale_m/CMS_res_m and CMS_scale_e/CMS_res_e for MC; every shift entry carries
+    Jet, MET, Muon and Electron. Otherwise
     (nominal only): JEC/JER -> muon SS -> electron SS -> MET-phi (2022).
     """
     met_field_key = "PuppiMET" if int(get_nano_version(year)) >= 12 else "MET"
@@ -129,8 +130,29 @@ def _object_corrector_manager_hczz(events, year, dataset, objcorr_config):
                 ({"Muon": events.Muon, met_field_key: events[met_field_key]}, None)
             ]
         nominal_muon = muon_variants[0][0]["Muon"]
+        # electron energy scale/resolution shifts (CMS_scale_e/CMS_res_e,
+        # added 2026-10-30); Run3 MC only, as the nominal electon_ss
+        if (
+            "electon_ss" in objcorr_config
+            and year.startswith("202")
+            and hasattr(events, "genWeight")
+        ):
+            electron_variants = hczz_electron_ss.apply_electron_ss_shifts(
+                events, year, met_field_key
+            )
+        else:
+            electron_variants = [({"Electron": events.Electron}, None)]
+        nominal_electron = electron_variants[0][0]["Electron"]
         shifts = [
-            ({"Jet": nominal_jet, met_field_key: nominal_met, "Muon": nominal_muon}, None)
+            (
+                {
+                    "Jet": nominal_jet,
+                    met_field_key: nominal_met,
+                    "Muon": nominal_muon,
+                    "Electron": nominal_electron,
+                },
+                None,
+            )
         ]
         for collections, shift_name in jec_variants[1:]:
             shifts.append(
@@ -139,6 +161,7 @@ def _object_corrector_manager_hczz(events, year, dataset, objcorr_config):
                         "Jet": collections["Jet"],
                         met_field_key: collections["MET"],
                         "Muon": nominal_muon,
+                        "Electron": nominal_electron,
                     },
                     shift_name,
                 )
@@ -150,6 +173,19 @@ def _object_corrector_manager_hczz(events, year, dataset, objcorr_config):
                         "Jet": nominal_jet,
                         met_field_key: collections[met_field_key],
                         "Muon": collections["Muon"],
+                        "Electron": nominal_electron,
+                    },
+                    shift_name,
+                )
+            )
+        for collections, shift_name in electron_variants[1:]:
+            shifts.append(
+                (
+                    {
+                        "Jet": nominal_jet,
+                        met_field_key: collections[met_field_key],
+                        "Muon": nominal_muon,
+                        "Electron": collections["Electron"],
                     },
                     shift_name,
                 )

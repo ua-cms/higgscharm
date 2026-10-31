@@ -11,6 +11,8 @@ Usage:
 """
 import argparse
 import glob
+import numpy as np
+import re
 import awkward as ak
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -18,6 +20,12 @@ from pathlib import Path
 
 ERAS = ["2022postEE", "2022preEE", "2023preBPix", "2023postBPix"]
 CATEGORIES = ["CR_3P1F", "CR_2P2F"]
+
+# 2026-10-28: genuinely per-jet / per-c-jet arrays. _normalize_table used to collapse EVERY list column with
+# ak.firsts, so the merged CR (and the Z+X MVA inputs built from it) kept only the leading jet: jets 2-3 became copies
+# of jet 1 at inference, jet_phi was lost. These columns are now kept as arrays (large_list<double>); the leading-jet
+# scalars that estimate_zx_background.py derives from them are unchanged.
+PER_JET_COLS = re.compile(r"^(jet|cjets)_(pt|eta|phi|mass|btag\w+|hadronFlavour)$|^cjets_h_dphi(_3p1f|_2p2f|_inclusive)?$")
 
 
 def _normalize_table(table):
@@ -44,7 +52,10 @@ def _normalize_table(table):
     new_cols = []
     for name in table.column_names:
         col = table.column(name).combine_chunks()
-        if pa.types.is_list(col.type) or pa.types.is_large_list(col.type):
+        if (pa.types.is_list(col.type) or pa.types.is_large_list(col.type)) and PER_JET_COLS.match(name):
+            col = ak.to_arrow(ak.values_astype(ak.from_arrow(col), np.float64), extensionarray=False)
+            col = col.cast(pa.large_list(pa.float64()))
+        elif pa.types.is_list(col.type) or pa.types.is_large_list(col.type):
             aarr = ak.from_arrow(col)
             # extensionarray=False: plain pyarrow array (matches the other
             # files' already-scalar columns), not awkward's own extension
@@ -108,12 +119,14 @@ def main():
     parser.add_argument("--year", default="all", help="Era or 'all'")
     parser.add_argument("--workflow", default="hplusc_mva_4class_CR",
                         help="CR workflow name (default: hplusc_mva_4class_CR)")
+    parser.add_argument("--merge-out", default=None,
+                        help="2026-10-28: output dir (default <workflow>_merged)")
     parser.add_argument("--force", action="store_true",
                         help="Overwrite existing merged files")
     args = parser.parse_args()
 
     cr_base   = f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}"
-    merge_out = f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}_merged"
+    merge_out = args.merge_out or f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}_merged"
 
     print(f"Workflow:  {args.workflow}")
     print(f"CR base:   {cr_base}")

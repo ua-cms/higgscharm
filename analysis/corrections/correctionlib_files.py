@@ -66,6 +66,21 @@ correction_files = {
         "2024": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2025-10-17/muon_scalesmearing.json.gz",
         "2025": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing.json.gz",
     },
+    "muon_ss_hczz": {
+        # HcZZ (hczz_legacy/muon_ss.py) only, 2026-10-30: MUO 2026-04-28 jsons (the earlier
+        # files had the MUO random-seed bug; adds RandomSmearing + syst). Upstream muon_ss
+        # (coffea-2026 code) keeps "muon_ss" until step 2.
+        "2016preVFP": f"{Path.cwd()}/analysis/data/rochester/RoccoR2016preVFPUL.txt",
+        "2016postVFP": f"{Path.cwd()}/analysis/data/rochester/RoccoR2016postVFPUL.txt",
+        "2017": f"{Path.cwd()}/analysis/data/rochester/RoccoR2017UL.txt",
+        "2018": f"{Path.cwd()}/analysis/data/rochester/RoccoR2018UL.txt",
+        "2022preEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22CDSep23-Summer22-NanoAODv12/2026-04-28/muon_scalesmearing.json.gz",
+        "2022postEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-22EFGSep23-Summer22EE-NanoAODv12/2026-04-28/muon_scalesmearing.json.gz",
+        "2023preBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23CSep23-Summer23-NanoAODv12/2026-04-28/muon_scalesmearing.json.gz",
+        "2023postBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-23DSep23-Summer23BPix-NanoAODv12/2026-04-28/muon_scalesmearing.json.gz",
+        "2024": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing.json.gz",
+        "2025": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run3-25Prompt-Summer24-NanoAODv15/2026-04-28/muon_scalesmearing.json.gz",
+    },
     "electron_id": {
         "2016preVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run2-2016preVFP-UL-NanoAODv9/2024-07-02/electron.json.gz",
         "2016postVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/EGM/Run2-2016postVFP-UL-NanoAODv9/2024-07-02/electron.json.gz",

@@ -28,6 +28,11 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from typing import Optional, Dict
+try:  # 2026-10-28: HcZZ extra classifier inputs (byte-identical to b-hive utils/hczz_extra_features.py)
+    from analysis.postprocess.hczz_extra_features import ALL_FEATURES as HCZZ_EXTRA_FEATURES, compute_all as hczz_compute_all
+except ImportError:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from hczz_extra_features import ALL_FEATURES as HCZZ_EXTRA_FEATURES, compute_all as hczz_compute_all
 
 logging.basicConfig(level=logging.INFO)
 
@@ -402,9 +407,11 @@ class MVAPostProcessor:
             # Offsets into the flat feature vector produced by prepare_features()
             self._global_end = n_global
             self._cpf_end    = n_global + n_cpf * cpf_dim
-            self._vtx_end    = n_global + n_cpf * cpf_dim + n_vtx * vtx_dim
-            self._npf_end    = n_global + n_cpf * cpf_dim + n_vtx * vtx_dim + n_npf * npf_dim
-            self._lt_end     = self._npf_end + n_lt * lt_dim
+            # 2026-10-28: prepare_features() order is global, cpf, NPF, VTX, lt (b-hive training order); the
+            # slices used to assume vtx before npf (only matters for 'optimized' models; ours are 'flat').
+            self._npf_end    = n_global + n_cpf * cpf_dim + n_npf * npf_dim
+            self._vtx_end    = self._npf_end + n_vtx * vtx_dim
+            self._lt_end     = self._vtx_end + n_lt * lt_dim
 
             logging.info(f"Detected Optimized model: hidden_dim={hidden_dim}, num_layers={num_layers}, num_classes={num_classes}")
             self._model = MLP_HcZZ_MW_Deep_4class_Optimized(
@@ -457,7 +464,7 @@ class MVAPostProcessor:
             tags[f'jet_is_{cat}'] = mask.astype(np.float32)
         return tags
 
-    def _get_col(self, df, names, default=0.0, idx=None):
+    def _get_col(self, df, names, default=0.0, idx=None, allow_missing=False):
         """Get column by trying multiple names. Handles array-valued columns.
 
         Args:
@@ -465,6 +472,9 @@ class MVAPostProcessor:
             names: Column name(s) to try
             default: Default value if column not found
             idx: If column contains arrays, extract this index (None = flatten/take first)
+            allow_missing: 2026-10-28 (strict by default): if none of `names` is in the input, raise instead of
+                silently returning `default` (that zero-filled e.g. all Z+X lepton ID/iso inputs, whose CR column
+                names were never mapped). Only for inputs that are legitimately optional (lepton_mass).
         """
         if isinstance(names, str):
             names = [names]
@@ -505,13 +515,18 @@ class MVAPostProcessor:
                     result.append(float(val) if val is not None else default)
                 return np.nan_to_num(np.array(result, dtype=np.float32), nan=default)
             else:
-                # Scalar values - use directly (ignore idx)
+                # Scalar values - use directly. 2026-10-28: a scalar column cannot provide candidate slot idx > 0;
+                # returning it gave jets 2-3 copies of jet 1 (Z+X, leading-jet-only CR merge) -> refuse.
+                if idx is not None and idx > 0:
+                    raise ValueError(f"_get_col: {name} is a per-event scalar, cannot provide candidate slot {idx}")
                 result = df[name].fillna(default).values
                 # Handle any remaining object types
                 if result.dtype == object:
                     result = np.array([float(x) if x is not None else default for x in result], dtype=np.float32)
                 return np.nan_to_num(result.astype(np.float32), nan=default)
 
+        if not allow_missing:
+            raise KeyError(f"_get_col: none of {names} in the input (columns: {len(df.columns)})")
         return np.full(len(df), default, dtype=np.float32)
 
     def _get_candidate_col(self, df, specific_name, generic_name, j, default=0.0):
@@ -577,9 +592,29 @@ class MVAPostProcessor:
             'z_mass': ['z1_mass', 'z2_mass'],
         }
 
+        # 2026-10-28: H->ZZ->4l decay angles + 4l/jet kinematics (hczz_extra_features.py, byte-identical to the
+        # b-hive copy used in training). Built from the same accessors as the lepton / jet / 4l inputs below; leptons
+        # massless, leading jet = jet_* (cjets_* fallback) index 0, leading c jet = cjets_* index 0 (none -> -1).
+        extra = {}
+        if any(f in HCZZ_EXTRA_FEATURES for f in global_feats):
+            pref = ['z1_l1', 'z1_l2', 'z2_l1', 'z2_l2']
+            lep = {k: np.column_stack([self._get_candidate_col(df, f'{pref[j]}_{k}', f'lepton_{k}', j) for j in range(4)])
+                   for k in ('pt', 'eta', 'phi', 'charge')}
+            if not np.all(np.abs(lep['charge']).sum(1) == 4):
+                raise KeyError("HcZZ extra features: lepton charges missing (z?_l?_charge / lepton_charge)")
+            lt = lambda k: self._get_col(df, col_map[k])
+            extra = hczz_compute_all(lep['pt'], lep['eta'], lep['phi'], np.zeros_like(lep['pt']), lep['charge'],
+                                     lt('pT_4l'), lt('eta_4l'), lt('phi_4l'),
+                                     self._get_col(df, ['jet_pt', 'cjets_pt'], idx=0), self._get_col(df, ['jet_eta', 'cjets_eta'], idx=0),
+                                     self._get_col(df, ['jet_phi', 'cjets_phi'], idx=0), self._get_col(df, ['cjets_pt'], idx=0),
+                                     self._get_col(df, ['cjets_eta'], idx=0), self._get_col(df, ['cjets_phi'], idx=0),
+                                     m4l=lt('m4l'))  # 2026-10-29: mass-normalised ptbalm/ptfracm
+
         # --- Global features ---
         for feat in global_feats:
-            if feat == 'in_mass_window':
+            if feat in extra:
+                all_features.append(extra[feat])
+            elif feat == 'in_mass_window':
                 m4l = self._get_col(df, ['zz_mass_inclusive', 'm4l'])
                 all_features.append(((m4l >= self.mass_window_min) & (m4l < self.mass_window_max)).astype(np.float32))
             elif feat == 'n_ctagged_jets':
@@ -606,6 +641,10 @@ class MVAPostProcessor:
         # --- CPF (c-Jets) features ---
         # Precompute jet tags per jet index (loop order below is feature-major, not jet-major)
         jet_tags_by_j = []
+        missing_jet = [c for c in ('jet_pt', 'jet_eta', 'jet_phi') if c not in df.columns]
+        if missing_jet:
+            logging.warning(f"{missing_jet} not in the input; falling back to cjets_* "
+                           f"(c-tagged subset, NOT the training-time jet collection)")
         if self.era in UPART_ERAS:
             # 2026-10-25: _get_col falls back to 0.0, which silently put every 2024 jet in L0
             # (the analysis parquets had no jet_btagUParTAK4CvL); refuse to score instead.
@@ -619,9 +658,11 @@ class MVAPostProcessor:
                 CvB = self._get_col(df, ['jet_btagUParTAK4CvB'], idx=j)
                 CvL = self._get_col(df, ['jet_btagUParTAK4CvL'], idx=j)
             else:
-                B = self._get_col(df, ['cjets_btagPNetB', 'jet_btagPNetB'], idx=j)
-                CvB = self._get_col(df, ['cjets_btagPNetCvB', 'jet_btagPNetCvB'], idx=j)
-                CvL = self._get_col(df, ['cjets_btagPNetCvL', 'jet_btagPNetCvL'], idx=j)
+                # 2026-10-27: jet_* first (all jets, what b-hive trains on); cjets_* is the
+                # c-tagged subset and gave ~9% of events the wrong jet inputs.
+                B = self._get_col(df, ['jet_btagPNetB', 'cjets_btagPNetB'], idx=j)
+                CvB = self._get_col(df, ['jet_btagPNetCvB', 'cjets_btagPNetCvB'], idx=j)
+                CvL = self._get_col(df, ['jet_btagPNetCvL', 'cjets_btagPNetCvL'], idx=j)
             jet_tags_by_j.append(self._compute_jet_tags(B, CvB, CvL))
 
         # NOTE: candidate-major (candidate outer, feat inner) -- verified 2026-08-04
@@ -640,13 +681,13 @@ class MVAPostProcessor:
                     else:
                         all_features.append(np.zeros(n, dtype=np.float32))
                 elif feat in ['cjets_pt', 'jet_pt']:
-                    all_features.append(self._get_col(df, ['cjets_pt', 'jet_pt'], idx=j))
+                    all_features.append(self._get_col(df, ['jet_pt', 'cjets_pt'], idx=j))
                 elif feat in ['cjets_eta', 'jet_eta']:
-                    all_features.append(self._get_col(df, ['cjets_eta', 'jet_eta'], idx=j))
+                    all_features.append(self._get_col(df, ['jet_eta', 'cjets_eta'], idx=j))
                 elif feat in ['cjets_phi', 'jet_phi']:
-                    all_features.append(self._get_col(df, ['cjets_phi', 'jet_phi'], idx=j))
+                    all_features.append(self._get_col(df, ['jet_phi', 'cjets_phi'], idx=j))
                 elif feat in ['cjets_mass', 'jet_mass']:
-                    all_features.append(self._get_col(df, ['cjets_mass', 'jet_mass'], idx=j))
+                    all_features.append(self._get_col(df, ['jet_mass', 'cjets_mass'], idx=j))
                 else:
                     # Generic array column with index
                     all_features.append(self._get_col(df, [feat], idx=j))
@@ -668,7 +709,7 @@ class MVAPostProcessor:
                     all_features.append(self._get_candidate_col(df, f'{prefix}_phi', 'lepton_phi', j))
                 elif feat == 'lepton_mass':
                     # Try array column first, then use default 0
-                    all_features.append(self._get_col(df, ['lepton_mass'], default=0.0, idx=j))
+                    all_features.append(self._get_col(df, ['lepton_mass'], default=0.0, idx=j, allow_missing=True))
                 elif feat == 'lepton_charge':
                     all_features.append(self._get_candidate_col(df, f'{prefix}_charge', 'lepton_charge', j))
                 elif feat == 'lepton_pfRelIso03_all':
@@ -706,7 +747,27 @@ class MVAPostProcessor:
             names = col_map.get(feat, [feat])
             all_features.append(self._get_col(df, names))
 
-        return np.column_stack(all_features)
+        X = np.column_stack(all_features)
+        # 2026-10-27: mass-invariant models (b-hive config `mass_scaled_features`, see b-hive
+        # utils/torch/mass_decorrelation.py): those inputs are divided by m4l, as LZ4Dataset does at training time.
+        # `aux_m4l` (DisCo) is not an input and needs nothing here.
+        scaled = set(self.config.get('mass_scaled_features') or [])
+        if scaled:
+            layout = list(global_feats)
+            for grp, nk in (('cpf_candidates', 'n_cpf_candidates'), ('npf_candidates', 'n_npf_candidates'),
+                            ('vtx_features', 'n_vtx_candidates'), ('lt_candidates', 'n_lt_candidates')):
+                fs, k = list(self.config.get(grp, [])), int(self.config.get(nk, 1))
+                layout += [f for _ in range(k) for f in fs]
+            if len(layout) != X.shape[1]:
+                raise ValueError(f"mass_scaled_features: layout {len(layout)} != {X.shape[1]} inputs")
+            idx = [i for i, f in enumerate(layout) if f in scaled]
+            if not set(layout) >= scaled:
+                raise KeyError(f"mass_scaled_features not among the inputs: {sorted(scaled - set(layout))}")
+            m4l = self._get_col(df, ['zz_mass_inclusive', 'm4l'], default=np.nan).astype(np.float64)
+            if not np.all(np.isfinite(m4l) & (m4l > 0)):
+                raise ValueError("mass_scaled_features: m4l missing or <= 0 for some events")
+            X[:, idx] = X[:, idx] / m4l[:, None]
+        return X
 
     def predict(self, features: np.ndarray) -> Dict[str, np.ndarray]:
         """Run inference."""
@@ -731,11 +792,11 @@ class MVAPostProcessor:
                 # jet-major [B, n*d] → feature-major [B, n*d] via reshape+permute
                 cp  = torch.from_numpy(features[:, self._global_end:self._cpf_end]).float()
                 cp  = cp.reshape(-1, n_cpf, cpf_dim).permute(0, 2, 1).reshape(-1, n_cpf * cpf_dim)
-                vt  = torch.from_numpy(features[:, self._cpf_end:self._vtx_end]).float()
-                vt  = vt.reshape(-1, n_vtx, vtx_dim).permute(0, 2, 1).reshape(-1, n_vtx * vtx_dim)
-                np_ = torch.from_numpy(features[:, self._vtx_end:self._npf_end]).float()
+                np_ = torch.from_numpy(features[:, self._cpf_end:self._npf_end]).float()
                 np_ = np_.reshape(-1, n_npf, npf_dim).permute(0, 2, 1).reshape(-1, n_npf * npf_dim)
-                lt  = torch.from_numpy(features[:, self._npf_end:self._lt_end]).float()
+                vt  = torch.from_numpy(features[:, self._npf_end:self._vtx_end]).float()
+                vt  = vt.reshape(-1, n_vtx, vtx_dim).permute(0, 2, 1).reshape(-1, n_vtx * vtx_dim)
+                lt  = torch.from_numpy(features[:, self._vtx_end:self._lt_end]).float()
                 # n_lt=1 → no swapaxes needed in b-hive either
                 logits = self._model(g, cp, np_, vt, lt)
             else:

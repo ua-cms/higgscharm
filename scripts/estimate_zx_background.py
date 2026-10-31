@@ -173,40 +173,20 @@ def _load_flat(arr, fields):
             flat[f] = ak.to_numpy(ak.fill_none(col, np.nan))
         else:
             # Try to flatten: if every row contributes exactly 1 value, keep as-is
-            try:
-                flat_col = ak.to_numpy(ak.flatten(ak.fill_none(col, np.nan), axis=1))
-            except Exception:
-                flat_col = None
-            if flat_col is not None and len(flat_col) == n_rows:
-                # Per-event scalar stored as single-element list
-                flat[f] = flat_col
+            # Per-event scalar stored as a single-element list: EVERY row has exactly one entry (10-29: was
+            # "total length == n_rows", which a per-jet column can satisfy by coincidence)
+            counts = ak.to_numpy(ak.fill_none(ak.num(col, axis=1), 0))
+            if np.all(counts == 1):
+                flat[f] = np.asarray(ak.to_numpy(ak.flatten(col, axis=1)), dtype=np.float64)
             else:
-                # Variable-length per-jet / per-cjet list
-                # If the column is option[var * ?T] (outer None wraps whole list),
-                # fill outer None with empty list before padding inner axis.
-                try:
-                    col_inner = ak.fill_none(col, [], axis=0)
-                except Exception:
-                    col_inner = col
-                # Extract first element as per-event scalar (NaN if empty)
-                try:
-                    padded = ak.pad_none(col_inner, 1, axis=1)
-                    flat[f] = ak.to_numpy(ak.fill_none(ak.flatten(padded, axis=1), np.nan))
-                    if len(flat[f]) != n_rows:
-                        # fallback: take first element explicitly
-                        flat[f] = ak.to_numpy(ak.fill_none(padded[:, 0], np.nan))
-                except Exception:
-                    flat[f] = np.full(n_rows, np.nan)
-                # Also emit indexed columns _0, _1, _2 for jet arrays
-                max_idx = 3
-                try:
-                    padded3 = ak.pad_none(col_inner, max_idx, axis=1)
-                    for j in range(max_idx):
-                        col_j = padded3[:, j]
-                        flat[f'{f}_{j}'] = ak.to_numpy(ak.fill_none(col_j, np.nan))
-                except Exception:
-                    for j in range(max_idx):
-                        flat[f'{f}_{j}'] = np.full(n_rows, np.nan)
+                # Variable-length per-jet / per-cjet list: first element as the per-event scalar (NaN if empty)
+                # plus _0/_1/_2 indexed columns. 2026-10-29: the old ak.fill_none(col, [], axis=0) turned the column
+                # into a union type, every later call raised and the except blocks filled ALL jets with NaN (Z+X MVA
+                # saw no jet at all). Index the option[var] column directly; no silent fallback.
+                padded3 = ak.pad_none(col, 3, axis=1, clip=True)
+                for jj in range(3):
+                    flat[f'{f}_{jj}'] = np.asarray(ak.to_numpy(ak.fill_none(padded3[:, jj], np.nan)), dtype=np.float64)
+                flat[f] = flat[f'{f}_0'].copy()
     return flat
 
 
@@ -737,6 +717,8 @@ def main():
     parser.add_argument('--year', type=str, default='all',
                         help="Era or 'all'")
     parser.add_argument('--output', type=str, required=True)
+    parser.add_argument('--merged-base', type=str, default=None,
+                        help='2026-10-28: merged CR dir (default <workflow>_merged)')
     parser.add_argument('--no-mass-window', action='store_true',
                         help='Disable m4l mass window (inclusive CR; for comparison with UAntwerp)')
     parser.add_argument('--mass-window', type=float, nargs=2, default=None,
@@ -749,7 +731,7 @@ def main():
 
     # Set workflow-dependent globals before any estimation runs
     global MERGED_BASE, CR_BASE
-    MERGED_BASE = f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}_merged"
+    MERGED_BASE = args.merged_base or f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}_merged"
     CR_BASE     = f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}"
     print(f"Workflow:     {args.workflow}")
     print(f"Merged base:  {MERGED_BASE}")
