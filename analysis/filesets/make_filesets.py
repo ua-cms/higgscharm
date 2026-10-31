@@ -3,7 +3,7 @@ import yaml
 import json
 import argparse
 from pathlib import Path
-from analysis.filesets.utils import get_nano_version
+from analysis.filesets.utils import get_nano_version, is_private_query
 from coffea.dataset_tools.dataset_query import DataDiscoveryCLI
 
 if __name__ == "__main__":
@@ -55,11 +55,17 @@ if __name__ == "__main__":
         query = dataset_configs[sample]["query"]
         if not query:
             print(f"No available query for: {sample}")
-        elif str(query).endswith("/USER"):
-            # USER (phys03) datasets are fetched outside singularity via make_signal_filesets.py
-            print(f"Skipping USER dataset (handled by make_signal_filesets.py): {sample}")
+        elif is_private_query(query):
+            # USER (phys03) and local signal datasets are added by make_signal_filesets.py
+            print(f"Skipping private dataset (handled by make_signal_filesets.py): {sample}")
         else:
             das_queries[sample] = query
+
+    fileset_file = filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
+    if not das_queries:
+        # only private samples requested: do_save below would overwrite the fileset with {}
+        print("No DAS samples to query")
+        raise SystemExit(0)
 
     # create a dataset_definition dict for each year
     dataset_definition = {}
@@ -78,4 +84,14 @@ if __name__ == "__main__":
         query_results_strategy="all",
         replicas_strategy="round-robin",
     )
-    ddc.do_save(filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json")
+    # do_save rewrites the whole file: keep the entries of the samples not queried now
+    # (e.g. signal samples added by make_signal_filesets.py)
+    if fileset_file.exists():
+        with open(fileset_file, "r") as f:
+            old_fileset = json.load(f)
+        for key, entry in old_fileset.items():
+            if not isinstance(entry, dict) or key in ddc.final_output:
+                continue
+            if entry.get("metadata", {}).get("short_name") not in das_queries:
+                ddc.final_output[key] = entry
+    ddc.do_save(fileset_file)

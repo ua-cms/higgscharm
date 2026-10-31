@@ -53,6 +53,13 @@ def divide_list(lst: list, nfiles: int = 20) -> list:
     return result
 
 
+def is_private_query(query) -> bool:
+    """USER (phys03) datasets and local *_signal.json lists: built by make_signal_filesets.py,
+    not by the rucio query in make_filesets.py."""
+    query = str(query or "")
+    return bool(query) and (query.endswith("/USER") or "/" not in query)
+
+
 def get_nano_version(year: str):
     if year.startswith("201"):
         nano_version = "9"

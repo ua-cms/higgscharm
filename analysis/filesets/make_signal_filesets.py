@@ -3,7 +3,7 @@ import json
 import argparse
 import subprocess
 from pathlib import Path
-from analysis.filesets.utils import get_nano_version, get_dataset_config
+from analysis.filesets.utils import get_nano_version, get_dataset_config, is_private_query
 
 
 def get_signal_fileset(query):
@@ -54,6 +54,12 @@ if __name__ == "__main__":
         type=str,
         help="site to read the signal samples from",
     )
+    parser.add_argument(
+        "--samples",
+        nargs="*",
+        type=str,
+        help="(Optional) signal samples to add. If omitted, all signal samples are added",
+    )
     args = parser.parse_args()
 
     # open dataset configs
@@ -63,19 +69,35 @@ if __name__ == "__main__":
     nano_version = get_nano_version(args.year)
     filesets_dir = Path.cwd() / "analysis" / "filesets"
     fileset_file = filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
-    with open(fileset_file, "r") as f:
-        built_dataset = json.load(f)
+    built_dataset = {}
+    if fileset_file.exists():
+        with open(fileset_file, "r") as f:
+            built_dataset = json.load(f)
+
+    def add_sample(key, sample, files):
+        # same entry format as DataDiscoveryCLI.do_save (read by fileset_checker / submit_condor.py)
+        for old_key in [
+            k for k, v in built_dataset.items()
+            if k == sample or (isinstance(v, dict) and v.get("metadata", {}).get("short_name") == sample)
+        ]:
+            del built_dataset[old_key]
+        built_dataset[key] = {
+            "files": {f: "Events" for f in files},
+            "metadata": {"short_name": sample},
+        }
 
     for sample in list(dataset_configs.keys()):
-        if dataset_configs[sample]["era"] == "signal":
-            query = dataset_configs[sample]["query"]
+        if args.samples and sample not in args.samples:
+            continue
+        query = dataset_configs[sample]["query"]
+        if is_private_query(query):
             if len(query.split("/")) != 1:
                 # from DAS queries
                 files = get_signal_fileset(query)
                 if files:
                     files = [f"{args.site}/{f}" for f in files]
                     print(f"Adding sample {sample}")
-                    built_dataset[sample] = files
+                    add_sample(f"/{query}", sample, files)
                 else:
                     print(f"query for '{sample}' sample did not work!")
             else:
@@ -93,8 +115,11 @@ if __name__ == "__main__":
                         print(f"Adding signal sample '{sample}'")
                         local_samples = []
                         for root_file in signal_json[sample]:
-                            local_samples.append(f"root://eosuser.cern.ch/{root_file}")
-                        built_dataset.update({sample: local_samples})
+                            # the *_signal.json files already store xrootd urls
+                            if not root_file.startswith("root://"):
+                                root_file = f"root://eosuser.cern.ch/{root_file}"
+                            local_samples.append(root_file)
+                        add_sample(sample, sample, local_samples)
                 else:
                     print(f"File '{signal_file}_signal.json' was not found!")
 
