@@ -88,11 +88,22 @@ COL_MAP_2P2F = {
     'cjets_h_dphi_2p2f': 'cjets_h_dphi_inclusive',
 }
 
+# 2026-10-28: lepton ID/iso/charge (and the Z2 lepton phi) were never mapped, so the scorer zero-filled
+# lepton_pfRelIso03_all / sip3d / mvaHZZIso / is_tight / isPFcand / highPtId (and charge) for every Z+X event.
+# CR names: z1_l1_<x>_<cat>, z1_l2_<x>_<cat>, l3_<x>_<cat>, l4_<x>_<cat> -> scorer names z1_l1_<X>, ..., z2_l2_<X>.
+_LEP_ATTR = {'pt': 'pt', 'eta': 'eta', 'phi': 'phi', 'charge': 'charge', 'pfreliso03all': 'pfRelIso03_all',
+             'sip3d': 'sip3d', 'mvahzziso': 'mvaHZZIso', 'istight': 'is_tight', 'ispfcand': 'isPFcand',
+             'highptid': 'highPtId'}
+for _cat, _map in (('3p1f', COL_MAP_3P1F), ('2p2f', COL_MAP_2P2F)):
+    for _src, _dst in (('z1_l1', 'z1_l1'), ('z1_l2', 'z1_l2'), ('l3', 'z2_l1'), ('l4', 'z2_l2')):
+        for _a, _b in _LEP_ATTR.items():
+            _map.setdefault(f'{_src}_{_a}_{_cat}', f'{_dst}_{_b}')
+
 # Columns that are the same name in both CR and MVA inputs
 PASSTHROUGH = [
     'jet_multiplicity', 'n_cjet', 'jet_ht', 'cjet_HT', 'nSV',
-    'jet_pt', 'jet_eta', 'jet_btagPNetB', 'jet_btagPNetCvL', 'jet_btagPNetCvB',
-    'cjets_pt', 'cjets_eta', 'cjets_btagPNetB', 'cjets_btagPNetCvL', 'cjets_btagPNetCvB',
+    'jet_pt', 'jet_eta', 'jet_phi', 'jet_btagPNetB', 'jet_btagPNetCvL', 'jet_btagPNetCvB',
+    'cjets_pt', 'cjets_eta', 'cjets_phi', 'cjets_btagPNetB', 'cjets_btagPNetCvL', 'cjets_btagPNetCvB',
     'weight_nominal', 'weight_zx', 'zx_weight', 'zx_sign',
 ]
 
@@ -109,8 +120,8 @@ PASSTHROUGH = [
 # this reconstructs the true per-jet array from those indexed columns so
 # the existing (correct) array-handling path in _get_col actually fires.
 JET_ARRAY_COLS = [
-    'jet_pt', 'jet_eta', 'jet_btagPNetB', 'jet_btagPNetCvL', 'jet_btagPNetCvB',
-    'cjets_pt', 'cjets_eta', 'cjets_btagPNetB', 'cjets_btagPNetCvL', 'cjets_btagPNetCvB',
+    'jet_pt', 'jet_eta', 'jet_phi', 'jet_btagPNetB', 'jet_btagPNetCvL', 'jet_btagPNetCvB',
+    'cjets_pt', 'cjets_eta', 'cjets_phi', 'cjets_btagPNetB', 'cjets_btagPNetCvL', 'cjets_btagPNetCvB',
 ]
 N_JET_SLOTS = 3
 
