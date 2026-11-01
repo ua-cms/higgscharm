@@ -1,0 +1,10 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_lepss/card.sh
+arguments = $(model)
+output = card.$(model).$(ClusterId).out
+error = card.$(model).$(ClusterId).err
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 12
+request_memory = 24000
++JobFlavour = "tomorrow"
+queue

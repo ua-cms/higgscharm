@@ -1,0 +1,8 @@
+# 2026-10-28 eve: redo the massinvlep lambda 0.1 2D cat40 (first build failed at 21:30 during the EOS quota overflow)
+JOB DUMP dump_model.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d
+VARS DUMP model="massinvlepdisco0p1"
+RETRY DUMP 1
+JOB OPT opt_layouts.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d
+VARS OPT model="massinvlepdisco0p1"
+RETRY OPT 1
+PARENT DUMP CHILD OPT

@@ -1,0 +1,10 @@
+JOB WAIT wait_scored.sub
+VARS WAIT model="massinvlep"
+JOB DUMP dump_model.sub
+VARS DUMP model="massinvlep"
+RETRY DUMP 1
+JOB OPT opt_layouts.sub
+VARS OPT model="massinvlep"
+RETRY OPT 1
+PARENT WAIT CHILD DUMP
+PARENT DUMP CHILD OPT

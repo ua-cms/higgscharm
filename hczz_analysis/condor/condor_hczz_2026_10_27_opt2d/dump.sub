@@ -1,0 +1,11 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d/dump.sh
+arguments = nom4l9016
+output = dump.$(ClusterId).out
+error = dump.$(ClusterId).err
+log = dump.$(ClusterId).log
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 12
+request_memory = 24000
++JobFlavour = "workday"
+queue

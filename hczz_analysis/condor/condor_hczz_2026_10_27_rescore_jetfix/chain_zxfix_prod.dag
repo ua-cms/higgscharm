@@ -1,0 +1,7 @@
+# 2026-10-29: prod 1D optbin10 with the jet-kinematics-fixed Z+X (scoring v1_jetfix reused). Old result: nom4l_card/prod_jetfix_zxnojet (443).
+JOB ZX zx.sub
+VARS ZX model="prod"
+RETRY ZX 1
+JOB CARD card.sub
+VARS CARD model="prod"
+PARENT ZX CHILD CARD

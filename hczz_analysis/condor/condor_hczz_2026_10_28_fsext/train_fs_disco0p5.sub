@@ -1,0 +1,15 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_28_fsext/train_fs.sh
+arguments = $(cfg) $(tag)
+output = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_28_fsext/train_fs.$(tag).$(ClusterId).out
+error = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_28_fsext/train_fs.$(tag).$(ClusterId).err
+log = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_28_fsext/train_fs.$(ClusterId).log
+MY.SendCredential = True
+getenv = False
+request_GPUs = 1
+request_CPUs = 8
+request_memory = 32000
+requirements = regexp("H100", TARGET.GPUs_DeviceName) && (TARGET.OpSysAndVer =?= "AlmaLinux9")
++JobFlavour = "tomorrow"
+queue cfg, tag from (
+  hc_zzto4l_mw_training_4class_fsext_disco0p5 fsextdisco0p5
+)

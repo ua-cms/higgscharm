@@ -1,0 +1,10 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d/wait_scored.sh
+arguments = $(model)
+output = waitscored.$(model).$(ClusterId).out
+error = waitscored.$(model).$(ClusterId).err
+log = waitscored.$(ClusterId).log
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 1
++JobFlavour = "tomorrow"
+queue

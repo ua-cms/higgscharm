@@ -1,0 +1,11 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d/opt_layouts.sh
+arguments = $(model)
+output = optlayouts.$(model).$(ClusterId).out
+error = optlayouts.$(model).$(ClusterId).err
+log = optlayouts.$(ClusterId).log
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 8
+request_memory = 24000
++JobFlavour = "tomorrow"
+queue

@@ -1,0 +1,10 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_lepss/zxbuild.sh
+arguments = 
+output = zxbuild.$(ClusterId).out
+error = zxbuild.$(ClusterId).err
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 4
+request_memory = 16000
++JobFlavour = "workday"
+queue

@@ -1,0 +1,34 @@
+JOB WAIT wait.sub
+VARS WAIT model="disco50"
+RETRY WAIT 1
+JOB S_2022preEE_bkg score.sub
+VARS S_2022preEE_bkg model="disco50" era="2022preEE" kind="bkg"
+RETRY S_2022preEE_bkg 1
+JOB S_2022preEE_sig score.sub
+VARS S_2022preEE_sig model="disco50" era="2022preEE" kind="sig"
+RETRY S_2022preEE_sig 1
+JOB S_2022postEE_bkg score.sub
+VARS S_2022postEE_bkg model="disco50" era="2022postEE" kind="bkg"
+RETRY S_2022postEE_bkg 1
+JOB S_2022postEE_sig score.sub
+VARS S_2022postEE_sig model="disco50" era="2022postEE" kind="sig"
+RETRY S_2022postEE_sig 1
+JOB S_2023preBPix_bkg score.sub
+VARS S_2023preBPix_bkg model="disco50" era="2023preBPix" kind="bkg"
+RETRY S_2023preBPix_bkg 1
+JOB S_2023preBPix_sig score.sub
+VARS S_2023preBPix_sig model="disco50" era="2023preBPix" kind="sig"
+RETRY S_2023preBPix_sig 1
+JOB S_2023postBPix_bkg score.sub
+VARS S_2023postBPix_bkg model="disco50" era="2023postBPix" kind="bkg"
+RETRY S_2023postBPix_bkg 1
+JOB S_2023postBPix_sig score.sub
+VARS S_2023postBPix_sig model="disco50" era="2023postBPix" kind="sig"
+RETRY S_2023postBPix_sig 1
+JOB ZX zx.sub
+VARS ZX model="disco50"
+RETRY ZX 1
+JOB CARD card.sub
+VARS CARD model="disco50"
+PARENT WAIT CHILD  S_2022preEE_bkg S_2022preEE_sig S_2022postEE_bkg S_2022postEE_sig S_2023preBPix_bkg S_2023preBPix_sig S_2023postBPix_bkg S_2023postBPix_sig ZX
+PARENT  S_2022preEE_bkg S_2022preEE_sig S_2022postEE_bkg S_2022postEE_sig S_2023preBPix_bkg S_2023preBPix_sig S_2023postBPix_bkg S_2023postBPix_sig ZX CHILD CARD

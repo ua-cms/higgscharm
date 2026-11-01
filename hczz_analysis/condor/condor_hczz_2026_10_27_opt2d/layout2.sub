@@ -1,0 +1,11 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d/layout.sh
+arguments = $(args)
+output = layout.$(name).$(ClusterId).out
+error = layout.$(name).$(ClusterId).err
+log = layout.$(ClusterId).log
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 8
+request_memory = 20000
++JobFlavour = "workday"
+queue name, args from layouts2.txt

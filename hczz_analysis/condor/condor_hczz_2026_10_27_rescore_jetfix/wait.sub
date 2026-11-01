@@ -1,0 +1,9 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix/wait_train.sh
+arguments = $(model)
+output = wait.$(model).$(ClusterId).out
+error = wait.$(model).$(ClusterId).err
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 1
++JobFlavour = "tomorrow"
+queue

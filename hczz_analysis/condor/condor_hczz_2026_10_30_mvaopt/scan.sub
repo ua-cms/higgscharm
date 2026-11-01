@@ -1,0 +1,22 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/scan.sh
+arguments = $(tag) $(hid) $(lay) $(drop) $(lr) $(ep)
+output = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/scan.$(tag).$(ClusterId).out
+error = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/scan.$(tag).$(ClusterId).err
+log = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/scan.$(ClusterId).log
+MY.SendCredential = True
+getenv = False
+request_GPUs = 1
+request_CPUs = 8
+request_memory = 32000
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
++JobFlavour = "tomorrow"
+queue tag, hid, lay, drop, lr, ep from (
+  base64x2d04 64 2 0.4 0.0005 40
+  h128l3d02 128 3 0.2 0.0005 40
+  h256l3d02 256 3 0.2 0.0005 40
+  h256l4d01 256 4 0.1 0.0005 40
+  h512l4d02 512 4 0.2 0.0005 40
+  h128l2d01 128 2 0.1 0.0005 40
+  h256l3d02lr1e3 256 3 0.2 0.001 40
+  h256l3d02ep80 256 3 0.2 0.0005 80
+)

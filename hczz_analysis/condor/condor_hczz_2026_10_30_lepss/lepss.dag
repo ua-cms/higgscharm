@@ -1,0 +1,105 @@
+# 2026-10-30 lepss chain: Z+X build, scoring (3 models), sumw, Z+X inference, 1D card (prod), 2D + channel-split (decorrelated)
+JOB ZXB zxbuild.sub
+RETRY ZXB 1
+JOB SUMW sumw.sub
+RETRY SUMW 1
+JOB S_prod_2022preEE_bkg score.sub
+VARS S_prod_2022preEE_bkg model="prod" era="2022preEE" kind="bkg"
+RETRY S_prod_2022preEE_bkg 1
+JOB S_prod_2022preEE_sig score.sub
+VARS S_prod_2022preEE_sig model="prod" era="2022preEE" kind="sig"
+RETRY S_prod_2022preEE_sig 1
+JOB S_prod_2022postEE_bkg score.sub
+VARS S_prod_2022postEE_bkg model="prod" era="2022postEE" kind="bkg"
+RETRY S_prod_2022postEE_bkg 1
+JOB S_prod_2022postEE_sig score.sub
+VARS S_prod_2022postEE_sig model="prod" era="2022postEE" kind="sig"
+RETRY S_prod_2022postEE_sig 1
+JOB S_prod_2023preBPix_bkg score.sub
+VARS S_prod_2023preBPix_bkg model="prod" era="2023preBPix" kind="bkg"
+RETRY S_prod_2023preBPix_bkg 1
+JOB S_prod_2023preBPix_sig score.sub
+VARS S_prod_2023preBPix_sig model="prod" era="2023preBPix" kind="sig"
+RETRY S_prod_2023preBPix_sig 1
+JOB S_prod_2023postBPix_bkg score.sub
+VARS S_prod_2023postBPix_bkg model="prod" era="2023postBPix" kind="bkg"
+RETRY S_prod_2023postBPix_bkg 1
+JOB S_prod_2023postBPix_sig score.sub
+VARS S_prod_2023postBPix_sig model="prod" era="2023postBPix" kind="sig"
+RETRY S_prod_2023postBPix_sig 1
+JOB ZX_prod zx.sub
+VARS ZX_prod model="prod"
+RETRY ZX_prod 1
+PARENT ZXB CHILD ZX_prod
+JOB CARD_prod card.sub
+VARS CARD_prod model="prod"
+PARENT  S_prod_2022preEE_bkg S_prod_2022preEE_sig S_prod_2022postEE_bkg S_prod_2022postEE_sig S_prod_2023preBPix_bkg S_prod_2023preBPix_sig S_prod_2023postBPix_bkg S_prod_2023postBPix_sig ZX_prod SUMW CHILD CARD_prod
+PARENT  S_prod_2022preEE_bkg S_prod_2022preEE_sig S_prod_2022postEE_bkg S_prod_2022postEE_sig S_prod_2023preBPix_bkg S_prod_2023preBPix_sig S_prod_2023postBPix_bkg S_prod_2023postBPix_sig CHILD SUMW
+JOB S_massinvlepdisco0p5_2022preEE_bkg score.sub
+VARS S_massinvlepdisco0p5_2022preEE_bkg model="massinvlepdisco0p5" era="2022preEE" kind="bkg"
+RETRY S_massinvlepdisco0p5_2022preEE_bkg 1
+JOB S_massinvlepdisco0p5_2022preEE_sig score.sub
+VARS S_massinvlepdisco0p5_2022preEE_sig model="massinvlepdisco0p5" era="2022preEE" kind="sig"
+RETRY S_massinvlepdisco0p5_2022preEE_sig 1
+JOB S_massinvlepdisco0p5_2022postEE_bkg score.sub
+VARS S_massinvlepdisco0p5_2022postEE_bkg model="massinvlepdisco0p5" era="2022postEE" kind="bkg"
+RETRY S_massinvlepdisco0p5_2022postEE_bkg 1
+JOB S_massinvlepdisco0p5_2022postEE_sig score.sub
+VARS S_massinvlepdisco0p5_2022postEE_sig model="massinvlepdisco0p5" era="2022postEE" kind="sig"
+RETRY S_massinvlepdisco0p5_2022postEE_sig 1
+JOB S_massinvlepdisco0p5_2023preBPix_bkg score.sub
+VARS S_massinvlepdisco0p5_2023preBPix_bkg model="massinvlepdisco0p5" era="2023preBPix" kind="bkg"
+RETRY S_massinvlepdisco0p5_2023preBPix_bkg 1
+JOB S_massinvlepdisco0p5_2023preBPix_sig score.sub
+VARS S_massinvlepdisco0p5_2023preBPix_sig model="massinvlepdisco0p5" era="2023preBPix" kind="sig"
+RETRY S_massinvlepdisco0p5_2023preBPix_sig 1
+JOB S_massinvlepdisco0p5_2023postBPix_bkg score.sub
+VARS S_massinvlepdisco0p5_2023postBPix_bkg model="massinvlepdisco0p5" era="2023postBPix" kind="bkg"
+RETRY S_massinvlepdisco0p5_2023postBPix_bkg 1
+JOB S_massinvlepdisco0p5_2023postBPix_sig score.sub
+VARS S_massinvlepdisco0p5_2023postBPix_sig model="massinvlepdisco0p5" era="2023postBPix" kind="sig"
+RETRY S_massinvlepdisco0p5_2023postBPix_sig 1
+JOB ZX_massinvlepdisco0p5 zx.sub
+VARS ZX_massinvlepdisco0p5 model="massinvlepdisco0p5"
+RETRY ZX_massinvlepdisco0p5 1
+PARENT ZXB CHILD ZX_massinvlepdisco0p5
+JOB CARD_massinvlepdisco0p5 card.sub
+VARS CARD_massinvlepdisco0p5 model="massinvlepdisco0p5"
+PARENT  S_massinvlepdisco0p5_2022preEE_bkg S_massinvlepdisco0p5_2022preEE_sig S_massinvlepdisco0p5_2022postEE_bkg S_massinvlepdisco0p5_2022postEE_sig S_massinvlepdisco0p5_2023preBPix_bkg S_massinvlepdisco0p5_2023preBPix_sig S_massinvlepdisco0p5_2023postBPix_bkg S_massinvlepdisco0p5_2023postBPix_sig ZX_massinvlepdisco0p5 SUMW CHILD CARD_massinvlepdisco0p5
+JOB TWOD_massinvlepdisco0p5 twod.sub
+VARS TWOD_massinvlepdisco0p5 model="massinvlepdisco0p5"
+PARENT  S_massinvlepdisco0p5_2022preEE_bkg S_massinvlepdisco0p5_2022preEE_sig S_massinvlepdisco0p5_2022postEE_bkg S_massinvlepdisco0p5_2022postEE_sig S_massinvlepdisco0p5_2023preBPix_bkg S_massinvlepdisco0p5_2023preBPix_sig S_massinvlepdisco0p5_2023postBPix_bkg S_massinvlepdisco0p5_2023postBPix_sig ZX_massinvlepdisco0p5 SUMW CHILD TWOD_massinvlepdisco0p5
+JOB S_fsextv2disco1_2022preEE_bkg score.sub
+VARS S_fsextv2disco1_2022preEE_bkg model="fsextv2disco1" era="2022preEE" kind="bkg"
+RETRY S_fsextv2disco1_2022preEE_bkg 1
+JOB S_fsextv2disco1_2022preEE_sig score.sub
+VARS S_fsextv2disco1_2022preEE_sig model="fsextv2disco1" era="2022preEE" kind="sig"
+RETRY S_fsextv2disco1_2022preEE_sig 1
+JOB S_fsextv2disco1_2022postEE_bkg score.sub
+VARS S_fsextv2disco1_2022postEE_bkg model="fsextv2disco1" era="2022postEE" kind="bkg"
+RETRY S_fsextv2disco1_2022postEE_bkg 1
+JOB S_fsextv2disco1_2022postEE_sig score.sub
+VARS S_fsextv2disco1_2022postEE_sig model="fsextv2disco1" era="2022postEE" kind="sig"
+RETRY S_fsextv2disco1_2022postEE_sig 1
+JOB S_fsextv2disco1_2023preBPix_bkg score.sub
+VARS S_fsextv2disco1_2023preBPix_bkg model="fsextv2disco1" era="2023preBPix" kind="bkg"
+RETRY S_fsextv2disco1_2023preBPix_bkg 1
+JOB S_fsextv2disco1_2023preBPix_sig score.sub
+VARS S_fsextv2disco1_2023preBPix_sig model="fsextv2disco1" era="2023preBPix" kind="sig"
+RETRY S_fsextv2disco1_2023preBPix_sig 1
+JOB S_fsextv2disco1_2023postBPix_bkg score.sub
+VARS S_fsextv2disco1_2023postBPix_bkg model="fsextv2disco1" era="2023postBPix" kind="bkg"
+RETRY S_fsextv2disco1_2023postBPix_bkg 1
+JOB S_fsextv2disco1_2023postBPix_sig score.sub
+VARS S_fsextv2disco1_2023postBPix_sig model="fsextv2disco1" era="2023postBPix" kind="sig"
+RETRY S_fsextv2disco1_2023postBPix_sig 1
+JOB ZX_fsextv2disco1 zx.sub
+VARS ZX_fsextv2disco1 model="fsextv2disco1"
+RETRY ZX_fsextv2disco1 1
+PARENT ZXB CHILD ZX_fsextv2disco1
+JOB CARD_fsextv2disco1 card.sub
+VARS CARD_fsextv2disco1 model="fsextv2disco1"
+PARENT  S_fsextv2disco1_2022preEE_bkg S_fsextv2disco1_2022preEE_sig S_fsextv2disco1_2022postEE_bkg S_fsextv2disco1_2022postEE_sig S_fsextv2disco1_2023preBPix_bkg S_fsextv2disco1_2023preBPix_sig S_fsextv2disco1_2023postBPix_bkg S_fsextv2disco1_2023postBPix_sig ZX_fsextv2disco1 SUMW CHILD CARD_fsextv2disco1
+JOB TWOD_fsextv2disco1 twod.sub
+VARS TWOD_fsextv2disco1 model="fsextv2disco1"
+PARENT  S_fsextv2disco1_2022preEE_bkg S_fsextv2disco1_2022preEE_sig S_fsextv2disco1_2022postEE_bkg S_fsextv2disco1_2022postEE_sig S_fsextv2disco1_2023preBPix_bkg S_fsextv2disco1_2023preBPix_sig S_fsextv2disco1_2023postBPix_bkg S_fsextv2disco1_2023postBPix_sig ZX_fsextv2disco1 SUMW CHILD TWOD_fsextv2disco1

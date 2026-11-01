@@ -1,0 +1,13 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_train_decor/roc_old.sh
+arguments = $(cfg) $(dt) $(tt) $(tv)
+output = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_train_decor/rocold.$(tt).$(tv).$(ClusterId).out
+error = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_train_decor/rocold.$(tt).$(tv).$(ClusterId).err
+log = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_train_decor/rocold.$(ClusterId).log
+MY.SendCredential = True
+getenv = False
+request_GPUs = 1
+request_CPUs = 8
+request_memory = 32000
+requirements = regexp("H100", TARGET.GPUs_DeviceName) && (TARGET.OpSysAndVer =?= "AlmaLinux9")
++JobFlavour = "tomorrow"
+queue
