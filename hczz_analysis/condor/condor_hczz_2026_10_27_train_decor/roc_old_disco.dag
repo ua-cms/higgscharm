@@ -1,0 +1,40 @@
+JOB W_0p1 wait.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix
+VARS W_0p1 model="massinvlepdisco0p1"
+JOB R_0p1_prod roc_old_node.sub
+VARS R_0p1_prod cfg="hc_zzto4l_mw_training_4class_massinvlep_disco0p1" dt="hcZZ_big4class_massinvlepdisco0p1_20261027" tt="train_loose_ymassbal2_massinvlepdisco0p1_20261027" tv="oldtest_prod_20261028"
+RETRY R_0p1_prod 1
+PARENT W_0p1 CHILD R_0p1_prod
+JOB R_0p1_clean roc_old_node.sub
+VARS R_0p1_clean cfg="hc_zzto4l_mw_training_4class_massinvlep_disco0p1" dt="hcZZ_big4class_massinvlepdisco0p1_20261027" tt="train_loose_ymassbal2_massinvlepdisco0p1_20261027" tv="oldtest_clean_20261028"
+RETRY R_0p1_clean 1
+PARENT W_0p1 CHILD R_0p1_clean
+JOB W_0p5 wait.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix
+VARS W_0p5 model="massinvlepdisco0p5"
+JOB R_0p5_prod roc_old_node.sub
+VARS R_0p5_prod cfg="hc_zzto4l_mw_training_4class_massinvlep_disco0p5" dt="hcZZ_big4class_massinvlepdisco0p5_20261027" tt="train_loose_ymassbal2_massinvlepdisco0p5_20261027" tv="oldtest_prod_20261028"
+RETRY R_0p5_prod 1
+PARENT W_0p5 CHILD R_0p5_prod
+JOB R_0p5_clean roc_old_node.sub
+VARS R_0p5_clean cfg="hc_zzto4l_mw_training_4class_massinvlep_disco0p5" dt="hcZZ_big4class_massinvlepdisco0p5_20261027" tt="train_loose_ymassbal2_massinvlepdisco0p5_20261027" tv="oldtest_clean_20261028"
+RETRY R_0p5_clean 1
+PARENT W_0p5 CHILD R_0p5_clean
+JOB W_2 wait.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix
+VARS W_2 model="massinvlepdisco2"
+JOB R_2_prod roc_old_node.sub
+VARS R_2_prod cfg="hc_zzto4l_mw_training_4class_massinvlep_disco2" dt="hcZZ_big4class_massinvlepdisco2_20261027" tt="train_loose_ymassbal2_massinvlepdisco2_20261027" tv="oldtest_prod_20261028"
+RETRY R_2_prod 1
+PARENT W_2 CHILD R_2_prod
+JOB R_2_clean roc_old_node.sub
+VARS R_2_clean cfg="hc_zzto4l_mw_training_4class_massinvlep_disco2" dt="hcZZ_big4class_massinvlepdisco2_20261027" tt="train_loose_ymassbal2_massinvlepdisco2_20261027" tv="oldtest_clean_20261028"
+RETRY R_2_clean 1
+PARENT W_2 CHILD R_2_clean
+JOB W_10 wait.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix
+VARS W_10 model="massinvlepdisco10"
+JOB R_10_prod roc_old_node.sub
+VARS R_10_prod cfg="hc_zzto4l_mw_training_4class_massinvlep_disco10" dt="hcZZ_big4class_massinvlepdisco10_20261027" tt="train_loose_ymassbal2_massinvlepdisco10_20261027" tv="oldtest_prod_20261028"
+RETRY R_10_prod 1
+PARENT W_10 CHILD R_10_prod
+JOB R_10_clean roc_old_node.sub
+VARS R_10_clean cfg="hc_zzto4l_mw_training_4class_massinvlep_disco10" dt="hcZZ_big4class_massinvlepdisco10_20261027" tt="train_loose_ymassbal2_massinvlepdisco10_20261027" tv="oldtest_clean_20261028"
+RETRY R_10_clean 1
+PARENT W_10 CHILD R_10_clean

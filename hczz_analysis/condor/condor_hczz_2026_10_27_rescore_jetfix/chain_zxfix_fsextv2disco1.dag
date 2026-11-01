@@ -1,0 +1,15 @@
+# 2026-10-29 (user): fsextv2disco1 with the jet-kinematics-fixed Z+X (scoring reused). Old results: {opt2d,nom4l_card}/fsextv2disco1_zxnojet (2D 447.5).
+JOB ZX zx.sub
+VARS ZX model="fsextv2disco1"
+RETRY ZX 1
+JOB CARD card.sub
+VARS CARD model="fsextv2disco1"
+PARENT ZX CHILD CARD
+JOB DUMP dump_model.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d
+VARS DUMP model="fsextv2disco1"
+RETRY DUMP 1
+JOB OPT opt_layouts.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d
+VARS OPT model="fsextv2disco1"
+RETRY OPT 1
+PARENT ZX CHILD DUMP
+PARENT DUMP CHILD OPT

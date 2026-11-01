@@ -1,0 +1,15 @@
+# 2026-10-28 eve (user): rerun prod with the per-jet Z+X (old results renamed *_oldzx); scoring reused
+JOB ZX zx.sub
+VARS ZX model="prod"
+RETRY ZX 1
+JOB CARD card.sub
+VARS CARD model="prod"
+PARENT ZX CHILD CARD
+JOB DUMP dump_model.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d
+VARS DUMP model="prod"
+RETRY DUMP 1
+JOB OPT opt_layouts.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d
+VARS OPT model="prod"
+RETRY OPT 1
+PARENT ZX CHILD DUMP
+PARENT DUMP CHILD OPT

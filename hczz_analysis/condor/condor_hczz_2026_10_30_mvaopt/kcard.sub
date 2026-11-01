@@ -1,0 +1,15 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/kcard.sh
+arguments = $(model) $(ktag) $(kappa)
+output = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/kcard.$(ktag).$(ClusterId).out
+error = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/kcard.$(ktag).$(ClusterId).err
+log = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/kcard.$(ClusterId).log
+MY.SendCredential = True
+getenv = False
+request_CPUs = 12
+request_memory = 24000
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
++JobFlavour = "tomorrow"
+queue model, ktag, kappa from (
+  fsextv2disco1 pS none
+  fsextv2disco1 k40_15_45 0.40,0.15,0.45
+)

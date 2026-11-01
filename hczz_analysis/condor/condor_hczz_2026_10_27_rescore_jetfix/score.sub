@@ -1,0 +1,10 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix/score.sh
+arguments = $(model) $(era) $(kind)
+output = score.$(model).$(era).$(kind).$(ClusterId).out
+error = score.$(model).$(era).$(kind).$(ClusterId).err
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 8
+request_memory = 16000
++JobFlavour = "workday"
+queue

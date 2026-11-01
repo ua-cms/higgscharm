@@ -1,0 +1,12 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/zxscan.sh
+arguments = base64x2d04 h128l3d02 h256l3d02 h256l4d01 h512l4d02 h128l2d01 h256l3d02lr1e3 h256l3d02ep80
+output = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/zxscan.$(ClusterId).out
+error = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/zxscan.$(ClusterId).err
+log = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/zxscan.$(ClusterId).log
+MY.SendCredential = True
+getenv = False
+request_CPUs = 2
+request_memory = 8000
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
++JobFlavour = "testmatch"
+queue

@@ -1,0 +1,10 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_lepss/zx.sh
+arguments = $(model)
+output = zx.$(model).$(ClusterId).out
+error = zx.$(model).$(ClusterId).err
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 2
+request_memory = 8000
++JobFlavour = "longlunch"
+queue

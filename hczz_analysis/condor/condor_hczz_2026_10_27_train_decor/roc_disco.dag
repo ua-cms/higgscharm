@@ -1,0 +1,24 @@
+JOB W_0p1 wait.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix
+VARS W_0p1 model="massinvlepdisco0p1"
+JOB R_0p1 roc_node.sub
+VARS R_0p1 cfg="hc_zzto4l_mw_training_4class_massinvlep_disco0p1" dt="hcZZ_big4class_massinvlepdisco0p1_20261027" tt="train_loose_ymassbal2_massinvlepdisco0p1_20261027"
+RETRY R_0p1 1
+PARENT W_0p1 CHILD R_0p1
+JOB W_0p5 wait.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix
+VARS W_0p5 model="massinvlepdisco0p5"
+JOB R_0p5 roc_node.sub
+VARS R_0p5 cfg="hc_zzto4l_mw_training_4class_massinvlep_disco0p5" dt="hcZZ_big4class_massinvlepdisco0p5_20261027" tt="train_loose_ymassbal2_massinvlepdisco0p5_20261027"
+RETRY R_0p5 1
+PARENT W_0p5 CHILD R_0p5
+JOB W_2 wait.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix
+VARS W_2 model="massinvlepdisco2"
+JOB R_2 roc_node.sub
+VARS R_2 cfg="hc_zzto4l_mw_training_4class_massinvlep_disco2" dt="hcZZ_big4class_massinvlepdisco2_20261027" tt="train_loose_ymassbal2_massinvlepdisco2_20261027"
+RETRY R_2 1
+PARENT W_2 CHILD R_2
+JOB W_10 wait.sub DIR /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_rescore_jetfix
+VARS W_10 model="massinvlepdisco10"
+JOB R_10 roc_node.sub
+VARS R_10 cfg="hc_zzto4l_mw_training_4class_massinvlep_disco10" dt="hcZZ_big4class_massinvlepdisco10_20261027" tt="train_loose_ymassbal2_massinvlepdisco10_20261027"
+RETRY R_10 1
+PARENT W_10 CHILD R_10

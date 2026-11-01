@@ -1,0 +1,3 @@
+# 2026-10-28 eve: fsextdisco0p1 validation (fixed validate_scoring.py: set-based alignment for the new inputs) + sculpting, NO 1D card (user: 2D only)
+JOB CARD card.sub
+VARS CARD model="fsextdisco0p1"

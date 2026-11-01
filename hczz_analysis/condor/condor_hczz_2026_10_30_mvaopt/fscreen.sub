@@ -1,0 +1,11 @@
+executable = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/fscreen.sh
+output = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/fscreen.$(ClusterId).out
+error = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/fscreen.$(ClusterId).err
+log = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_30_mvaopt/fscreen.$(ClusterId).log
+MY.SendCredential = True
+getenv = False
+request_CPUs = 8
+request_memory = 24000
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
++JobFlavour = "workday"
+queue

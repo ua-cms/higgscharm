@@ -1,0 +1,10 @@
+executable = /eos/user/s/snandaku/Analysis/decorrelation_2026_10_27/ht_leak/run.sh
+output = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d/htleak.$(ClusterId).out
+error = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d/htleak.$(ClusterId).err
+log = /afs/cern.ch/user/s/snandaku/condor_hczz_2026_10_27_opt2d/htleak.$(ClusterId).log
+MY.SendCredential = True
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
+request_CPUs = 8
+request_memory = 16000
++JobFlavour = "workday"
+queue
