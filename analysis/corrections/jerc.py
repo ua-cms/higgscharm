@@ -264,6 +264,29 @@ def get_corr_inputs(input_dict, corr_obj, jersyst="nom"):
     return input_values
 
 
+def eval_jer_sf(cset, jrname, j, jersyst="nom"):
+    """JER SF for 'nom'/'up'/'down', for both JME json formats.
+
+    Before 2026-06 the ScaleFactor took a "systematic" string input. The 2026-06 jsons
+    (JRV2 for 2022, JRV3 for 2023, 2025) have no such input and a separate
+    SFUncertainty. Passing jersyst to the new format through get_corr_inputs is
+    silently ignored, i.e. JER up = down = nominal.
+    The SFUncertainty is ABSOLUTE: checked 2026-11-01 against the old-format
+    JRV1 files (same nominal SF), its 10/50/90% quantiles equal those of the old
+    (up - nom) exactly, so up/down = SF +/- unc. SF * (1 +/- unc) (JME changes.md,
+    coffea-2026 jec.py) would inflate the variation by the SF (~15-25%).
+    """
+    jer_sf = cset[f"{jrname}_ScaleFactor_AK4PFPuppi"]
+    if any(i.name == "systematic" for i in jer_sf.inputs):
+        return jer_sf.evaluate(*get_corr_inputs(j, jer_sf, jersyst=jersyst))
+    sf_nom = jer_sf.evaluate(*get_corr_inputs(j, jer_sf))
+    if jersyst == "nom":
+        return sf_nom
+    jer_unc = cset[f"{jrname}_SFUncertainty_AK4PFPuppi"]
+    sf_unc = jer_unc.evaluate(*get_corr_inputs(j, jer_unc))
+    return sf_nom + sf_unc if jersyst == "up" else sf_nom - sf_unc
+
+
 def get_jec_data_tag(params, dataset, year):
     """JEC tag for a data dataset from a jec_params_correctionlib.yaml year block.
 
@@ -363,15 +386,13 @@ def apply_jerc_correctionlib(events, year, dataset):
 
     ## JER
     if is_mc:
-        jer_sf = cset[f"{jrname}_ScaleFactor_AK4PFPuppi"]
         jer_ptres = cset[f"{jrname}_PtResolution_AK4PFPuppi"]
         # for MC, correct the jet pT with JEC first
         j["pt"] = j["pt_raw"] * jec_flat_corr_factor
         j["mass"] = j["mass_raw"] * jec_flat_corr_factor
-        jer_sf_input = get_corr_inputs(j, jer_sf)
         jer_ptres_input = get_corr_inputs(j, jer_ptres)
         j["JER"] = jer_ptres.evaluate(*jer_ptres_input)
-        j["JERSF"] = jer_sf.evaluate(*jer_sf_input)
+        j["JERSF"] = eval_jer_sf(cset, jrname, j)
         if sf_jersmear is None:
             warnings.warn(
                 "JER smearing coefficients unavailable. "
@@ -473,12 +494,11 @@ def get_corrected_jets_with_shifts(events, year):
     jec_flat_corr_factor = jec_corr.evaluate(*get_corr_inputs(j, jec_corr))
 
     if is_mc:
-        jer_sf = cset[f"{jrname}_ScaleFactor_AK4PFPuppi"]
         jer_ptres = cset[f"{jrname}_PtResolution_AK4PFPuppi"]
         j["pt"] = j["pt_raw"] * jec_flat_corr_factor
         j["mass"] = j["mass_raw"] * jec_flat_corr_factor
         j["JER"] = jer_ptres.evaluate(*get_corr_inputs(j, jer_ptres))
-        j["JERSF"] = jer_sf.evaluate(*get_corr_inputs(j, jer_sf))
+        j["JERSF"] = eval_jer_sf(cset, jrname, j)
         if sf_jersmear is None:
             corr_factor = jec_flat_corr_factor
         else:
@@ -532,7 +552,7 @@ def get_corrected_jets_with_shifts(events, year):
                 unc_jets[f"jer{var}"] = copy.copy(jets)
                 unc_met[f"jer{var}"] = copy.copy(met)
             else:
-                j["JERSF"] = jer_sf.evaluate(*get_corr_inputs(j, jer_sf, jersyst=var))
+                j["JERSF"] = eval_jer_sf(cset, jrname, j, jersyst=var)
                 corr_factor_var = ak.unflatten(
                     jec_flat_corr_factor * sf_jersmear.evaluate(*get_corr_inputs(j, sf_jersmear)),
                     nj,
