@@ -379,6 +379,11 @@ HPLUSBOTTOM_BUGGY_SYST = {"lhe_pdf", "scalevar_muR", "scalevar_muF"}
 # entries in SYSTEMATICS above, just realized as a directory/file split
 # instead of a column-name split.
 JECSHIFTS_SYSTEMATICS = ["CMS_scale_j", "CMS_res_j", "CMS_scale_m", "CMS_res_m"]
+# 2026-10-30: electron energy scale/resolution shift dirs (CMS_scale_e/CMS_res_e) exist only in the productions
+# made with the corrected lepton scale/smearing (workflows *_lepss_*); opt in with HCZZ_ELE_SHIFTS=1 so that cards
+# from the older productions (no such dirs) still build unchanged.
+if os.environ.get("HCZZ_ELE_SHIFTS") == "1":
+    JECSHIFTS_SYSTEMATICS = JECSHIFTS_SYSTEMATICS + ["CMS_scale_e", "CMS_res_e"]
 
 # All 4 process classes were reprocessed under the same 84 (era,dataset)
 # target list as the main ctag2d campaign (see second-brain memory

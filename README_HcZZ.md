@@ -105,6 +105,18 @@ python3 -u analysis/postprocess/run_mva_postprocess.py \
 - **Nominal binning (adopted 2026-10-22): 10 optimised bins** (optbin10 = S10 edges `0,0.077426,0.198279,0.381715,0.518877,0.634575,0.714366,0.808976,0.833804,0.874049,1` from `Analysis/optbin_2026_10_21/edges_smzx.txt`, passed with `--bin-edges`; not K10 in `edges.txt`): r = 427.0 (V2/V1 background) / 427.5 (V4/V3 + `--recompute-muon-id-sf`). All new cards (2022/23 V4/V3, 2024) use these edges.
 - Superseded: 20 qqZZ-quantile bins (`--higgs-scale-norm`): r = 456.0.
 
+**Update 2026-10-27/28 (supersedes the scoring/model statements above where they differ).**
+- **Scorer fix:** `mva_inference.prepare_features` now reads `jet_*` before `cjets_*` (it used the c-tagged subset
+  for jet pt/eta/phi/mass/PNet before; ~9% of events had wrong jet inputs). Same file in EOS, AFS, HcZZ_eossync.
+  Production rescored → `_ctag2d_jecshifts_bkg_scored_v1_jetfix` / `_ctag2d_fschad_scored_v1_jetfix`; 1D optbin10
+  r = 427.0 (was 429.0). `_scored_v1` deleted.
+- **Mass-scaled inputs:** if the b-hive config has `mass_scaled_features`, the scorer divides those inputs by m4l
+  (`zz_mass_inclusive`, Z+X `m4l`), as b-hive `LZ4Dataset` does in training. `aux_m4l`/`disco` need nothing here.
+- **The production MVA sculpts m4l** (m4l input). No-m4l / mass-invariant / DisCo models and 2D m4l × score cards:
+  `second-brain/Notes/hczz-scorer-fix-2d-fit-decorrelation-2026-10-27.md`.
+- **Known issue, Z+X:** the Z+X CR parquet has leading-jet scalars only and `run_zx_inference.py` does not pass
+  `jet_phi`, so Z+X MVA inputs have jet φ = 0 and jets 2–3 = jet 1 (34% of the Z+X yield has jets). Not fixed.
+
 **Z+X.** `Analysis/jecv4_bkg_2026_10_22/zx_pipeline.sh`: `merge_cr_parquets.py` → `estimate_zx_background.py --fake-rates <pkatris OS fake_rates.pkl> --year all --mass-window 105 160` → `run_zx_inference.py`. On V4/V3: **35.9 ± 4.5** events (35.1 ± 4.4 in the 10-07 production, which missed some 2023preBPix muon data files).
 
 ---
