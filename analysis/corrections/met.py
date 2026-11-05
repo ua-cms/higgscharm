@@ -39,7 +39,6 @@ def apply_met_phi_corrections(
         "2016postVFP": [278769, 284045],
         "2017": [297020, 306463],
         "2018": [315252, 325274],
-        "2024": [378971, 387121],
     }
     data_kind = "MC" if hasattr(events, "genWeight") else "DATA"
 
