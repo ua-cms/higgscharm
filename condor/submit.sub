@@ -10,6 +10,5 @@ transfer_input_files  = INPUTFILES
 request_memory        = MEMORY
 
 +JobFlavour           = JOBFLAVOR
-+SingularityImage     = "/cvmfs/unpacked.cern.ch/registry.hub.docker.com/coffeateam/coffea-dask-almalinux9:2026.5.0-py3.13"
 
 Queue JOBNUM from JOBNUM_FILE
