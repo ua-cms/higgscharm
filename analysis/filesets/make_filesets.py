@@ -76,4 +76,48 @@ if __name__ == "__main__":
         query_results_strategy="all",
         replicas_strategy="round-robin",
     )
-    ddc.do_save(filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json")
+    fileset_file = filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
+    ddc.do_save(fileset_file)
+
+    # Remove known files with zero events.
+    # https://cms-talk.web.cern.ch/t/empty-files-in-muoneg-datasets-for-2022/145956
+    files_to_remove = {
+        "2022postEE": {
+            "/MuonEG/Run2022F-22Sep2023-v1/NANOAOD": [
+                "store/data/Run2022F/MuonEG/NANOAOD/22Sep2023-v1/50000/4fb72196-3b02-4499-8f6c-a54e15692b32.root",
+                "store/data/Run2022F/MuonEG/NANOAOD/22Sep2023-v1/50000/4d76213a-ef14-411a-9558-559a6df3f978.root",
+            ],
+            "/MuonEG/Run2022G-22Sep2023-v1/NANOAOD": [
+                "store/data/Run2022G/MuonEG/NANOAOD/22Sep2023-v1/2520000/cd404eb6-8218-4787-b5ed-af6cd9fe3750.root",
+            ],
+        }
+    }
+    if args.year in files_to_remove:
+        with open(fileset_file, "r") as f:
+            fileset = json.load(f)
+
+        for dataset_name, files_to_remove_for_dataset in files_to_remove[
+            args.year
+        ].items():
+            if dataset_name not in fileset:
+                continue
+
+            original_files = fileset[dataset_name]["files"]
+
+            filtered_files = {
+                file: metadata
+                for file, metadata in original_files.items()
+                if not any(
+                    file.endswith(file_to_remove)
+                    for file_to_remove in files_to_remove_for_dataset
+                )
+            }
+
+            removed_count = len(original_files) - len(filtered_files)
+
+            fileset[dataset_name]["files"] = filtered_files
+
+            print(f"{dataset_name}: removed {removed_count} files with zero events")
+
+        with open(fileset_file, "w") as json_file:
+            json.dump(fileset, json_file, indent=4, sort_keys=True)
