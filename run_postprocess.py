@@ -31,7 +31,7 @@ from analysis.postprocess.utils import (
 )
 
 
-OUTPUT_DIR = Path.cwd() / "outputs"
+OUTPUT_DIR = Path("/eos/user/p/pkatris/higgscharm/outputs")
 
 
 def parse_arguments():
@@ -114,7 +114,98 @@ def parse_arguments():
         "--skipmerging", action="store_true", help="Skip parquet outputs merging"
     )
     parser.add_argument("--blind", action="store_true", help="Blind data")
+    parser.add_argument(
+        "--blind_range",
+        type=float,
+        nargs=2,
+        default=None,
+        metavar=("LOW", "HIGH"),
+        help="Blind data in [LOW, HIGH] of the variables in --blind_vars (e.g. 100 150)",
+    )
+    parser.add_argument(
+        "--blind_vars",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Variables to apply --blind_range to (default: all plotted variables)",
+    )
+    parser.add_argument(
+        "--blind_window",
+        type=str,
+        nargs="+",
+        default=None,
+        metavar="VAR=LOW,HIGH",
+        help=(
+            "Per-variable blinding windows, e.g. "
+            "--blind_window zz_mass=100,150 z1_mass=80,100. "
+            "Repeat a variable to blind several windows in it. "
+            "Can be combined with --blind_range/--blind_vars."
+        ),
+    )
+    parser.add_argument(
+        "--rebin",
+        type=str,
+        nargs="+",
+        default=None,
+        metavar="VAR=SPEC",
+        help=(
+            "Rebin at plotting time. SPEC is an integer factor (e.g. zz_mass_inclusive=3 "
+            "turns 5 GeV into 15 GeV bins) or comma-separated new edges that are a subset "
+            "of the original ones (e.g. zz_mass_inclusive=70,80,85,90,95,100,105,...,400). "
+            "Use 'zz_mass_*=3' to apply to every variable matching the pattern."
+        ),
+    )
+    parser.add_argument(
+        "--signal_scale",
+        type=str,
+        nargs="+",
+        default=None,
+        metavar="PROCESS=FACTOR",
+        help="Scale signal overlays for visibility, e.g. --signal_scale smsignal=100 hb=100",
+    )
+    parser.add_argument(
+        "--mc_divide",
+        type=float,
+        default=1.0,
+        help=(
+            "TEMPORARY: divide every MC histogram (backgrounds, signals, variations) by "
+            "this factor at plotting time, e.g. 9 for coffea outputs made with jec_shifts "
+            "before the base.py fix. Data, cutflows and saved files are untouched."
+        ),
+    )
     return parser.parse_args()
+
+
+def parse_signal_scales(entries):
+    """turn ['proc=100', 'other=10'] into {'proc': 100.0, 'other': 10.0}"""
+    scales = {}
+    for entry in entries or []:
+        try:
+            process, factor = entry.rsplit("=", 1)
+            scales[process] = float(factor)
+        except ValueError:
+            raise ValueError(f"--signal_scale expects PROCESS=FACTOR, got '{entry}'")
+    return scales
+
+
+def parse_rebin(rebin_args, variables):
+    """['var=3', 'zz_mass_*=70,80,...'] -> {variable: 3 or [edges]}"""
+    import fnmatch
+
+    rebin = {}
+    for item in rebin_args or []:
+        if "=" not in item:
+            raise ValueError(f"--rebin expects VAR=SPEC, got '{item}'")
+        pattern, spec = item.split("=", 1)
+        value = (
+            [float(x) for x in spec.split(",") if x.strip()] if "," in spec else int(spec)
+        )
+        matched = [v for v in variables if fnmatch.fnmatch(v, pattern)]
+        if not matched:
+            raise ValueError(f"--rebin: no histogram variable matches '{pattern}'")
+        for v in matched:
+            rebin[v] = value
+    return rebin
 
 
 def check_output_dir(workflow: str, year: str) -> Path:
@@ -192,6 +283,39 @@ def plot_variable(variable: str, group_by, histogram_config) -> bool:
     return False
 
 
+def parse_blind_windows(entries):
+    """
+    turn ['zz_mass=100,150', 'z1_mass=80,100', 'zz_mass=300,350'] into
+    {'zz_mass': [(100.0, 150.0), (300.0, 350.0)], 'z1_mass': [(80.0, 100.0)]}
+    """
+    windows = defaultdict(list)
+    for entry in entries or []:
+        try:
+            variable, bounds = entry.split("=", 1)
+            low, high = (float(x) for x in bounds.split(","))
+        except ValueError:
+            raise ValueError(f"--blind_window expects VAR=LOW,HIGH, got '{entry}'")
+        if low >= high:
+            raise ValueError(
+                f"--blind_window {variable}: LOW must be smaller than HIGH (got {low}, {high})"
+            )
+        windows[variable].append((low, high))
+    return dict(windows)
+
+
+def get_blind_windows(variable: str, blind_range, blind_vars, blind_windows):
+    """
+    return the list of (low, high) windows to blind for this variable,
+    or None if it isn't blinded. Combines --blind_range/--blind_vars
+    with the per-variable --blind_window entries.
+    """
+    windows = []
+    if blind_range is not None and (blind_vars is None or variable in blind_vars):
+        windows.append(tuple(blind_range))
+    windows += blind_windows.get(variable, [])
+    return windows or None
+
+
 if __name__ == "__main__":
     args = parse_arguments()
 
@@ -213,6 +337,20 @@ if __name__ == "__main__":
 
     if "data" not in workflow_config.datasets:
         args.blind = True
+
+    signal_scales = parse_signal_scales(args.signal_scale)
+
+    blind_windows = parse_blind_windows(args.blind_window)
+    unknown = [v for v in blind_windows if v not in histogram_config.axes]
+    if unknown:
+        raise ValueError(f"--blind_window: unknown variable(s) {unknown}")
+
+    if args.blind_range is not None:
+        low, high = args.blind_range
+        if low >= high:
+            raise ValueError(
+                f"--blind_range LOW must be smaller than HIGH (got {low}, {high})"
+            )
 
     if args.postprocess and (args.year not in ["2016", "2022", "2023"]):
         print_header(f"Running postprocess for {args.year}")
@@ -452,6 +590,8 @@ if __name__ == "__main__":
             output_dir=output_dir,
             group_by=group_by,
             pass_axis=args.pass_axis,
+            rebin=parse_rebin(args.rebin, list(histogram_config.axes.keys())),
+            mc_divide=args.mc_divide,
         )
         for category in categories:
             logging.info(
@@ -473,6 +613,12 @@ if __name__ == "__main__":
                         continue
                 if plot_variable(variable, group_by, workflow_config.histogram_config):
                     logging.info(variable)
+                    blind_range = get_blind_windows(
+                        variable, args.blind_range, args.blind_vars, blind_windows
+                    )
+                    if blind_range is not None:
+                        windows_str = ", ".join(f"[{lo}, {hi}]" for lo, hi in blind_range)
+                        logging.info(f"  blinding data in {windows_str}")
                     plotter.plot_histograms(
                         variable=variable,
                         category=category,
@@ -480,10 +626,35 @@ if __name__ == "__main__":
                         log=args.log,
                         extension=args.extension,
                         blind=args.blind,
+                        blind_range=blind_range,
+                        signal_scales=signal_scales,
                     )
             if args.workflow.startswith("zplusl_"):
                 plotter.plot_fake_rate(category)
             subprocess.run(
                 f"tar -zcvf {output_dir}/{category}/{args.workflow}_{args.year}_plots.tar.gz {output_dir}/{category}/*.{args.extension}",
                 shell=True,
+            )
+
+        # Save fake rates once per year, computed directly from this plotter's
+        # already-loaded Data/WZ histograms (reusing the same barrel/endcap
+        # DATA-minus-WZ logic as plot_fake_rate/_debug_fr_table above),
+        # instead of relying on the separate, currently broken
+        # compute_fake_rates.py script.
+        #
+        # Written to the same path estimate_zx_background.py expects:
+        #   OUTPUT_DIR/fake_rates/{year}/fake_rates.pkl
+        #
+        # NOTE: only zplusl_ss and zplusl_os carry a "WZ" process in
+        # processed_histograms (see _is_wz_dataset filtering upstream in
+        # compute_fake_rates.py / load_zplusl_histograms). If you also run
+        # zplusl_ss_maximal/_minimal/_intermediate variants through --plot
+        # and they do NOT have a "WZ" key, narrow this condition to
+        # `args.workflow in ("zplusl_ss", "zplusl_os")` to avoid a KeyError.
+        if args.workflow.startswith("zplusl_"):
+            print_header(f"Saving fake rates for {args.year}")
+            fake_rates_path = OUTPUT_DIR / "fake_rates" / args.year / "fake_rates.pkl"
+            plotter.save_fake_rates(
+                output_path=fake_rates_path,
+                categories=tuple(categories),
             )

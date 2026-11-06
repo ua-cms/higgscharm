@@ -1,6 +1,6 @@
-import os
+import re
 import yaml
-import pickle
+import hist
 import logging
 import numpy as np
 import mplhep as hep
@@ -33,13 +33,35 @@ class CoffeaPlotter:
         output_dir: str,
         group_by: str,
         pass_axis: str,
+        rebin: dict = None,
+        mc_divide: float = 1.0,
     ):
         self.workflow = workflow
         self.year = year
         self.processed_histograms = processed_histograms
+        # TEMPORARY (2026-10-23): with `jec_shifts` + coffea output, base.py fills the
+        # "nominal" histograms once per object shift (nominal + 8 shifts = 9 passes),
+        # so every MC histogram is ~9x too large. Divide all non-Data histograms
+        # (backgrounds, signals, every variation) by `mc_divide` at plotting time.
+        # The saved .coffea files and the cutflows are NOT changed.
+        # Remove once base.py fills histograms only for shift_name is None.
+        if mc_divide and mc_divide != 1:
+            logging.warning(
+                f"TEMPORARY: dividing all MC histograms by {mc_divide:g} at plotting time"
+            )
+            self.processed_histograms = {
+                process: (
+                    histogram_dict
+                    if process == "Data"
+                    else {k: h * (1.0 / mc_divide) for k, h in histogram_dict.items()}
+                )
+                for process, histogram_dict in processed_histograms.items()
+            }
         self.output_dir = output_dir
         self.group_by = group_by
         self.pass_axis = pass_axis
+        # {variable: int factor | list of new bin edges}, applied at plotting time only
+        self.rebin = rebin or {}
 
         # get histogram config
         config_builder = WorkflowConfigBuilder(workflow=workflow)
@@ -84,7 +106,76 @@ class CoffeaPlotter:
         if other_category is not None:
             selector[self.group_by["name"]] = other_category
         histogram = histogram[selector].project(variable)
+        histogram = self.apply_rebin(histogram, variable)
+        # if axis type is variable divide by bin width
+        if isinstance(self.histogram_config.axes[variable], VariableAxis):
+            histogram = divide_by_binwidth(histogram)
+        elif self.per_gev(variable):
+            histogram = self.scale_by_binwidth(histogram)
         return histogram
+
+    # ------------------------------------------------------------------
+    # rebinning (plotting time only; processed histograms are untouched)
+    # ------------------------------------------------------------------
+    def per_gev(self, variable):
+        """True if the plotted y-axis is per unit of x (uneven bins)"""
+        return isinstance(self.histogram_config.axes[variable], VariableAxis) or isinstance(
+            self.rebin.get(variable), (list, tuple)
+        )
+
+    @staticmethod
+    def scale_by_binwidth(histogram):
+        widths = histogram.axes[0].widths
+        out = histogram.copy()
+        view = out.view(flow=False)
+        if hasattr(view, "value"):
+            view.value[...] = view.value / widths
+            view.variance[...] = view.variance / widths**2
+        else:
+            view[...] = view / widths
+        return out
+
+    def apply_rebin(self, histogram, variable):
+        """rebin a 1D histogram by an integer factor or onto new edges"""
+        spec = self.rebin.get(variable)
+        if spec is None:
+            return histogram
+        axis = histogram.axes[0]
+        old_edges = np.asarray(axis.edges)
+        if isinstance(spec, int):
+            if spec < 1 or len(axis) % spec != 0:
+                raise ValueError(
+                    f"rebin factor {spec} for '{variable}' must divide its {len(axis)} bins "
+                    f"(possible: {[k for k in range(2, len(axis) + 1) if len(axis) % k == 0]})"
+                )
+            new_edges = old_edges[::spec]
+        else:
+            new_edges = np.asarray(spec, dtype=float)
+            missing = [e for e in new_edges if not np.isclose(old_edges, e).any()]
+            if missing or np.any(np.diff(new_edges) <= 0):
+                raise ValueError(
+                    f"rebin edges for '{variable}' must be increasing and a subset of the "
+                    f"original edges (not original edges: {missing})"
+                )
+        # map every original bin (incl. flow) onto the new binning
+        centers = 0.5 * (old_edges[1:] + old_edges[:-1])
+        idx = np.searchsorted(new_edges, centers, side="right")  # 0 = underflow, len = overflow
+        idx = np.concatenate([[0], idx, [len(new_edges)]])
+        new_axis = hist.axis.Variable(new_edges, name=axis.name, label=axis.label)
+        old_view = histogram.view(flow=True)
+        if hasattr(old_view, "value"):
+            new = hist.Hist(new_axis, storage=hist.storage.Weight())
+            vals = np.bincount(idx, weights=old_view.value, minlength=len(new_edges) + 1)
+            vars_ = np.bincount(idx, weights=old_view.variance, minlength=len(new_edges) + 1)
+            new_view = new.view(flow=True)
+            new_view.value[...] = vals
+            new_view.variance[...] = vars_
+        else:
+            new = hist.Hist(new_axis, storage=hist.storage.Double())
+            new.view(flow=True)[...] = np.bincount(
+                idx, weights=old_view, minlength=len(new_edges) + 1
+            )
+        return new
 
     def get_variations(
         self,
@@ -103,10 +194,55 @@ class CoffeaPlotter:
         if "category" in histogram.axes.name:
             selectorup["category"] = category
             selectordown["category"] = category
-        histogram_up = histogram[selectorup].project(variable)
-        histogram_down = histogram[selectordown].project(variable)
+        histogram_up = self.apply_rebin(histogram[selectorup].project(variable), variable)
+        histogram_down = self.apply_rebin(histogram[selectordown].project(variable), variable)
         # if axis type is variable divide by bin width
+        if isinstance(self.histogram_config.axes[variable], VariableAxis):
+            histogram_up = divide_by_binwidth(histogram_up)
+            histogram_down = divide_by_binwidth(histogram_down)
+        elif self.per_gev(variable):
+            histogram_up = self.scale_by_binwidth(histogram_up)
+            histogram_down = self.scale_by_binwidth(histogram_down)
         return histogram_up, histogram_down
+
+    @staticmethod
+    def normalize_blind_windows(blind_range):
+        """
+        accept None, a single (low, high) window, or a list of windows,
+        and return a list of (low, high) tuples (empty list = no blinding)
+        """
+        if blind_range is None:
+            return []
+        if len(blind_range) == 2 and np.isscalar(blind_range[0]):
+            return [tuple(blind_range)]
+        return [tuple(w) for w in blind_range]
+
+    @staticmethod
+    def blind_histogram(histogram, blind_range):
+        """
+        return a copy of a 1D histogram with every bin overlapping any of the
+        blinding windows set to NaN (NaN points are not drawn by matplotlib,
+        so they disappear from both the main panel and the ratio panel).
+        blind_range: None, (low, high), or [(low1, high1), (low2, high2), ...]
+        """
+        windows = CoffeaPlotter.normalize_blind_windows(blind_range)
+        if not windows:
+            return histogram
+        blinded = histogram.copy()
+        edges = blinded.axes[0].edges
+        # any bin overlapping any window is blinded (conservative at the edges)
+        in_window = np.zeros(len(edges) - 1, dtype=bool)
+        for low, high in windows:
+            in_window |= (edges[:-1] < high) & (edges[1:] > low)
+        view = blinded.view(flow=False)
+        if hasattr(view, "value"):
+            # Weight storage: blind both sum of weights and variance
+            view.value[in_window] = np.nan
+            view.variance[in_window] = np.nan
+        else:
+            # Double/Int storage
+            view[in_window] = np.nan
+        return blinded
 
     def collect_histograms_for_plotting(self, variable, category):
         histogram_info = {}
@@ -159,19 +295,36 @@ class CoffeaPlotter:
 
                 # save variations histograms
                 if key == "mc":
+                    var_cats = set(aux_histogram.axes["variation"])
+                    process_nominal = None
                     for variation in get_variations_keys(self.processed_histograms):
-                        var_cats = [v for v in aux_histogram.axes["variation"]]
-                        if not f"{variation}Up" in var_cats:
-                            continue
-                        up, down = self.get_variations(
-                            variable=variable,
-                            category=category,
-                            variation=variation,
-                            histogram=aux_histogram,
-                        )
+                        if f"{variation}Up" in var_cats and f"{variation}Down" in var_cats:
+                            up, down = self.get_variations(
+                                variable=variable,
+                                category=category,
+                                variation=variation,
+                                histogram=aux_histogram,
+                            )
+                        else:
+                            # FIX 2026-10-01: a process that does not carry this
+                            # variation (e.g. kfactor_ggzz_* for qqZZ, scalevar_* for
+                            # the MCFM ggZZ samples) is unaffected by it, so it must
+                            # enter the varied total at its NOMINAL. Previously it was
+                            # skipped (`continue`), i.e. counted as 0, which made the
+                            # varied total far below nominal for both Up and Down and
+                            # inflated the lower edge of the band by tens of percent.
+                            if process_nominal is None:
+                                process_nominal = self.get_histogram(
+                                    variable=variable,
+                                    category=category,
+                                    variation="nominal",
+                                    histogram=aux_histogram,
+                                )
+                            up, down = process_nominal.copy(), process_nominal.copy()
                         if f"{variation}Up" in histogram_info[key]["variations"]:
                             histogram_info[key]["variations"][f"{variation}Up"] += up
-                            histogram_info[key]["variations"][f"{variation}Down"] += up
+                            # FIX: previously accumulated `up` into the Down variation
+                            histogram_info[key]["variations"][f"{variation}Down"] += down
                         else:
                             histogram_info[key]["variations"][f"{variation}Up"] = up
                             histogram_info[key]["variations"][f"{variation}Down"] = down
@@ -180,9 +333,12 @@ class CoffeaPlotter:
 
     def plot_uncert_band(self, histogram_info, ax):
         # initialize up/down errors with statisticall error
-        mcstat_err2 = self.nominal_variances
-        err2_up = mcstat_err2
-        err2_down = mcstat_err2
+        # FIX: copy the arrays; previously err2_up, err2_down and
+        # self.nominal_variances were the same object, so every `+=` below
+        # modified all three and the up/down bands came out identical
+        mcstat_err2 = np.array(self.nominal_variances, dtype=float)
+        err2_up = mcstat_err2.copy()
+        err2_down = mcstat_err2.copy()
 
         for variation in get_variations_keys(self.processed_histograms):
             # Up/down variations for a single MC sample
@@ -223,6 +379,7 @@ class CoffeaPlotter:
 
     def plot_ratio(self, rax):
         # compute Data/MC ratio
+        # (blinded bins are NaN in self.data_values, so their ratio points are not drawn)
         num = self.data_values
         den = self.nominal_values
         ratio = num / den
@@ -323,8 +480,13 @@ class CoffeaPlotter:
 
     def add_xylabels(self, variable, category, add_ratio, ax, rax):
         ylabel = "Events"
-        if isinstance(self.histogram_config.axes[variable], VariableAxis):
-            ylabel += " / GeV"
+        m = re.search(r"\[(.+?)\]", self.histogram_config.axes[variable].label or "")
+        unit = m.group(1) if m else ""
+        if self.per_gev(variable):
+            ylabel += f" / {unit}" if unit else " / unit"
+        elif isinstance(self.rebin.get(variable), int):
+            width = self.edges[1] - self.edges[0]
+            ylabel += f" / {width:g} {unit}".rstrip()
 
         xlabel = self.histogram_config.axes[variable].label
 
@@ -353,7 +515,16 @@ class CoffeaPlotter:
         add_ratio: bool = True,
         blind: bool = False,
         extension: str = "png",
+        blind_range=None,
+        signal_scales: dict = None,
     ):
+        """
+        signal_scales: optional {signal_process: factor} used to scale signal
+        overlays for visibility, e.g. {"somesmsignal": 100, "hb": 100}.
+        Only the drawn signal lines are scaled (and their legend labels get
+        "x factor"); the MC stack, uncertainty band and ratio are untouched.
+        """
+        signal_scales = signal_scales or {}
         if blind:
             add_ratio = False
 
@@ -399,11 +570,11 @@ class CoffeaPlotter:
         # get variation MC histograms
         variation_histograms = histogram_info["mc"]["variations"]
 
-        # get Data histogram
+        # get Data histogram (blinded in blind_range, if requested)
         if "data" not in self.datasets:
             blind = True
         if not blind:
-            data_histogram = histogram_info["data"]
+            data_histogram = self.blind_histogram(histogram_info["data"], blind_range)
             self.data_values = data_histogram.values()
             self.data_variances = data_histogram.variances()
 
@@ -444,12 +615,23 @@ class CoffeaPlotter:
                 **self.style["data_hist_kwargs"],
             )
         if "signal" in self.datasets:
-            for signal_process, signal_histogram in histogram_info["signal"][
-                "nominal"
-            ].items():
+            signal_hists = histogram_info["signal"]["nominal"]
+            missing = [p for p in signal_scales if p not in signal_hists]
+            if missing:
+                logging.warning(
+                    f"signal_scales: {missing} not found among signal processes "
+                    f"{list(signal_hists)}; they will not be scaled"
+                )
+            for signal_process, signal_histogram in signal_hists.items():
+                label = signal_process
+                factor = signal_scales.get(signal_process)
+                if factor is not None and factor != 1:
+                    # hist supports scalar multiplication (values *f, variances *f^2)
+                    signal_histogram = signal_histogram * factor
+                    label = f"{signal_process} $\\times$ {factor:g}"
                 hep.histplot(
                     signal_histogram,
-                    label=signal_process,
+                    label=label,
                     color=self.color_map[signal_process],
                     flow="none",
                     ax=ax,
@@ -462,6 +644,26 @@ class CoffeaPlotter:
         # plot ratio
         if add_ratio:
             self.plot_ratio(rax)
+
+        # shade the blinded window(s); only the first gets a legend entry
+        if not blind:
+            blind_span_kwargs = {
+                "facecolor": "none",
+                "edgecolor": "gray",
+                "hatch": "///",
+                "linewidth": 0,
+                "zorder": 0,
+            }
+            windows = self.normalize_blind_windows(blind_range)
+            for i, (low, high) in enumerate(windows):
+                ax.axvspan(
+                    low,
+                    high,
+                    label="Blinded" if i == 0 else None,
+                    **blind_span_kwargs,
+                )
+                if add_ratio:
+                    rax.axvspan(low, high, **blind_span_kwargs)
 
         # set limits
         hist_edges = np.array([[i, j] for i, j in zip(self.edges[:-1], self.edges[1:])])
@@ -522,32 +724,7 @@ class CoffeaPlotter:
         fig.savefig(figname)
         plt.close()
 
-    def _debug_fr_table(self, label, endcap_vals, barrel_vals, edges):
-        """Print a (pt x region) table matching the compute_fake_rates debug format."""
-        pt_labels = [f"{edges[i]:.0f}-{edges[i+1]:.0f}" for i in range(len(edges) - 1)]
-        region_labels = ["endcap", "barrel"]
-        col_w = 14
-        header = (
-            f"{'pT / region':>16s}"
-            + "".join(f"{r:>{col_w}s}" for r in region_labels)
-            + f"{'SUM':>{col_w}s}"
-        )
-        print(f"\n  {label}")
-        print(f"  {'-' * len(header)}")
-        print(f"  {header}")
-        print(f"  {'-' * len(header)}")
-        arr = np.stack([endcap_vals, barrel_vals], axis=1)
-        for i, pt_lab in enumerate(pt_labels):
-            row = arr[i, :]
-            print(f"  {pt_lab:>16s}" + "".join(f"{v:>{col_w}.2f}" for v in row)
-                    + f"{np.sum(row):>{col_w}.2f}")
-        print(f"  {'-' * len(header)}")
-        col_sums = arr.sum(axis=0)
-        print(f"  {'SUM':>16s}" + "".join(f"{v:>{col_w}.2f}" for v in col_sums)
-               + f"{arr.sum():>{col_w}.2f}")
-        print()
-
-    def plot_fake_rate(self, category, ylim=(None, 0.35), extension="png",debug=True):
+    def plot_fake_rate(self, category, ylim=(None, 0.35), extension="pdf"):
         edges = (
             self.processed_histograms["Data"]["probe_lepton"]
             .project("probe_lepton_pt")
@@ -574,46 +751,6 @@ class CoffeaPlotter:
         ].project("probe_lepton_pt", "is_passing_lepton")
         data_wz_barrel = data_barrel + (wz_barrel * -1)
         data_wz_endcap = data_endcap + (wz_endcap * -1)
-        
-        if debug:
-            sep = "=" * 80
-            print(f"\n{sep}\n  DEBUG [COFFEA PLOTTER — {category.upper()}]\n{sep}")
-
-            # column 0 = endcap (is_barrel False), column 1 = barrel (is_barrel True)
-            data_total = {"endcap": data_endcap[{"is_passing_lepton": sum}].values(),
-                "barrel": data_barrel[{"is_passing_lepton": sum}].values()}
-            data_pass  = {"endcap": data_endcap[{"is_passing_lepton": True}].values(),
-                "barrel": data_barrel[{"is_passing_lepton": True}].values()}
-            wz_total   = {"endcap": wz_endcap[{"is_passing_lepton": sum}].values(),
-                "barrel": wz_barrel[{"is_passing_lepton": sum}].values()}
-            wz_pass    = {"endcap": wz_endcap[{"is_passing_lepton": True}].values(),
-                "barrel": wz_barrel[{"is_passing_lepton": True}].values()}
-            corr_total = {"endcap": data_wz_endcap[{"is_passing_lepton": sum}].values(),
-                "barrel": data_wz_barrel[{"is_passing_lepton": sum}].values()}
-            corr_pass  = {"endcap": data_wz_endcap[{"is_passing_lepton": True}].values(),
-                "barrel": data_wz_barrel[{"is_passing_lepton": True}].values()}
-
-            self._debug_fr_table("DATA  n_total (unweighted)",    data_total["endcap"], data_total["barrel"], edges)
-            self._debug_fr_table("DATA  n_pass  (unweighted)",    data_pass["endcap"],  data_pass["barrel"],  edges)
-            self._debug_fr_table("WZ MC n_total (lumi-weighted)", wz_total["endcap"],   wz_total["barrel"],   edges)
-            self._debug_fr_table("WZ MC n_pass  (lumi-weighted)", wz_pass["endcap"],    wz_pass["barrel"],    edges)
-            self._debug_fr_table("CORR  n_total = DATA - WZ",     corr_total["endcap"], corr_total["barrel"], edges)
-            self._debug_fr_table("CORR  n_pass  = DATA - WZ",     corr_pass["endcap"],  corr_pass["barrel"],  edges)
-
-            with np.errstate(divide="ignore", invalid="ignore"):
-                fr_data = {r: np.where(data_total[r] > 0, data_pass[r] / data_total[r], np.nan)
-                          for r in ("endcap", "barrel")}
-                fr_corr = {r: np.where(corr_total[r] > 0, corr_pass[r] / corr_total[r], np.nan)
-                        for r in ("endcap", "barrel")}
-            self._debug_fr_table("DATA  fake rate", fr_data["endcap"], fr_data["barrel"], edges)
-            self._debug_fr_table("CORR  fake rate", fr_corr["endcap"], fr_corr["barrel"], edges)
-
-            print(f"  SCALAR SUMMARY [{category}]")
-            print(f"    DATA  total probe leptons    : {sum(v.sum() for v in data_total.values()):.1f}")
-            print(f"    DATA  passing probe leptons  : {sum(v.sum() for v in data_pass.values()):.1f}")
-            print(f"    WZ MC total (lumi-weighted)  : {sum(v.sum() for v in wz_total.values()):.4f}")
-            print(f"    WZ MC passing (lumi-weighted): {sum(v.sum() for v in wz_pass.values()):.4f}")
-            print()
 
         data_barrel_ratio = (
             data_barrel[{"is_passing_lepton": True}].values()
@@ -792,7 +929,8 @@ class CoffeaPlotter:
         fig.savefig(
             f"{output_path}/{self.workflow}_{category}_FR_{self.year}.{extension}"
         )
-
+        
+        
     def _compute_fake_rate_arrays(self, n_pass, n_total, min_events=10):
         """
         Binomial fake rate f = n_pass / n_total with the same validity/clipping
