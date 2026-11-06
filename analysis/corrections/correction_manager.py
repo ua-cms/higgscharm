@@ -18,6 +18,7 @@ from analysis.corrections.muon_ss import apply_muon_ss_corrections
 from analysis.corrections.partonshower import add_partonshower_weight
 from analysis.corrections.electron_ss import apply_electron_ss_corrections
 from analysis.corrections.tau_energy import apply_tau_energy_scale_corrections
+from analysis.corrections.kfactors import add_kfactor_weights
 
 
 def object_corrector_manager(events, year, run, dataset, workflow_config):
@@ -264,6 +265,20 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     electron_hzz_weights.add_reco_weights("low")
                     electron_hzz_weights.add_reco_weights("mid")
                     electron_hzz_weights.add_reco_weights("high")
+
+        if "kFactorWeight" in weights_config:
+            if weights_config["kFactorWeight"]:
+                # NNLO QCD k-factors for ggZZ (vs m4l) and NNLO QCD x NLO EW for
+                # qqZZ (vs m4l, |cos theta*|), from gen-level hard-process leptons.
+                # Only applied to datasets matching the ggzz/qqzz name prefixes
+                # (see kfactors.py); a no-op for everything else.
+                add_kfactor_weights(
+                    events=pruned_ev,
+                    weights_container=weights_container,
+                    year=year,
+                    dataset=dataset,
+                    config=weights_config["kFactorWeight"],
+                )
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))
     return weights_container
