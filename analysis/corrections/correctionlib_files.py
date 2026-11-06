@@ -2,6 +2,18 @@ from pathlib import Path
 
 # corrections from correctionlib https://cms-analysis-corrections.docs.cern.ch/
 correction_files = {
+    "electron_hzz": {
+        "2022preEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2022preEE.json.gz",
+        "2022postEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2022postEE.json.gz",
+        "2023preBPix": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2023preBPix.json.gz",
+        "2023postBPix": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2023postBPix.json.gz",
+    },
+    "muon_hzz": {
+        "2022preEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2022preEE.json.gz",
+        "2022postEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2022postEE.json.gz",
+        "2023preBPix": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2023preBPix.json.gz",
+        "2023postBPix": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2023postBPix.json.gz",
+    },
     "tau": {
         "2016preVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run2-2016preVFP-UL-NanoAODv9/latest/tau.json.gz",
         "2016postVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run2-2016postVFP-UL-NanoAODv9/latest/tau.json.gz",
@@ -22,7 +34,6 @@ correction_files = {
         "2022postEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/latest/met_xyCorrections_2022_2022EE.json.gz",
         "2023preBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/latest/met_xyCorrections_2023_2023.json.gz",
         "2023postBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/latest/met_xyCorrections_2023_2023BPix.json.gz",
-        "2024": "analysis/data/met/met_xy_corrections.json",
     },
     "jerc": {
         "2022preEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/latest/jet_jerc.json.gz",
@@ -40,7 +51,7 @@ correction_files = {
         "2022postEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-22EFGSep23-Summer22EE-NanoAODv12/2024-01-31/puWeights.json.gz",
         "2023preBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-23CSep23-Summer23-NanoAODv12/2024-01-31/puWeights.json.gz",
         "2023postBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-23DSep23-Summer23BPix-NanoAODv12/2024-01-31/puWeights.json.gz",
-        "2024": f"{Path.cwd()}/analysis/data/pileup/2024_puWeights.json.gz",  # taken from /eos/cms/store/user/evourlio/pileupJson_forHiggsDNA
+        "2024": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/latest/puWeights_CDEFGHI.json.gz",
     },
     "muon": {
         "2016preVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run2-2016preVFP-UL-NanoAODv9/2024-07-02/muon_Z.json.gz",

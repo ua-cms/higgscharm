@@ -2,6 +2,7 @@ import numpy as np
 from coffea.analysis_tools import Weights
 from analysis.filesets.utils import get_nano_version
 from analysis.corrections.muon import MuonWeights
+from analysis.corrections.hzz_muon import MuonHZZWeights
 from analysis.corrections.ctag import CTagCorrector
 from analysis.corrections.jetvetomaps import jet_veto
 from analysis.corrections.pileup import add_pileup_weight
@@ -9,6 +10,7 @@ from analysis.corrections.nnlops import add_nnlops_weight
 from analysis.corrections.lhepdf import add_lhepdf_weight
 from analysis.corrections.top_pt import add_top_pt_weight
 from analysis.corrections.electron import ElectronWeights
+from analysis.corrections.hzz_electron import ElectronHZZWeights
 from analysis.corrections.jec import apply_jerc_corrections
 from analysis.corrections.lhescale import add_scalevar_weight
 from analysis.corrections.met import apply_met_phi_corrections
@@ -237,6 +239,31 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     weights_container=weights_container,
                     dataset=dataset,
                 )
+
+        if "muon_hzz" in weights_config:
+            if weights_config["muon_hzz"]:
+                if "selected_muons" in pruned_ev.fields:
+                    muon_hzz_weights = MuonHZZWeights(
+                        events=pruned_ev,
+                        year=year,
+                        shift=shift,
+                        weights=weights_container,
+                    )
+                    muon_hzz_weights.add_id_weights()
+
+        if "electron_hzz" in weights_config:
+            if weights_config["electron_hzz"]:
+                if "selected_electrons" in pruned_ev.fields:
+                    electron_hzz_weights = ElectronHZZWeights(
+                        events=pruned_ev,
+                        year=year,
+                        shift=shift,
+                        weights=weights_container,
+                    )
+                    electron_hzz_weights.add_id_weights()
+                    electron_hzz_weights.add_reco_weights("low")
+                    electron_hzz_weights.add_reco_weights("mid")
+                    electron_hzz_weights.add_reco_weights("high")
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))
     return weights_container
