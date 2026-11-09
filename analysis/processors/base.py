@@ -161,13 +161,21 @@ class BaseProcessor(processor.ProcessorABC):
                     category=category,
                     shift=shift,
                 )
-                # evaluate variables required by the histogram layout
+                # Evaluate variables required by the histogram layout
                 variables_map = {}
-                layout_axes = self.histogram_config.layout.values()
+                layout = self.histogram_config.layout
+                if layout != "individual":
+                    layout_axes = {
+                        variable
+                        for variables in layout.values()
+                        for variable in variables
+                    }
                 for variable, axis in self.histogram_config.axes.items():
-                    if variable in ak.flatten(layout_axes):
-                        variables_map[variable] = eval(axis.expression)[category_mask]
+                    if layout != "individual" and variable not in layout_axes:
+                        continue
+                    variables_map[variable] = eval(axis.expression)[category_mask]
 
+                # save variables
                 if self.output_format == "coffea":
                     fill_histograms(
                         histogram_config=self.histogram_config,
