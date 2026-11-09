@@ -32,10 +32,9 @@ def dump_pa_table(
     extra_metadata: Optional[dict] = None,
 ):
     subdirs = subdirs or []
-    xrd_prefix = "root://"
-    pfx_len = len(xrd_prefix)
     xrootd = False
-    if xrd_prefix in location:
+
+    if location.startswith("root://"):
         try:
             import XRootD
             import XRootD.client
@@ -45,62 +44,75 @@ def dump_pa_table(
             raise ImportError(
                 "Install XRootD python bindings with: conda install -c conda-forge xroot"
             ) from err
+
     local_file = (
         os.path.abspath(os.path.join(".", fname))
         if xrootd
         else os.path.join(".", fname)
     )
+
     merged_subdirs = "/".join(subdirs) if xrootd else os.path.sep.join(subdirs)
+
     destination = (
         location + merged_subdirs + f"/{fname}"
         if xrootd
         else os.path.join(location, os.path.join(merged_subdirs, fname))
     )
+
     out = {}
+
     for variable, array in arrays.items():
-        # plain Python lists (e.g. dump_chunk_sumw's {"sumw": [val]}) have no .ndim;
-        # only awkward arrays need the 2D->firsts flattening.
+        # Convert two-dimensional arrays to their first element per event.
         if hasattr(array, "ndim") and array.ndim == 2:
             out[variable] = ak.firsts(array)
         else:
             out[variable] = array
 
-    import pyarrow as pa
-    import pyarrow.parquet as pq
-
     table = pa.Table.from_pydict(out)
+
+    # Skip empty tables before creating or transferring any files.
+    if len(table) == 0:
+        return
+
     if extra_metadata:
         existing = dict(table.schema.metadata or {})
+
         for k, v in extra_metadata.items():
             kk = k.encode() if isinstance(k, str) else k
             vv = v.encode() if isinstance(v, str) else v
             existing[kk] = vv
+
         table = table.replace_schema_metadata(existing)
 
-    if len(table) != 0:  # skip dataframes with empty entries
-        # Sanitize the schema before writing: coerce null / list<null> fields to
-        # concrete nullable types and force every field nullable. Casting an
-        # all-empty list<null> to list<float64> keeps the (empty) lists intact,
-        # so no data is lost.
-        new_schema = pa.schema(
-            [pa.field(f.name, _fix_null(f.type), nullable=True) for f in table.schema]
-        )
-        table = table.cast(new_schema)
-        pq.write_table(table, local_file)
-        if xrootd:
-            copyproc = XRootD.client.CopyProcess()
-            copyproc.add_job(local_file, destination, force=True)
-            copyproc.prepare()
-            status, response = copyproc.run()
-            if status.status != 0:
-                raise Exception(status.message)
-            del copyproc
-        else:
-            dirname = os.path.dirname(destination)
-            pathlib.Path(dirname).mkdir(parents=True, exist_ok=True)
-            shutil.copy(local_file, destination)
-            assert os.path.isfile(destination)
-        pathlib.Path(local_file).unlink()
+    # Replace null types with concrete nullable types before writing.
+    new_schema = pa.schema(
+        [pa.field(f.name, _fix_null(f.type), nullable=True) for f in table.schema]
+    )
+    table = table.cast(new_schema)
+
+    pq.write_table(table, local_file)
+
+    if xrootd:
+        copyproc = XRootD.client.CopyProcess()
+        copyproc.add_job(local_file, destination, force=True)
+        copyproc.prepare()
+
+        status, response = copyproc.run()
+
+        if status.status != 0:
+            raise Exception(status.message)
+
+        del copyproc
+
+    else:
+        dirname = os.path.dirname(destination)
+        pathlib.Path(dirname).mkdir(parents=True, exist_ok=True)
+
+        shutil.copy(local_file, destination)
+
+        assert os.path.isfile(destination)
+
+    pathlib.Path(local_file).unlink()
 
 
 # Function taken from HiggsDNA
