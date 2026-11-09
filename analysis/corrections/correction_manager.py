@@ -10,6 +10,7 @@ from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
 from analysis.corrections.lhepdf import add_lhepdf_weight
 from analysis.corrections.top_pt import add_top_pt_weight
+from analysis.corrections.higgs_hf import add_higgs_hf_weight
 from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.hzz_electron import ElectronHZZWeights
 from analysis.corrections.jec import apply_jerc_corrections
@@ -22,7 +23,6 @@ from analysis.corrections.correctionlib_files import correction_files
 from analysis.corrections.ctag2d import CTag2DCorrector, BOUNDARIES_BY_ERA
 from analysis.corrections.electron_ss import apply_electron_ss_corrections
 from analysis.corrections.tau_energy import apply_tau_energy_scale_corrections
-
 
 
 def object_corrector_manager(events, year, run, dataset, workflow_config):
@@ -306,6 +306,17 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     shift=shift,
                 )
                 ctag2d_corrector.add_weights()
+
+        if "higgsHFWeight" in weights_config:
+            if weights_config["higgsHFWeight"]:
+                # ggH/VBF only (see higgs_hf.py); per-event, keyed on gen-jet heavy
+                # flavour, replaces a flat lnN on the pooled Other_Higgs group
+                add_higgs_hf_weight(
+                    events=pruned_ev,
+                    weights_container=weights_container,
+                    dataset=dataset,
+                    shift=shift,
+                )
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))
     return weights_container
