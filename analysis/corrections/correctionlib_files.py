@@ -2,6 +2,21 @@ from pathlib import Path
 
 # corrections from correctionlib https://cms-analysis-corrections.docs.cern.ch/
 correction_files = {
+    # Preliminary 2D pseudo-continuous HF-tagging SF ("2D_HF_Tagging"), distinct scheme from
+    # "ctagging" above -- see analysis/corrections/ctag2d.py. Paths confirmed readable
+    # 2026-08-10 (second-brain memory hczz_pnet_ctag_sf_migration); correction name
+    # ParticleNetAK4_pseudocontinuous for 2022/2023, UParTAK4_pseudocontinuous for 2024.
+    # 2025: no 2D calibration exists (BTV/HGG, checked 2026-10-23: only the 2024 file in
+    # ingredients/2024/2D_HF_Tagging, none for 2025); uses the 2024 file as a placeholder
+    # (user, 2026-10-23), same as the 2024 MVA scoring 2025.
+    "ctagging_2d": {
+        "2022preEE": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2022/2D_HF_Tagging/flavTaggingSF_2022preEE.json.gz",
+        "2022postEE": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2022/2D_HF_Tagging/flavTaggingSF_2022postEE.json.gz",
+        "2023preBPix": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2023/2D_HF_Tagging/flavTaggingSF_2023preBPix.json.gz",
+        "2023postBPix": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2023/2D_HF_Tagging/flavTaggingSF_2023postBPix.json.gz",
+        "2024": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2024/2D_HF_Tagging/flavTaggingSF_2024.json.gz",
+        "2025": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2024/2D_HF_Tagging/flavTaggingSF_2024.json.gz",
+    },
     "electron_hzz": {
         "2022preEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2022preEE.json.gz",
         "2022postEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2022postEE.json.gz",

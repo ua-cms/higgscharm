@@ -12,13 +12,16 @@ from analysis.corrections.top_pt import add_top_pt_weight
 from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.hzz_electron import ElectronHZZWeights
 from analysis.corrections.jec import apply_jerc_corrections
+from analysis.corrections.kfactors import add_kfactor_weights
 from analysis.corrections.lhescale import add_scalevar_weight
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
 from analysis.corrections.partonshower import add_partonshower_weight
+from analysis.corrections.correctionlib_files import correction_files
+from analysis.corrections.ctag2d import CTag2DCorrector, BOUNDARIES_BY_ERA
 from analysis.corrections.electron_ss import apply_electron_ss_corrections
 from analysis.corrections.tau_energy import apply_tau_energy_scale_corrections
-from analysis.corrections.kfactors import add_kfactor_weights
+
 
 
 def object_corrector_manager(events, year, run, dataset, workflow_config):
@@ -279,6 +282,29 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     dataset=dataset,
                     config=weights_config["kFactorWeight"],
                 )
+
+        if "ctagging_2d" in weights_config:
+            if weights_config["ctagging_2d"] and (
+                year not in BOUNDARIES_BY_ERA
+                or year not in correction_files["ctagging_2d"]
+            ):
+                # Safety net for eras without a boundary table or SF file. Since 2026-10-23
+                # 2024 and 2025 (2024 file as placeholder) are wired, so this no longer
+                # triggers for any analysis era.
+                warnings.warn(
+                    f"ctagging_2d requested but not available for year '{year}' -- "
+                    f"NO c-tag SF applied (weight = 1, no CMS_ctag2d nuisance).",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+            elif weights_config["ctagging_2d"]:
+                ctag2d_corrector = CTag2DCorrector(
+                    events=pruned_ev,
+                    weights=weights_container,
+                    year=year,
+                    shift=shift,
+                )
+                ctag2d_corrector.add_weights()
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))
     return weights_container
