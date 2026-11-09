@@ -235,18 +235,12 @@ def identify_error_types(content: str) -> set[str]:
     }
 
 
-def get_missing_job_partitions(job_dir: Path, dataset: str) -> set[str]:
-    """Read missing partition identifiers from missing.txt, if available."""
-    missing_path = Path(job_dir) / dataset / "missing.txt"
-
-    if not missing_path.is_file():
-        return set()
-
-    return {
-        line.strip()
-        for line in missing_path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    }
+def get_missing_job_partitions(
+    jobnum_missing: dict[str, set[str]],
+    dataset: str,
+) -> set[str]:
+    """Return the missing partition identifiers for a dataset."""
+    return set(jobnum_missing.get(dataset, set()))
 
 
 def get_partition_endpoints(
@@ -352,9 +346,6 @@ def analyze_xrootd_error_logs(
     """
     dataset_dir = Path(job_dir) / dataset
     partitions_path = dataset_dir / "partitions.json"
-
-    if missing_partitions is None:
-        missing_partitions = get_missing_job_partitions(job_dir, dataset)
 
     missing_partitions = {str(partition) for partition in missing_partitions}
 
@@ -1340,7 +1331,7 @@ def main():
     # Filter logs BEFORE both diagnostics and planning. A recent log from a
     # completed job must never contribute sites to the blacklist.
     eligible_missing = {
-        dataset: get_missing_job_partitions(job_dir, dataset) & jobnum_missing[dataset]
+        dataset: get_missing_job_partitions(jobnum_missing, dataset)
         for dataset in missing_datasets
     }
     missing_error_files = {
@@ -1357,7 +1348,7 @@ def main():
 
     for dataset in missing_datasets:
         err_files = missing_error_files.get(dataset, [])
-        missing_partitions = get_missing_job_partitions(job_dir, dataset)
+        missing_partitions = get_missing_job_partitions(jobnum_missing, dataset)
 
         if not err_files:
             errors_by_dataset[dataset] = {
