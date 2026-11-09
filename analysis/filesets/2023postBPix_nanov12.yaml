@@ -290,3 +290,15 @@ ZHto2Zto4L:
   process: H(125) 
   key: higgs
   xsec: 0.000775
+HPlusCharm:
+  era: signal
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23BPixNanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_postBPix_ForNanov13_v2-v1-00000000000000000000000000000000/USER
+  key: hplusc
+  process: hplusc
+  xsec: 0.000026
+HPlusBottom:
+  era: signal
+  query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23BPixNanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_postBPix_ForNanov13_v2-v1-00000000000000000000000000000000/USER
+  key: hplusb
+  process: hplusb
+  xsec: 0.000026

@@ -446,3 +446,27 @@ TTH_Hto2Z:
   process: H(125) 
   key: higgs
   xsec: 0.00312
+HPlusCharm_v1:
+  era: signal
+  query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v1-00000000000000000000000000000000/USER
+  key: hplusc
+  process: hplusc
+  xsec: 0.000026
+HPlusCharm_v2:
+  era: signal
+  query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v2-00000000000000000000000000000000/USER
+  key: hplusc
+  process: hplusc
+  xsec: 0.000026
+HPlusBottom_v1:
+  era: signal
+  query: HPlusBottom_5FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v1-00000000000000000000000000000000/USER
+  key: hplusb
+  process: hplusb
+  xsec: 0.000026
+HPlusBottom_v2:
+  era: signal
+  query: HPlusBottom_5FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v2-00000000000000000000000000000000/USER
+  key: hplusb
+  process: hplusb
+  xsec: 0.000026

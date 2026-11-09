@@ -350,3 +350,21 @@ ZHto2Zto4L:
   process: H(125) 
   key: higgs
   xsec: 0.000775
+HPlusCharm_v1:
+  era: signal
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
+  key: hplusc
+  process: hplusc
+  xsec: 0.000026
+HPlusCharm_v2:
+  era: signal
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1la-00000000000000000000000000000000/USER
+  key: hplusc
+  process: hplusc
+  xsec: 0.000026
+HPlusBottom:
+  era: signal
+  query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
+  key: hplusb
+  process: hplusb
+  xsec: 0.000026
