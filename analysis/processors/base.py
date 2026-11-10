@@ -42,7 +42,6 @@ class BaseProcessor(processor.ProcessorABC):
         year: str,
         output_format: str,
         output_location: str,
-        partition_key: str,
         mode="virtual",
     ):
         assert mode in ["eager", "virtual", "dask"]
@@ -51,7 +50,6 @@ class BaseProcessor(processor.ProcessorABC):
         self.workflow = workflow
         self.output_format = output_format
         self.output_location = output_location
-        self.partition_key = partition_key
         self.run = "2" if year.startswith("201") else "3"
 
         config_builder = WorkflowConfigBuilder(workflow)
@@ -196,7 +194,6 @@ class BaseProcessor(processor.ProcessorABC):
                         year=year,
                         category=category,
                         output_location=self.output_location,
-                        partition_key=self.partition_key,
                         shift=shift,
                     )
 

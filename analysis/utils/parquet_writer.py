@@ -176,7 +176,6 @@ def dump_parquet(
     year,
     category,
     output_location,
-    partition_key,
     shift,
 ):
     is_mc = hasattr(events, "genWeight")
@@ -218,8 +217,9 @@ def dump_parquet(
             "xsec": str(dataset_info.get("xsec", "")),
             "era": str(dataset_info.get("era", "")),
         }
-
-    fname = partition_key.replace("/", "_") + ".parquet"
+    fname = (
+        events.attrs["@events_factory"]._partition_key.replace("/", "_") + ".parquet"
+    )
     dump_pa_table(
         variables_map, fname, output_location, subdirs, extra_metadata=extra_metadata
     )
