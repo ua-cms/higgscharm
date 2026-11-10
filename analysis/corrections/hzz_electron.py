@@ -55,6 +55,7 @@ class ElectronHZZWeights:
         self.is_2022 = year.startswith("2022")
         self.is_2023 = year.startswith("2023")
         self.is_post_bpix = year == "2023postBPix"
+        self.is_2024 = year == "2024"
 
     def _get_event_relative_uncertainty(self, relative_unc):
         """
@@ -146,7 +147,7 @@ class ElectronHZZWeights:
             & (self.electron_pt < 20.0)
         )
 
-        if self.is_2023:
+        if self.is_2023 or self.is_2024:
             gap_sf = self._evaluate(
                 "id_gap",
                 "nominal",
