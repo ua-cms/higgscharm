@@ -84,12 +84,13 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
 
         if "met" in objcorr_config:
             # apply met phi modulation corrections
-            shifts = apply_met_phi_corrections(
-                events=events,
-                year=year,
-                shifts=shifts,
-                corrections_config=corrections_config,
-            )
+            if year in correction_files["met"]:
+                shifts = apply_met_phi_corrections(
+                    events=events,
+                    year=year,
+                    shifts=shifts,
+                    corrections_config=corrections_config,
+                )
 
         if "jetveto" in objcorr_config:
             event_veto = jet_veto(events, year)
@@ -248,27 +249,29 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
         if "muon_hzz" in weights_config:
             if weights_config["muon_hzz"]:
                 if "selected_muons" in pruned_ev.fields:
-                    muon_hzz_weights = MuonHZZWeights(
-                        events=pruned_ev,
-                        year=year,
-                        shift=shift,
-                        weights=weights_container,
-                    )
-                    muon_hzz_weights.add_id_weights()
+                    if year in correction_files["muon_hzz"]:
+                        muon_hzz_weights = MuonHZZWeights(
+                            events=pruned_ev,
+                            year=year,
+                            shift=shift,
+                            weights=weights_container,
+                        )
+                        muon_hzz_weights.add_id_weights()
 
         if "electron_hzz" in weights_config:
             if weights_config["electron_hzz"]:
                 if "selected_electrons" in pruned_ev.fields:
-                    electron_hzz_weights = ElectronHZZWeights(
-                        events=pruned_ev,
-                        year=year,
-                        shift=shift,
-                        weights=weights_container,
-                    )
-                    electron_hzz_weights.add_id_weights()
-                    electron_hzz_weights.add_reco_weights("low")
-                    electron_hzz_weights.add_reco_weights("mid")
-                    electron_hzz_weights.add_reco_weights("high")
+                    if year in correction_files["electron_hzz"]:
+                        electron_hzz_weights = ElectronHZZWeights(
+                            events=pruned_ev,
+                            year=year,
+                            shift=shift,
+                            weights=weights_container,
+                        )
+                        electron_hzz_weights.add_id_weights()
+                        electron_hzz_weights.add_reco_weights("low")
+                        electron_hzz_weights.add_reco_weights("mid")
+                        electron_hzz_weights.add_reco_weights("high")
 
         if "kFactorWeight" in weights_config:
             if weights_config["kFactorWeight"]:
