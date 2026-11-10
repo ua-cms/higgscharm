@@ -115,6 +115,7 @@ event_selection:
   selections:
     trigger: get_zzto4l_trigger_mask(events, hlt_paths, dataset, year)
     lumimask: get_lumi_mask(events, year)
+    met_filters: get_metfilters_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     atleast_one_zz: ak.num(objects['zzcandidates']) >= 1
     atleast_one_cjet: ak.num(objects['cjets']) >= 1
@@ -122,6 +123,7 @@ event_selection:
     base:
       - trigger
       - lumimask
+      - met_filters
       - atleast_one_goodvertex
       - atleast_one_zz
       - atleast_one_cjet

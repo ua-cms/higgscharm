@@ -48,6 +48,7 @@ event_selection:
     trigger: get_trigger_mask(events, hlt_paths, dataset, year)
     trigger_match: get_trigger_match_mask(events, hlt_paths, year, events.Muon)
     lumimask: get_lumi_mask(events, year)
+    met_filters: get_metfilters_mask(events, year)
     atleast_one_goodvertex: events.PV.npvsGood > 0
     leading_muon_pt: ak.firsts(objects['muons'].pt) > 27
     subleading_muon_pt: ak.pad_none(objects['muons'], target=2)[:, 1].pt > 15
@@ -59,6 +60,7 @@ event_selection:
       - trigger
       - trigger_match
       - lumimask
+      - met_filters
       - atleast_one_goodvertex
       - leading_muon_pt
       - subleading_muon_pt
@@ -71,6 +73,7 @@ corrections:
     - jetveto
     - muon
     - electron
+    - met
   object_shifts: true
   event_weights:
     genWeight: true
@@ -78,7 +81,7 @@ corrections:
     partonshowerWeight: true
     lhepdfWeight: true
     lhescaleWeight: true
-    nnlopsWeight: false
+    nnlopsWeight: true
     topPtWeight: true
     electron: false
     muon: 
