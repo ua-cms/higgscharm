@@ -2,7 +2,7 @@ import correctionlib
 import awkward as ak
 from coffea.analysis_tools import Weights
 
-from analysis.corrections.utils import unflat_sf
+from analysis.corrections.utils import unflat_sf, candidate_leptons_only
 from analysis.corrections.correctionlib_files import correction_files
 
 
@@ -31,7 +31,8 @@ class ElectronHZZWeights:
         shift: str,
     ) -> None:
         self.events = events
-        self.electrons = events.selected_electrons
+        # only the 4 leptons of the best candidate get the HZZ SF (see candidate_leptons_only)
+        self.electrons = candidate_leptons_only(events, events.selected_electrons)
         self.weights = weights
         self.year = year
         self.shift = shift
