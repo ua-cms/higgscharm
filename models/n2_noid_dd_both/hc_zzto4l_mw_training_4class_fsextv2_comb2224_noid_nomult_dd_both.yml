@@ -1,0 +1,170 @@
+# 2026-11-12: variant of _noid_nomult without cjet_HT, kin_deta_j_4l (redundant-pair test), see Analysis/sculpt_study_2026_11_06/build_dedup.py
+# 2026-11-12: variant of _noid, see Analysis/sculpt_study_2026_11_06/build_ncj_nomult.py (jet_multiplicity -> n_cjet_2d / removed)
+# 2026-11-06 (m4l sculpting study): = hc_zzto4l_mw_training_4class_fsextv2_comb2224.yml WITHOUT lepton_mvaHZZIso and
+#  lepton_highPtId (lepton-flavour flags in practice; their importance vs ggZZ came from the unweighted per-channel
+#  ggZZ flavour mix of the training set). Dataset: Analysis/sculpt_study_2026_11_06/build_noid.py.
+# 2026-11-06 (user: "train 2022+2023+2024 together"): combined-era fsextv2 training.
+#  = hc_zzto4l_mw_training_4class_fsextv2_disco1.yml (2022/23 nominal recipe, 73 inputs, massinvlep scaling, DisCo on qqZZ+ggZZ)
+#  + global feature is_2024 (0 = 2022/23 PNet 2D categories, 1 = 2024 UParT; flavour-composition check
+#    Analysis/flavour_composition_2026_11_06: S/qqZZ per category differs 5-11% between the taggers)
+#  + DisCo lambda 0.355 = 2022/23 lambda 1 rescaled by the mean class weight (0.1130 here vs 0.3186; see base_model.disco_term).
+#  Dataset NOT built by DatasetConstructorTask: Analysis/comb_training_2026_11_06/build_comb_lz4.py merges the existing LZ4
+#  training sets hcZZ_fs_fsextv2disco1_20261028 (2022/23) + hcZZ_fsextv2disco1_2024v15 (2024) -> hcZZ_comb2224[_test,_test2223,_test2024].
+#  The process list below is the 2022/23 one + the 2024 names (only used by DatasetConstructorTask).
+# 2026-10-29 pm (user): fsextv2 with a stronger DisCo, lambda 1.0 (was 0.5: f(115-135) at 5% ZZ eff 0.24-0.25 vs massinvlep
+#  lambda 0.5 0.215; Notes/hczz-mva-new-inputs-fs-training-2026-10-28.md 12.6). Everything else = the _disco0p5 config.
+# 2026-10-29 (user): fsextv2 = fsext DisCo 0.5 minus the 4 jet-4l pT features (kin_ptbal/ptfrac_{j,cj}_4l):
+#  they use raw pT_4l, so with raw jet_pt + pT_4l/m4l the net can rebuild m4l exactly (Notes/hczz-mva-new-inputs-fs-training-2026-10-28.md 12.2-12.4).
+#  Jets stay RAW, lepton_pt / z_pt / pT_4l stay divided by m4l (12.3). 73 inputs.
+# 2026-10-28 (user): massinvlep + new inputs + FS-stitched balanced training set.
+#  - inputs pruned by permutation/gradient importance of massinvlep (Analysis/mva_newinputs_2026_10_28/importance_massinvlep.log):
+#    dropped all absolute phi, lepton_charge/is_tight/isPFcand, n_cjet, object etas, duplicate lt eta_4l (global eta_4l kept: it is the eta_key) (drop < 0.001 in every AUC)
+#  - added utils/hczz_extra_features.py: 5 H->ZZ decay angles + 7 4l/jet kinematics (dimensionless; phi/charge loaded as aux)
+#  - signal = 4FS HPlusCharm n_genc10==0 + 3FS Stitch3FS_cH n_genc10>=1 (card stitching), filelists hcZZ_fs_{train,test}_20261028
+#  - (fsext: 77 inputs) lepton_pt, z_pt, pT_4l divided by m4l (aux_m4l), as massinvlep
+#  - DisCo lambda 0.5 on qqZZ+ggZZ (10-28 eve, user)
+bins_pt:
+- 0
+- 50
+- 100
+- 200
+- 500
+bins_eta:
+- -6
+- -2
+- 0
+- 2
+- 6
+pt_key: jet_ht
+eta_key: eta_4l
+processor: LZ4HcZZProcessor
+treename: Events
+global_features:
+- jet_ht
+- eta_4l
+- deltaR_ZZ
+- cjets_h_dphi_inclusive
+- ang_cos_theta_star
+- ang_cos_theta1
+- ang_cos_theta2
+- ang_phi
+- ang_phi1
+- kin_dphi_j_4l
+- kin_deta_cj_4l
+- is_2024
+cpf_candidates:
+- jet_pt
+- jet_is_C0
+- jet_is_C1
+- jet_is_C2
+- jet_is_C3
+- jet_is_C4
+- jet_is_B0
+- jet_is_B1
+- jet_is_B2
+- jet_is_B3
+- jet_is_B4
+- jet_is_L0
+vtx_features:
+- z_pt
+npf_candidates:
+- lepton_pt
+- lepton_pfRelIso03_all
+- lepton_sip3d
+lt_candidates:
+- pT_4l
+n_cpf_candidates: 3
+n_vtx_candidates: 2
+n_npf_candidates: 4
+n_lt_candidates: 1
+truths:
+- is_qqZZ
+- is_ggZZ
+- is_Signal
+- is_Other_Higgs
+reference_flavour: is_Signal
+class_names:
+- qqZZ
+- ggZZ
+- Signal
+- Other_Higgs
+hierarchical_loss:
+  global_groups:
+    ZZ:
+    - is_qqZZ
+    - is_ggZZ
+    Higgs:
+    - is_Signal
+    - is_Other_Higgs
+  fine_groups:
+    ZZ: 3.0
+    Higgs: 8.0
+  fine_weight_boosts:
+    is_Signal: 2.0
+  max_weight_ratio: 3.0
+  significance:
+    signal_class: is_Signal
+    mode: logB
+    lam: 0.0
+reweighting_mode: class
+selections:
+  and:
+  - m4l>=90
+  - m4l<160
+  - eta_4l>=-6
+  - eta_4l<6
+data_precision: float32
+mass_window:
+  feature: m4l
+  min: 90
+  max: 160
+  filter_training: false
+  filter_inference: false
+processes:
+- GluGluHtoZZto4L
+- ZZto4L
+- GluGlutoContinto2Zto4E
+- GluGlutoContinto2Zto4Mu
+- GluGlutoContinto2Zto4Tau
+- GluGluToContinto2Zto2E2Mu
+- GluGluToContinto2Zto2E2Tau
+- GluGluToContinto2Zto2Mu2Tau
+- HPlusCharm
+- HPlusBottom
+- 2023postBPixHB
+- 2023preBPixHB
+- 2022postEEHB
+- 2022preEEHB
+- VBFHto2Zto4L
+- ZHto2Zto4L
+- WminusH_Hto2Zto4L
+- WplusH_Hto2Zto4L
+- TTH_Hto2Z
+- bbH_Hto2Zto4L
+- Stitch3FS_cH
+- GluGlu2Zto4E
+- GluGlu2Zto4Mu
+- GluGlu2Zto4Tau
+- GluGlu2Zto2E2Mu
+- GluGlu2Zto2E2Tau
+- GluGlu2Zto2Mu2Tau
+- HPlusCharm_v2_2024
+- HPlusBottom_2024
+xsec_weighting:
+  enabled: false
+aux_m4l: true
+mass_scaled_features:
+- lepton_pt
+- z_pt
+- pT_4l
+force_truth:
+  Stitch3FS_cH: is_Signal
+file_event_filters:
+  HPlusCharm: n_genc10==0
+  Stitch3FS_cH: n_genc10>=1
+disco:
+  lambda: 0.355
+  classes:
+  - is_qqZZ
+  - is_ggZZ
+  score_class: is_Signal

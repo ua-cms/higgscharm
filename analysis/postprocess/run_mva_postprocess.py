@@ -553,9 +553,15 @@ def main():
         help='Output directory (default: same as input, files updated in place)'
     )
     parser.add_argument(
+        '--model-name',
+        default=None,
+        help='Registered model (models/registry.yaml), e.g. n2_noid_dd_both: config + checkpoint resolved and md5-checked. '
+             'Without --model-name/--config/--model the registry default is used.'
+    )
+    parser.add_argument(
         '--config', '-c',
         default=None,
-        help='Path to b-hive config YAML file (required for --stages score)'
+        help='Path to b-hive config YAML file (ad-hoc models; use --model-name for registered ones)'
     )
     parser.add_argument(
         '--model', '-m',
@@ -635,6 +641,13 @@ def main():
         sys.exit(1)
 
     if 'score' in stages:
+        if args.model_name and (args.config or args.model):
+            parser.error('use either --model-name or --config/--model')
+        if args.model_name or not (args.config or args.model):
+            from analysis.postprocess.mva_registry import resolve_model
+            reg = resolve_model(args.model_name, era=args.era)
+            args.config, args.model = reg['config'], reg['model']
+            logger.info(f"Registered model {reg['name']} ({reg['entry']['status']}): md5 config {reg['entry']['md5']['config']}, model {reg['entry']['md5']['model']}")
         if not args.config or not args.model:
             parser.error('--config and --model are required for --stages score')
         if not Path(args.config).exists():

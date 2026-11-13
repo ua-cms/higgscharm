@@ -10,6 +10,16 @@ Models are saved as PyTorch `.pt` checkpoint files produced by the [b-hive](http
 
 ## Available models
 
+Usable models are listed in [`registry.yaml`](registry.yaml) with their files, md5 sums, classes, eras and tagger;
+`run_mva_postprocess.py --model-name <name>` resolves and checks them (`analysis/postprocess/mva_registry.py`).
+
+| Name | Status | Eras | Inputs | Notes |
+|------|--------|------|--------|-------|
+| [`n2_noid_dd_both`](n2_noid_dd_both/README.md) | candidate (final choice, frozen after the 2022/23 limit) | 2022-2026 | 63 | combined 2022+2023+2024 training, PNet / UParTAK4 per era |
+| `legacy_2022_2023_101inputs` | legacy | 2022/2023 | 101 | first model, described below |
+
+### Legacy 2022/2023 model
+
 The 2022/2023 analysis (2022preEE, 2022postEE, 2023preBPix, 2023postBPix) uses one model:
 
 | File | Value |
