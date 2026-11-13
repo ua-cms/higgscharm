@@ -406,6 +406,9 @@ class ObjectSelector:
         muons["lostHits"] = ak.zeros_like(muons.pt)
         # Add placeholder mvaHZZIso for muons (electrons use this for tight ID)
         muons["mvaHZZIso"] = ak.ones_like(muons.pt) * -999
+        # 2026-11-03: electron supercluster eta offset, needed by the HZZ electron SFs
+        # (corrections/hzz_lepton.py, binned in SC eta); 0 for muons
+        muons["deltaEtaSC"] = ak.zeros_like(muons.pt)
         # muons already have isPFcand and highPtId from NanoAOD
         electrons = self.objects["electrons"]
         # electrons already have mvaHZZIso from NanoAOD
@@ -433,6 +436,7 @@ class ObjectSelector:
                 "mvaHZZIso": helper_leptons.mvaHZZIso,
                 "isPFcand": helper_leptons.isPFcand,
                 "highPtId": helper_leptons.highPtId,
+                "deltaEtaSC": helper_leptons.deltaEtaSC,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,
@@ -469,7 +473,8 @@ class ObjectSelector:
         helper_leptons = assign_lepton_fsr_idx(fsr_photons, helper_leptons)
 
         # for each FSR photon that was selected, we exclude that photon from the isolation sum of all the leptons in the event
-        # This concerns the photons that are in the isolation cone and outside the isolation veto of said leptons dR < 0.4 AND dR > 0.01
+        # This concerns the photons that are in the isolation cone and outside the isolation veto of said leptons dR < 0.3 AND dR > 0.01
+        # (2026-11-09: cone 0.4 -> 0.3 = the pfRelIso03 cone, as CJLST lepFiller.py; bak_20261109_before_cjlst_iso)
         selected_fsr_photons = fsr_photons[fsr_photons.lepton_idx > -1]
         muons_matchedfsr_cartesian = ak.cartesian(
             {"muon": muons, "fsr": selected_fsr_photons},
@@ -480,7 +485,7 @@ class ObjectSelector:
             muons_matchedfsr_cartesian.fsr
         )
         muons_matchedfsr_cartesian_dr_valid = (muons_matchedfsr_cartesian_dr > 0.01) & (
-            muons_matchedfsr_cartesian_dr < 0.4
+            muons_matchedfsr_cartesian_dr < 0.3
         )
         valid_matchedfsr_pt = ak.sum(
             # awkward 2.9: ak.mask instead of .mask[] on a temporary (same result)
@@ -497,8 +502,8 @@ class ObjectSelector:
         # update 'is_tight' selection for muons
         muons["is_tight"] = muons.is_tight & (muons.pfRelIso03_all < 0.35)
 
-        # update 'is_tight' for electrons with isolation (no FSR correction in v12)
-        electrons["is_tight"] = electrons.is_tight & (electrons.pfRelIso03_all < 0.35)
+        # 2026-11-09: NO isolation cut for electrons (the HZZ BDT includes isolation; CJLST relIso_ele = 1e9, and the
+        # HZZ electron SFs are measured without one). Was: is_tight & (pfRelIso03_all < 0.35).
         electrons["pfRelIso03_all"] = ak.zeros_like(electrons.pt)
         # concatenate muons and electrons with corrected iso
         leptons = ak.concatenate([muons, electrons], axis=1)
@@ -524,6 +529,7 @@ class ObjectSelector:
                 "mvaHZZIso": leptons.mvaHZZIso,
                 "isPFcand": leptons.isPFcand,
                 "highPtId": leptons.highPtId,
+                "deltaEtaSC": leptons.deltaEtaSC,
             },
             with_name="PtEtaPhiMCandidate",
             behavior=candidate.behavior,

@@ -16,6 +16,7 @@ from analysis.corrections.hzz_electron import ElectronHZZWeights
 from analysis.corrections.jec import apply_jerc_corrections
 from analysis.corrections.kfactors import add_kfactor_weights
 from analysis.corrections.lhescale import add_scalevar_weight
+from analysis.corrections.hb_syst_transfer import is_old_hplusbottom, add_hb_syst_transfer_weights
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
 from analysis.corrections.partonshower import add_partonshower_weight
@@ -264,7 +265,12 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                         weights_container=weights_container,
                         shift=shift,
                     )
-        if "lhepdfWeight" in weights_config:
+        # 2026-11-09: old-gridpack private H+b (broken LHE weights) -> scale/PDF/alphaS transferred from the
+        # official H+b -> gamma gamma 5FS FxFx sample (hb_syst_transfer.py) instead of its own LHE weights
+        old_hb = is_old_hplusbottom(dataset) and (weights_config.get("lhepdfWeight") or weights_config.get("lhescaleWeight"))
+        if old_hb:
+            add_hb_syst_transfer_weights(pruned_ev, weights_container)
+        if "lhepdfWeight" in weights_config and not old_hb:
             if weights_config["lhepdfWeight"]:
                 if "LHEPdfWeight" in pruned_ev.fields:
                     add_lhepdf_weight(
@@ -272,7 +278,7 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                         weights_container=weights_container,
                         shift=shift,
                     )
-        if "lhescaleWeight" in weights_config:
+        if "lhescaleWeight" in weights_config and not old_hb:
             if weights_config["lhescaleWeight"]:
                 if "LHEScaleWeight" in pruned_ev.fields:
                     add_scalevar_weight(
@@ -297,6 +303,18 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                         events=pruned_ev,
                         weights_container=weights_container,
                     )
+        # 2026-11-03: m(ZZ)-dependent ZZ k-factors (corrections/zz_kfactor.py; gg->ZZ NNLO incl. variations,
+        # qq->ZZ NNLO/NLO QCD); the card builder must then drop its flat gg->ZZ 2.27 (HCZZ_ZZ_KFACTOR_WEIGHTS=1)
+        if weights_config.get("zz_kfactors"):
+            from analysis.corrections.zz_kfactor import add_zz_kfactor_weights
+            add_zz_kfactor_weights(pruned_ev, weights_container, dataset, variation="nominal" if shift is None else shift)
+        # 2026-11-03: HZZ lepton SFs on the 4 leptons of the best candidate (corrections/hzz_lepton.py).
+        # Use with muon: id: false and electron: id/reco: false (it replaces both, see module docstring).
+        if weights_config.get("hzz_leptons"):
+            from analysis.corrections.hzz_lepton import HZZLeptonWeights
+            HZZLeptonWeights(
+                events=pruned_ev, weights=weights_container, year=year, variation="nominal" if shift is None else shift
+            ).add_all()
         if "muon" in weights_config:
             if weights_config["muon"]:
                 if "selected_muons" in pruned_ev.fields:

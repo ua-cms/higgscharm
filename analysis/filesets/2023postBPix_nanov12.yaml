@@ -1,3 +1,5 @@
+# 2026-11-13 HcZZ_full_c26: coffea-2026 data/MC names + HcZZ production signal (smsignal), H+b (hb), 3FS stitch and SMEFT entries;
+# upstream hplusc/hplusb entries kept with corrected xsec (H+c 2.6381e-5 pb, H+b 1.73299e-4 pb) and the HPlusCharm_v2 key/xsec swap fixed.
 MuonEGRun2023Dv1:
   era: D
   query: MuonEG/Run2023D-22Sep2023_v1-v1/NANOAOD
@@ -81,8 +83,8 @@ TTto2L2Nu:
   query: TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v3/NANOAODSIM
   process: tt
   key:
-    - tt
-    - tt_semileptonic
+  - tt
+  - tt_semileptonic
   xsec: 97.78
 TTto4Q:
   era: mc
@@ -119,7 +121,7 @@ TbarBQ:
   query: TbarBQ_t-channel_4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
   process: Single Top
   key: singletop
-  xsec: 87.20
+  xsec: 87.2
 TbarWplusto2L2Nu:
   era: mc
   query: TbarWplusto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
@@ -143,27 +145,27 @@ TBbarQ:
   query: TBbarQ_t-channel_4FS_TuneCP5_13p6TeV_powheg-madspin-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
   process: Single Top
   key: singletop
-  xsec: 145.00
+  xsec: 145.0
 WW:
   era: mc
   query: WW_TuneCP5_13p6TeV_pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
   process: Diboson
   key: diboson
-  xsec: 122.30
+  xsec: 122.3
 WZ:
   era: mc
   query: WZ_TuneCP5_13p6TeV_pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
   process: Diboson
   key: diboson
-  xsec: 54.30
+  xsec: 54.3
 ZZ:
   era: mc
   query: ZZ_TuneCP5_13p6TeV_pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
   process: Diboson
-  key: 
-    - diboson
-    - zz
-  xsec: 16.70
+  key:
+  - diboson
+  - zz
+  xsec: 16.7
 ZZZ:
   era: mc
   query: ZZZ_TuneCP5_13p6TeV_amcatnlo-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v2-v2/NANOAODSIM
@@ -257,19 +259,19 @@ bbH_Hto2Zto4L:
 GluGluHtoZZto4L:
   era: mc
   query: GluGluHtoZZto4L_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.01434
 TTH_Hto2Z:
   era: mc
   query: TTH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
-  xsec: 0.0004437  # 2026-10-16: was 0.00312 (~20x/7x too high); sigma_ttH 0.5700 pb x BR(H->ZZ) 0.02641 x filter 0.029474 (4l from H, or 1 H-Z->ll + 2 leptonic tops; 36% pure 4l on GenPart; = Heyen 0.393 fb at 13 TeV)
+  xsec: 0.0004383
 VBFHto2Zto4L:
   era: mc
   query: VBFHto2Zto4L_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.00112
 WminusH_Hto2Zto4L:
@@ -281,7 +283,7 @@ WminusH_Hto2Zto4L:
 WplusH_Hto2Zto4L:
   era: mc
   query: WplusH_Hto2Zto4L_M-125_TuneCP5_13p6TeV_powheg2-minlo-HWJ-JHUGenV752-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
-  process:  H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.000244
 ZHto2Zto4L:
@@ -289,16 +291,46 @@ ZHto2Zto4L:
   query: ZH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
   process: H(125)
   key: higgs
-  xsec: 0.000775
+  xsec: 0.0007062
 HPlusCharm:
   era: signal
   query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23BPixNanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_postBPix_ForNanov13_v2-v1-00000000000000000000000000000000/USER
   key: hplusc
   process: hplusc
-  xsec: 0.000026
+  xsec: 2.6381e-05
 HPlusBottom:
   era: signal
   query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23BPixNanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_postBPix_ForNanov13_v2-v1-00000000000000000000000000000000/USER
   key: hplusb
   process: hplusb
-  xsec: 0.000026
+  xsec: 0.000173299
+SomeSMSignal:
+  era: signal
+  query: 2023postBPix_signal
+  key: smsignal
+  process: smsignal
+  xsec: 2.6381e-05
+2023postBPixHB:
+  era: signal
+  query: 2023postBPixHB
+  key: hb
+  process: hb
+  xsec: 0.000173299
+HPlusBottom_2023postBPix:
+  era: signal
+  query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23BPixNanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_postBPix_ForNanov13_v2-v1-00000000000000000000000000000000/USER
+  key: hb
+  process: hb
+  xsec: 0.000173299
+HPlusCharm_2023postBPix:
+  era: signal
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23BPixNanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_postBPix_ForNanov13_v2-v1-00000000000000000000000000000000/USER
+  key: smsignal
+  process: smsignal
+  xsec: 2.6381e-05
+Stitch3FS_cH_2023postBPix:
+  era: signal
+  query: HPlusCharm_3FS_MuRFScaleDynX0p50_HToZZTo4L_M125_TuneCP5_13p6TeV_amcatnlo-JHUGen-pythia8new/snandaku-Run3Summer23BPixNanoAODv13-3FS-HToZZTo4L-JHUGen-133X_mcRun3_2023_realistic_postBPix_ForNanov13_v2-v1new-00000000000000000000000000000000/USER
+  key: smsignal
+  process: smsignal
+  xsec: 1.48e-05

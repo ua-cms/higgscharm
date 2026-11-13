@@ -203,7 +203,7 @@ def load_mc_scored_parquets_rawsf(scored_dir, sumw_by_group):
             # Mirrors the same fix in create_datacards_ctag2d_100150.py's
             # load_mc_scored_parquets (this function is a hand-duplicated
             # copy of it, patched only for CMS_ctag2d recomputation).
-            is_hplusbottom = (proc != "Signal" and "HPlusBottom" in sample_name)
+            is_hplusbottom = (proc != "Signal" and dc.is_old_hplusbottom(sample_name))
             requestable = usable - HPLUSBOTTOM_BUGGY_SYST if is_hplusbottom else usable
             syst_cols_wanted = []
             for syst in requestable:
@@ -247,10 +247,12 @@ def load_mc_scored_parquets_rawsf(scored_dir, sumw_by_group):
                         elif is_hplusbottom and syst in HPLUSBOTTOM_BUGGY_SYST:
                             proc_syst_weights[proc][syst][direction].append(nominal_win)
                         elif col in df_win.columns:
+                            dc.note_syst_col(proc, syst, direction, True, nominal_win, sample_name)
                             proc_syst_weights[proc][syst][direction].append(
                                 df_win[col].fillna(0).values * scale
                             )
                         else:
+                            dc.note_syst_col(proc, syst, direction, False, nominal_win, sample_name)
                             proc_syst_weights[proc][syst][direction].append(nominal_win)
 
     return dc.finalize_mc_data(proc_scores, proc_weights, proc_syst_weights, raw_weight)

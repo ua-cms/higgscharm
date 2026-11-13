@@ -14,14 +14,14 @@
   MC: "Summer23BPixPrompt23_V4 Summer23BPixPrompt23_RunD_JRV3"
   Run2023D: "Summer23BPixPrompt23_V4"
 '2024':
-  MC: "Summer24Prompt24_V2 Summer23BPixPrompt23_RunD_JRV1"
-  Run2024C: "Summer24Prompt24_V2"
-  Run2024D: "Summer24Prompt24_V2"
-  Run2024E: "Summer24Prompt24_V2"
-  Run2024F: "Summer24Prompt24_V2"
-  Run2024G: "Summer24Prompt24_V2"
-  Run2024H: "Summer24Prompt24_V2"
-  Run2024I: "Summer24Prompt24_V2"
+  MC: "Summer24Prompt24_V5 Summer24Prompt24_JRV2"
+  Run2024C: "Summer24Prompt24_V5"
+  Run2024D: "Summer24Prompt24_V5"
+  Run2024E: "Summer24Prompt24_V5"
+  Run2024F: "Summer24Prompt24_V5"
+  Run2024G: "Summer24Prompt24_V5"
+  Run2024H: "Summer24Prompt24_V5"
+  Run2024I: "Summer24Prompt24_V5"
 '2025':
   # Run3-25Prompt-Summer24-NanoAODv15 (2025 data analysed against Summer24 MC)
   MC: "Summer24Prompt25_V3 Summer24Prompt25_JRV2"
@@ -30,3 +30,14 @@
   Run2025E: "Summer24Prompt25_V3"
   Run2025F: "Summer24Prompt25_V3"
   Run2025G: "Summer24Prompt25_V3"
+'2026':
+  # Run3-26Prompt-Summer24-NanoAODv15 2026-07-15 (first 2026 JEC/JER; 2026 data vs Summer24 MC).
+  # JER: RunBD (RunC = dedicated low-PU run, not in the golden JSON). DATA JEC is run-dependent (one tag).
+  MC: "Summer24Prompt26_V1 Summer24Prompt26_RunBD_JRV1"
+  Run2026A: "Summer24Prompt26_V1"  # A is in the golden JSON; DATA L2L3Res run bins start at 401600
+  Run2026B: "Summer24Prompt26_V1"
+  Run2026C: "Summer24Prompt26_V1"
+  Run2026D: "Summer24Prompt26_V1"
+  Run2026E: "Summer24Prompt26_V1"
+  Run2026F: "Summer24Prompt26_V1"
+  Run2026G: "Summer24Prompt26_V1"

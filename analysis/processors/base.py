@@ -1,6 +1,7 @@
 import warnings
 from urllib.parse import quote
 import numpy as np
+from analysis.corrections.zz_kfactor import lhe_four_lepton  # 2026-11-03: LHE m4l columns
 import awkward as ak
 from copy import deepcopy
 from coffea import processor
@@ -211,6 +212,7 @@ class BaseProcessor(processor.ProcessorABC):
 
         self.n_genc = None
         self.chad = None
+        self.lhe4l = None
         if self.hczz:
             # HcZZ convention: metadata "sumw" (and the cutflow "initial") after the veto
             self.sumw = (
@@ -219,6 +221,9 @@ class BaseProcessor(processor.ProcessorABC):
             if self.is_mc and "GenJet" in vetoed_events.fields:
                 self.n_genc = count_gen_cjets(vetoed_events)
                 sumw_extra.update(sumw_by_genc(vetoed_events, self.n_genc))
+            # LHE four-lepton mass, same-flavour flag and |cos theta*| for the ZZ k-factors (MC with LHEPart only)
+            if self.is_mc and "LHEPart" in vetoed_events.fields:
+                self.lhe4l = lhe_four_lepton(vetoed_events)
             if self.is_mc and "GenPart" in vetoed_events.fields:
                 self.chad = gen_chadron_info(vetoed_events)
                 for t in CHAD_PT_THRESHOLDS:
@@ -350,6 +355,10 @@ class BaseProcessor(processor.ProcessorABC):
                     if self.chad is not None:
                         for key, val in self.chad.items():
                             variables_map[key] = val[mask_np]
+                    if self.lhe4l is not None:
+                        variables_map["lhe_m4l"] = self.lhe4l[0][mask_np]
+                        variables_map["lhe_4l_sameflavour"] = self.lhe4l[1][mask_np]
+                        variables_map["lhe_abscosthetastar"] = self.lhe4l[2][mask_np]  # -1 if no OSSF pairing
                     dump_parquet(
                         events=events,
                         weights_container=weights_container,

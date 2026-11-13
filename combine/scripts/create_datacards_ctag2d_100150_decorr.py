@@ -135,7 +135,7 @@ def load_mc_scored_parquets_decorr(scored_dir, sumw_by_group):
             usable = dc.USABLE_SYST.get(proc, set())
             has_ctag = RESID in usable   # CMS_ctag2d itself was swapped for NEW_SYST at import
             old_syst = [s for s in usable if s != "CMS_ctag2d" and s not in NEW_SYST]
-            is_hb = (proc != "Signal" and "HPlusBottom" in sample_name)
+            is_hb = (proc != "Signal" and dc.is_old_hplusbottom(sample_name))
             requestable = [s for s in old_syst if not (is_hb and s in dc.HPLUSBOTTOM_BUGGY_SYST)]
             syst_cols = [dc.syst_col(s, d, era) for s in requestable for d in ("Up", "Down")]
             jet_cols = rs.jet_score_cols(era) if has_ctag else []
@@ -161,8 +161,10 @@ def load_mc_scored_parquets_decorr(scored_dir, sumw_by_group):
                         if is_hb and syst in dc.HPLUSBOTTOM_BUGGY_SYST:
                             arr = nominal
                         elif col in df_win.columns:
+                            dc.note_syst_col(proc, syst, d, True, nominal, sample_name)
                             arr = df_win[col].fillna(0).values * scale
                         else:
+                            dc.note_syst_col(proc, syst, d, False, nominal, sample_name)
                             arr = nominal
                         proc_syst_weights[proc][syst][d].append(arr)
 

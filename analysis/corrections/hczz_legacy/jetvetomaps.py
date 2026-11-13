@@ -25,6 +25,7 @@ def apply_jetvetomaps(events, year: str, mapname: str = "jetvetomap"):
         "2023postBPix": "Summer23BPixPrompt23_RunD_V1",
         "2024": "Summer24Prompt24_RunBCDEFGHI_V1",
         "2025": "Summer24Prompt25_RunCDEFG_V1",
+        "2026": "Summer24Prompt26_RunBCD_V1",  # cloned from 2025 by JME (2026-07-15)
     }
     cset = correctionlib.CorrectionSet.from_file(correction_files["jetvetomaps"][year])
 

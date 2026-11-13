@@ -21,6 +21,7 @@ if __name__ == "__main__":
             "2023postBPix",
             "2024",
             "2025",
+            "2026",
         ],
     )
     args = parser.parse_args()

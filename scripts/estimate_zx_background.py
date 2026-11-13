@@ -39,20 +39,19 @@ CR_BASE     = "/eos/user/s/snandaku/higgscharm/outputs/hplusc_mva_4class_CR"
 # These are module-level defaults; the CLI --mass-window / --no-mass-window overrides them.
 SR_M4L_MIN  = 100.0   # GeV  (mva_config.mass_window.min); set to None to disable
 SR_M4L_MAX  = 150.0   # GeV  (mva_config.mass_window.max); set to None to disable
-SR_CJET_REQ = False   # Do NOT apply c-jet cut to CR events.
-                      # Standard CMS H→ZZ fake rate method (AN-18-340, UAntwerp iBOF)
-                      # uses inclusive CR events within the m4l window.  Applying the
-                      # SR c-jet requirement here incorrectly reduces N_3P1F (fewer
-                      # events relative to N_2P2F) and causes near-cancellation in the
-                      # Z+X estimate.  The c-jet efficiency is accounted for separately
-                      # via the SR selection when the final MVA score is applied.
+SR_CJET_REQ = False   # Default: no c-jet cut on CR events (inclusive CR within the m4l window, as the standard CMS H→ZZ fake rate method).
+                      # 2026-11-12: --require-cjet sets this True -> n_cjet >= 1 (same loose c-tag WP and jet cleaning as the SR atleast_one_cjet) on the
+                      # 3P1F/2P2F data AND on the ZZ MC subtracted in 3P1F. Without it the card Z+X is 2.6x too large: the CR has no jet requirement, so
+                      # 0-jet / non-c-tagged Z+X events (28.9 + 0.8 of 47.7 in 2022/23 105-160) enter the card, while all MC needs >= 1 c-jet. The old claim
+                      # that the c-jet efficiency is applied later via the MVA score does not hold (the scorer does not reject them); the near-cancellation
+                      # seen earlier does not occur with the current inputs (net 18.1 events with the cut).
 
 # Dataset folder name keywords to identify process type
 _DATA_KW   = ('Muon', 'EGamma', 'DoubleEG', 'DoubleMuon', 'MuonEG',
                'SingleMuon', 'SingleElectron', 'SinglePhoton')
 _QQZZ_KW   = ('ZZto4L',)
 # GluGluToContinto / GluGlutoContinto = continuum gg→ZZ (not H→ZZ signal)
-_GGZZ_KW   = ('GluGluToContinto', 'GluGlutoContinto')
+_GGZZ_KW   = ('GluGluToContinto', 'GluGlutoContinto', 'GluGlu2Zto')   # 2026-11-10: 2024 (nanov15) names GluGlu2Zto*
 
 
 def _classify_dataset(folder_name):
@@ -225,10 +224,12 @@ def load_cr_data(year, category):
     else:
         print(f"  m4l window: NONE (inclusive)")
 
-    if SR_CJET_REQ and "cjet_HT" in df.columns:
+    if SR_CJET_REQ:
+        if "n_cjet" not in df.columns:
+            raise RuntimeError(f"--require-cjet: no n_cjet column in {merged}")
         before = len(df)
-        df = df[df["cjet_HT"] > 0].reset_index(drop=True)
-        print(f"  After cjet_HT > 0:              {len(df):,} events ({len(df)/before*100:.1f}%)")
+        df = df[df["n_cjet"] >= 1].reset_index(drop=True)
+        print(f"  After n_cjet >= 1:              {len(df):,} events ({len(df)/before*100:.1f}%)")
 
     # ── Keep DATA events only ───────────────────────────────────────────────
     # DATA rows have weight_nominal = NaN (no MC weight); MC rows have finite values.
@@ -244,8 +245,18 @@ _FILESET_YAML = {
     '2022postEE':   '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2022postEE_nanov12.yaml',
     '2023preBPix':  '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2023preBPix_nanov12.yaml',
     '2023postBPix': '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2023postBPix_nanov12.yaml',
+    '2024':         '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2024_nanov15.yaml',
 }
-_LUMI_FB = {'2022preEE': 7.98, '2022postEE': 26.67, '2023preBPix': 17.79, '2023postBPix': 9.53}
+# 2026-11-10: 2024 added (was missing -> "Unknown era 2024, skipping ZZ correction" = factor 1.0, no ZZ subtraction in 3P1F);
+# lumi = create_datacards_2024.py LUMI_2024_PB 108960 pb^-1
+_LUMI_FB = {'2022preEE': 7.98, '2022postEE': 26.67, '2023preBPix': 17.79, '2023postBPix': 9.53, '2024': 108.96}
+
+
+def _ggzz_samples(year):
+    """gg->ZZ continuum samples (4e, 4mu, 2e2mu) entering the ZZ-in-CR correction; 2024 (nanov15) renamed them GluGlu2Zto*."""
+    if year in ('2022preEE', '2022postEE', '2023preBPix', '2023postBPix'):
+        return ['GluGlutoContinto2Zto4E', 'GluGlutoContinto2Zto4Mu', 'GluGluToContinto2Zto2E2Mu']
+    return ['GluGlu2Zto4E', 'GluGlu2Zto4Mu', 'GluGlu2Zto2E2Mu']
 # Generated-sumw source for the ZZ-in-3P1F correction: the dedup'd per-chunk
 # sumw/*.json sidecars of the ctag2d production (the same denominator the
 # [100,150] datacard uses for its MC). Was outputs/hplusc/*.coffea until that
@@ -253,7 +264,9 @@ _LUMI_FB = {'2022preEE': 7.98, '2022postEE': 26.67, '2023preBPix': 17.79, '2023p
 # the ZZ correction became 1.0 in every era. Same input files as the CR
 # productions (e.g. ZZto4L 82/208/.../81 files). CR_merged's own .coffea were
 # not used: 2022postEE ZZto4L has only 7/14 of them (silent xrdcp failures).
-_SUMW_BASE = "/eos/user/s/snandaku/higgscharm/outputs/hplusc_mva_4class_ctag2d"
+# 2026-11-03: hplusc_mva_4class_ctag2d was deleted (EOS space); HCZZ_ZX_SUMW_BASE points to another production
+# with the same generated-sumw sidecars (e.g. hplusc_mva_4class_ctag2d_lepss_bkg).
+_SUMW_BASE = os.environ.get("HCZZ_ZX_SUMW_BASE", "/eos/user/s/snandaku/higgscharm/outputs/hplusc_mva_4class_ctag2d")
 
 
 def _load_xsec(year, sample_key):
@@ -321,6 +334,16 @@ def _get_sumw_from_coffea(year, dataset_prefix):
     return total
 
 
+def _cjet_mask(arr, pfile):
+    """2026-11-12: per-event n_cjet >= 1 mask for --require-cjet (None when the cut is off)."""
+    if not SR_CJET_REQ:
+        return None
+    if 'n_cjet' not in arr.fields:
+        raise RuntimeError(f"--require-cjet: no n_cjet column in {pfile}")
+    n = arr['n_cjet']
+    return ak.to_numpy(ak.fill_none(ak.flatten(n, axis=1) if n.ndim > 1 else n, 0)) >= 1
+
+
 def _sum_wnominal_from_cr(year, dataset_prefix, category, m4l_min=None, m4l_max=None,
                           cr_base=None, m4l_col=None):
     """Sum weight_nominal (genWeight × SFs, NOT xs-normalized) from per-dataset CR parquets."""
@@ -345,7 +368,12 @@ def _sum_wnominal_from_cr(year, dataset_prefix, category, m4l_min=None, m4l_max=
                     m4l_np = ak.to_numpy(
                         ak.fill_none(ak.flatten(m4l, axis=1) if m4l.ndim > 1 else m4l, np.nan))
                     mask = mask & (m4l_np >= m4l_min) & (m4l_np <= m4l_max)
+                cm = _cjet_mask(arr, pfile)
+                if cm is not None:
+                    mask = mask & cm
                 total += float(w_np[mask].sum())
+            except RuntimeError:
+                raise
             except Exception as e:
                 print(f"    Warning reading {pfile}: {e}")
     return total
@@ -383,11 +411,8 @@ def compute_zz_correction(year, category="CR_3P1F", df_data=None):
     # ── ggZZ contribution (GluGluto/GluGluToContinto) ──────────────────────
     # Sum over all relevant gg→ZZ samples (4e, 4mu, 2e2mu)
     n_zz_gg = 0.0
-    for sample_key, folder_prefix in [
-        ('GluGlutoContinto2Zto4E',       'GluGlutoContinto2Zto4E'),
-        ('GluGlutoContinto2Zto4Mu',      'GluGlutoContinto2Zto4Mu'),
-        ('GluGluToContinto2Zto2E2Mu',    'GluGluToContinto2Zto2E2Mu'),
-    ]:
+    for sample_key in _ggzz_samples(year):
+        folder_prefix = sample_key
         xs_gg   = _load_xsec(year, sample_key)
         sumw_gg = _get_sumw_from_coffea(year, folder_prefix)
         if xs_gg <= 0:
@@ -468,6 +493,9 @@ def load_cr_ss_data(year):
                 mask = (m4l >= SR_M4L_MIN) & (m4l <= SR_M4L_MAX)
             else:
                 mask = np.ones(len(m4l), dtype=bool)
+            cm = _cjet_mask(arr, pfile)
+            if cm is not None:
+                mask = mask & cm
             n_pass = int(np.nansum(mask))
             if n_pass == 0:
                 continue
@@ -508,8 +536,7 @@ def estimate_zx_ss_crosscheck(year):
     n_zz_mc = 0.0
     for dclass, sample_keys in [
         ('qqzz', ['ZZto4L']),
-        ('ggzz', ['GluGlutoContinto2Zto4E', 'GluGlutoContinto2Zto4Mu',
-                   'GluGluToContinto2Zto2E2Mu']),
+        ('ggzz', _ggzz_samples(year)),
     ]:
         sub = df_mc[df_mc['dataset_class'] == dclass]
         if len(sub) == 0:
@@ -727,6 +754,8 @@ def main():
     parser.add_argument('--ss-crosscheck', action='store_true',
                         help='Also print the SS-method (CR_2P2F_SS) cross-check '
                              'per era. Printed only, not fed into combine.')
+    parser.add_argument('--require-cjet', action='store_true',
+                        help='2026-11-12: apply the SR c-jet requirement (n_cjet >= 1) to the CR data and the ZZ MC subtraction')
     args = parser.parse_args()
 
     # Set workflow-dependent globals before any estimation runs
@@ -748,6 +777,11 @@ def main():
         print(f"Mass window: [{SR_M4L_MIN}, {SR_M4L_MAX}] GeV")
     else:
         print(f"Mass window: [{SR_M4L_MIN}, {SR_M4L_MAX}] GeV (default)")
+
+    global SR_CJET_REQ
+    if args.require_cjet:
+        SR_CJET_REQ = True
+    print(f"c-jet requirement (n_cjet >= 1): {'ON' if SR_CJET_REQ else 'OFF'}")
 
     fake_rates = load_fake_rates(args.fake_rates)
 

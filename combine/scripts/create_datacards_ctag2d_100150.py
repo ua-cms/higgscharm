@@ -84,8 +84,8 @@ PROCESS_XS_PB = {
     "ggZZ":        3 * 0.003 + 3 * 0.006,
     "qqZZ":        1.39,
     "Other_Higgs": (
-        0.01434 + 0.00112 + 0.000775 + 0.000156 + 0.000244
-        + 0.00312 + 0.000144 + 0.000173
+        0.01434 + 0.00112 + 0.0007062 + 0.000156 + 0.000244   # 11-04: ZH, ttH = CJLST (yamls)
+        + 0.0004383 + 0.000144 + 0.000173
     ),
 }
 # gg->ZZ is generated at LO (GluGluToContinto2Z*_mcfm701-pythia8, loop-induced
@@ -99,6 +99,12 @@ PROCESS_XS_PB = {
 # central-value correction anywhere in the pipeline. See
 # hczz_physicsdays_systematics_audit memory for the full investigation.
 GGZZ_KFACTOR = 2.27
+# 2026-11-03: productions with `zz_kfactors` (workflows *_lepsf_*) carry the m(ZZ)-dependent gg->ZZ NNLO k-factor
+# (and qq->ZZ NNLO/NLO) in weight_nominal (analysis/corrections/zz_kfactor.py) -> HCZZ_ZZ_KFACTOR_WEIGHTS=1: no flat
+# factor here, and the 10% kfactor_ggZZ lnN is replaced by the computed shape variations kfactor_ggZZ_<source>.
+ZZ_KFACTOR_WEIGHTS = os.environ.get("HCZZ_ZZ_KFACTOR_WEIGHTS") == "1"
+if ZZ_KFACTOR_WEIGHTS:
+    GGZZ_KFACTOR = 1.0
 
 EXPECTED_YIELDS = {p: xs * TOTAL_LUMI_PB for p, xs in PROCESS_XS_PB.items()}
 EXPECTED_YIELDS["ggZZ"] *= GGZZ_KFACTOR
@@ -232,6 +238,14 @@ SYSTEMATICS = {
     # CMS_eff_e_reco above, not an LHE-generator weight -- unaffected by the
     # private-sample lhe_pdf/scalevar bugs, usable for every process.
     "CMS_eff_m_id":           {"col": "weight_CMS_eff_m_id",           "era_dep": True},
+    # 2026-11-03: HZZ electron selection SF (BDT ID + SIP; analysis/corrections/hzz_lepton.py, workflows
+    # *_lepsf_*); with hzz_leptons the muon one above is the HZZ muon SF and both act on the 4 candidate leptons
+    "CMS_eff_e_id":           {"col": "weight_CMS_eff_e_id",           "era_dep": True},
+    # 2026-11-03: gg->ZZ NNLO k-factor variations (scale, PDF, alpha_s), HCZZ_ZZ_KFACTOR_WEIGHTS
+    "kfactor_ggZZ_QCDScale":   {"col": "weight_kfactor_ggZZ_QCDScale",   "era_dep": False},
+    "kfactor_ggZZ_PDFScale":   {"col": "weight_kfactor_ggZZ_PDFScale",   "era_dep": False},
+    "kfactor_ggZZ_As":         {"col": "weight_kfactor_ggZZ_As",         "era_dep": False},
+    # 2026-11-09: no PDFReplica in the CJLST Run-3 ggZZ table (PDF + PDF_aS + QCD_mu; zz_kfactor.py), entry removed
     # Higgs+HF (ggH/VBF heavy-flavor-composition) uncertainty, computed by
     # analysis/corrections/higgs_hf.py (ported from HiggsDNA, AN-23-102
     # section 7.1) and confirmed present + correctly scoped in the real
@@ -247,6 +261,10 @@ SYSTEMATICS = {
 }
 
 # Per-process usable systematics, based on empirical sanity checks (2026-08-03/04):
+# 2026-11-04 CORRECTION: the '/99' below was WRONG for every sample -- all LHEPdfWeight sets are MC-Hessian
+# (325300 official, 325500 private H+c), so lhepdf.py's /99 made qqZZ/Other_Higgs lhe_pdf sqrt(99) too small; fixed in
+# lhepdf.py 11-04, older productions corrected on read with HCZZ_PDF_HESSIAN_FIX=1 (eos_io.py). The private-sample
+# problem is different (members 1-100 normalised differently from member 0) and stays excluded.
 # Signal's lhe_pdf/lhe_alphaS/scalevar_muR/scalevar_muF are anomalous.
 # lhe_pdf: root cause confirmed (missing 1/sqrt(N-1) NNPDF-replica
 # normalization in analysis/corrections/lhepdf.py, now fixed there for
@@ -343,18 +361,54 @@ USABLE_SYST = {
     # members with no alphaS variation at all, and ggZZ has no LHEScaleWeight
     # branch and degenerate lhe_pdf/lhe_alphaS -- unrelated to the abs() bug,
     # re-including wouldn't add real information for either).
-    "qqZZ":        set(SYSTEMATICS.keys()) - {"higgs_plus_c"},
-    "Other_Higgs": set(SYSTEMATICS.keys()),
-    "ggZZ":        {"ps_isr", "ps_fsr", "CMS_pileup", "CMS_ctag2d", "CMS_eff_m_id"} | EFF_E_RECO,
-    "Signal":      {"ps_isr", "ps_fsr", "CMS_pileup", "CMS_ctag2d", "CMS_eff_m_id"} | EFF_E_RECO,
+    "qqZZ":        set(SYSTEMATICS.keys()) - {"higgs_plus_c"} - {k for k in SYSTEMATICS if k.startswith("kfactor_ggZZ_")},
+    "Other_Higgs": set(SYSTEMATICS.keys()) - {k for k in SYSTEMATICS if k.startswith(("kfactor_ggZZ_", "kfactor_qqZZ_"))},
+    "ggZZ":        {"ps_isr", "ps_fsr", "CMS_pileup", "CMS_ctag2d", "CMS_eff_m_id", "CMS_eff_e_id"} | EFF_E_RECO,
+    # (kfactor_ggZZ_* added below for HCZZ_ZZ_KFACTOR_WEIGHTS; they exist only in gg->ZZ parquets)
+    "Signal":      {"ps_isr", "ps_fsr", "CMS_pileup", "CMS_ctag2d", "CMS_eff_m_id", "CMS_eff_e_id"} | EFF_E_RECO,
 }
+if ZZ_KFACTOR_WEIGHTS:
+    USABLE_SYST["ggZZ"] |= {k for k in SYSTEMATICS if k.startswith("kfactor_ggZZ_")}
+# 2026-11-09: qq->ZZ k-factor uncertainties of the CJLST Run-3 tables (analysis/corrections/zz_kfactor.py since
+# 11-09: kfactor_qqZZ_EW/_smoothing/_As = 1 +- relative value, kfactor_qqZZ_QCD = QCD_up|dn / nominal), qqZZ only.
+# Opt in with HCZZ_RUN3_KFACTORS=1 (productions made with the 11-09 zz_kfactor.py; older ones have no such columns).
+# In 105-160: EW = 0 (EW factor 1 below 2 mZ), smoothing 0.3-0.6%, alpha_S 1.7%. kfactor_qqZZ_QCD is NOT included by
+# default (HCZZ_QQZZ_KFAC_QCD=1 adds it): both QCD_up and QCD_dn lie BELOW the nominal (0.97 / 0.94 in 105-160), it
+# overlaps QCDscale_qqZZ (4%) + scalevar_muR/muF_qqZZ, and HIG-24-013 uses only the EW one.
+RUN3_KFACTORS = os.environ.get("HCZZ_RUN3_KFACTORS") == "1"
+QQZZ_KFACTOR_SYST = []
+if RUN3_KFACTORS:
+    if not ZZ_KFACTOR_WEIGHTS:
+        raise SystemExit("HCZZ_RUN3_KFACTORS=1 needs HCZZ_ZZ_KFACTOR_WEIGHTS=1")
+    QQZZ_KFACTOR_SYST = ["kfactor_qqZZ_EW", "kfactor_qqZZ_smoothing", "kfactor_qqZZ_As"]
+    if os.environ.get("HCZZ_QQZZ_KFAC_QCD") == "1":
+        QQZZ_KFACTOR_SYST.append("kfactor_qqZZ_QCD")
+    for _k in QQZZ_KFACTOR_SYST:
+        SYSTEMATICS[_k] = {"col": f"weight_{_k}", "era_dep": False}
+    USABLE_SYST["qqZZ"] |= set(QQZZ_KFACTOR_SYST)
 
 # Per-sample (not per-process) override: HPlusBottom is the ~4% private-LHE
 # sub-sample of Other_Higgs sharing Signal's confirmed lhe_pdf-normalization
 # and scalevar_muR/muF same-direction bugs (see the block comment above).
 # lhe_alphaS is NOT in this set -- verified sane (not pathological) for
 # HPlusBottom specifically, 2026-09-11.
-HPLUSBOTTOM_BUGGY_SYST = {"lhe_pdf", "scalevar_muR", "scalevar_muF"}
+# 2026-11-09: + lhe_alphaS (old-gridpack H+b alphaS members are mis-normalised too, +8%), and the check now also
+# catches the local <era>HB samples (is_old_hplusbottom): "HPlusBottom" in name missed them, so their broken
+# lhe_pdf (Up 8.4x / Down -6.4x nominal in the PDF-fixed productions) and lhe_alphaS entered every card.
+HPLUSBOTTOM_BUGGY_SYST = {"lhe_pdf", "lhe_alphaS", "scalevar_muR", "scalevar_muF"}
+# 2026-11-09: productions made after analysis/corrections/hb_syst_transfer.py carry, for the old H+b samples, scale/
+# PDF/alphaS weights transferred from the official H+b -> gamma gamma 5FS FxFx sample -> HCZZ_HB_TRANSFER=1 keeps them
+# (and gives HPlusB its own scalevar_muR/muF_HPlusB in split_other_higgs). Older productions: leave unset.
+HB_TRANSFER = os.environ.get("HCZZ_HB_TRANSFER") == "1"
+if HB_TRANSFER:
+    HPLUSBOTTOM_BUGGY_SYST = set()
+
+
+def is_old_hplusbottom(sample_name):
+    """Private H+b sample from the OLD gridpack (broken LHE weights): HPlusBottom_<era>[_n], HPlusBottom_new_<era>[_n],
+    HPlusBottom_<year>[_n], <era>HB[_n]. The fixed 4FS samples (HPlusBottom4FS_*, from gridpack afd1d440) are NOT matched."""
+    base = re.sub(r"_\d+$", "", sample_name)
+    return bool(re.match(r"^HPlusBottom(_new)?_\d{4}", base) or re.match(r"^\d{4}\w*HB$", base))
 
 
 # ---------------------------------------------------------------------------
@@ -384,6 +438,35 @@ JECSHIFTS_SYSTEMATICS = ["CMS_scale_j", "CMS_res_j", "CMS_scale_m", "CMS_res_m"]
 # from the older productions (no such dirs) still build unchanged.
 if os.environ.get("HCZZ_ELE_SHIFTS") == "1":
     JECSHIFTS_SYSTEMATICS = JECSHIFTS_SYSTEMATICS + ["CMS_scale_e", "CMS_res_e"]
+# 2026-11-03: JME Regrouped JES sources + JER per era (productions with `jes_regrouped` in the workflow,
+# shift dirs CMS_scale_j_<source>{Up,Down} and CMS_res_j_<era>{Up,Down}); opt in with HCZZ_JES_REGROUPED=1.
+# Sources without an era suffix are one nuisance for all eras; suffixed sources and JER exist only in their era,
+# and their templates take the NOMINAL events of the other eras (shift_dir() -> None).
+JES_REGROUPED = os.environ.get("HCZZ_JES_REGROUPED") == "1"
+JES_ERA_SUFFIX = {"2022preEE": "2022", "2022postEE": "2022EE", "2023preBPix": "2023", "2023postBPix": "2023BPix"}
+JES_CORR_SOURCES = ["Absolute", "BBEC1", "EC2", "FlavorQCD", "HF", "RelativeBal"]
+JES_ERA_SOURCES = ["Absolute", "BBEC1", "EC2", "HF", "RelativeSample"]
+if JES_REGROUPED:
+    JECSHIFTS_SYSTEMATICS = (
+        [f"CMS_scale_j_{s}" for s in JES_CORR_SOURCES]
+        + [f"CMS_scale_j_{s}_{x}" for x in JES_ERA_SUFFIX.values() for s in JES_ERA_SOURCES]
+        + [f"CMS_res_j_{e}" for e in JES_ERA_SUFFIX]
+        + [s for s in JECSHIFTS_SYSTEMATICS if s not in ("CMS_scale_j", "CMS_res_j")]
+    )
+
+
+def shift_dir(syst, era, direction):
+    """Shift directory name of `syst` in `era` (under <sample>/base/), or None when the nuisance does not
+    act on that era (its template then uses the era's nominal events)."""
+    if JES_REGROUPED:
+        if syst.startswith("CMS_scale_j_"):
+            sfx = syst.rsplit("_", 1)[1]
+            if sfx in JES_ERA_SUFFIX.values() and sfx != JES_ERA_SUFFIX[era]:
+                return None
+            return f"{syst}{direction}"
+        if syst.startswith("CMS_res_j_"):
+            return f"{syst}{direction}" if syst == f"CMS_res_j_{era}" else None
+    return f"{syst}_{era_year(era)}{direction}"
 
 # All 4 process classes were reprocessed under the same 84 (era,dataset)
 # target list as the main ctag2d campaign (see second-brain memory
@@ -532,6 +615,47 @@ def load_sumw_by_group(sumw_dir):
 # Load MC from test-set scored parquets
 # ---------------------------------------------------------------------------
 
+# 2026-11-09: a systematic column missing from a parquet used to fall back SILENTLY to nominal, so a process whose
+# production never made the weight got a dummy Up = Down = nominal row (CMS_eff_e_id in the 2024 cards). Every loader
+# now records each fallback here and the build stops (check_missing_syst) unless the systematic is listed in
+# HCZZ_ALLOW_MISSING_SYST (comma separated, or "all"), which downgrades it to a warning.
+_MISSING_SYST = defaultdict(lambda: [0.0, 0.0, set()])   # (proc, syst+dir) -> [sum|w| missing, sum|w| total, samples]
+
+
+def note_syst_col(proc, syst, direction, present, nominal_w, sample):
+    rec = _MISSING_SYST[(proc, syst + direction)]
+    w = float(np.abs(nominal_w).sum())
+    rec[1] += w
+    if not present:
+        rec[0] += w
+        rec[2].add(re.sub(r"_\d+$", "", sample))
+
+
+# Partial coverage by design (never an error unless missing for the WHOLE process): higgs_plus_c exists only in
+# ggH/VBF parquets (higgs_hf.py), so a pooled Other_Higgs is partly without it.
+PARTIAL_BY_DESIGN = {"higgs_plus_c"}
+
+
+def check_missing_syst():
+    allow = {a.strip() for a in os.environ.get("HCZZ_ALLOW_MISSING_SYST", "").split(",") if a.strip()}
+    bad = []
+    for (proc, sd), (miss, tot, samples) in sorted(_MISSING_SYST.items()):
+        if miss <= 0:
+            continue
+        syst = re.sub(r"(Up|Down)$", "", sd)
+        if syst in PARTIAL_BY_DESIGN and miss < tot:
+            continue
+        line = (f"{proc:12s} {sd:34s} missing in {miss / tot:6.1%} of the in-window weight "
+                f"({'ALL' if miss >= tot else 'part'}), samples: {', '.join(sorted(samples)[:6])}")
+        if "all" in allow or syst in allow:
+            print("  WARNING (allowed) syst column missing -> nominal:", line)
+        else:
+            bad.append(line)
+    if bad:
+        raise SystemExit("Systematic weight columns missing (would give dummy/partial rows); fix the production or "
+                         "set HCZZ_ALLOW_MISSING_SYST=<syst,...>:\n  " + "\n  ".join(bad))
+
+
 def load_mc_scored_parquets(scored_dir, sumw_by_group):
     """
     Walk all eras/samples in scored_dir, read mva_score_Signal + weight_nominal.
@@ -572,7 +696,7 @@ def load_mc_scored_parquets(scored_dir, sumw_by_group):
             # the FULL `usable` set per file so proc_syst_weights arrays stay
             # aligned 1:1 with proc_scores/proc_weights across every file of
             # this process, HPlusBottom or not.
-            is_hplusbottom = (proc != "Signal" and "HPlusBottom" in sample_name)
+            is_hplusbottom = (proc != "Signal" and is_old_hplusbottom(sample_name))
             requestable = usable - HPLUSBOTTOM_BUGGY_SYST if is_hplusbottom else usable
             syst_cols_wanted = []
             for syst in requestable:
@@ -614,12 +738,14 @@ def load_mc_scored_parquets(scored_dir, sumw_by_group):
                             # the missing-column fallback below.
                             proc_syst_weights[proc][syst][direction].append(nominal_win)
                         elif col in df_win.columns:
+                            note_syst_col(proc, syst, direction, True, nominal_win, sample_name)
                             proc_syst_weights[proc][syst][direction].append(
                                 df_win[col].fillna(0).values * scale
                             )
                         else:
-                            # Column missing for this file -- fall back to
-                            # nominal (no variation) so array lengths align.
+                            # Column missing for this file -- nominal so array lengths align; recorded and
+                            # checked in finalize_mc_data (check_missing_syst).
+                            note_syst_col(proc, syst, direction, False, nominal_win, sample_name)
                             proc_syst_weights[proc][syst][direction].append(nominal_win)
 
     return finalize_mc_data(proc_scores, proc_weights, proc_syst_weights, raw_weight)
@@ -632,6 +758,7 @@ def finalize_mc_data(proc_scores, proc_weights, proc_syst_weights, raw_weight):
     after the baseline selection (all m4l), printed next to the in-window one.
     No ratio clipping of the syst weights: an out-of-range per-event weight
     variation is a symptom of a real bug upstream (see CMS_ctag_light above)."""
+    check_missing_syst()
     mc_data = {}
     print(f"\n  {'Process':<15} {'yield_all_m4l':>14} {'in_win_yield':>14}")
     print("  " + "-" * 45)
@@ -694,9 +821,9 @@ def load_jecshifts_scored_parquets(jecshifts_dir, sumw_by_group):
 
             for syst in JECSHIFTS_SYSTEMATICS:
                 for direction in ("Up", "Down"):
-                    cat_dir = os.path.join(
-                        era_dir, sample_name, "base", f"{syst}_{year}{direction}"
-                    )
+                    sd = shift_dir(syst, era, direction)
+                    # sd None: nuisance not acting on this era -> its nominal events (files directly in base/)
+                    cat_dir = os.path.join(era_dir, sample_name, "base", *([sd] if sd else []))
                     if not E.isdir(cat_dir):
                         continue
 
@@ -931,7 +1058,7 @@ def split_other_higgs(per_process_scale=False):
     USABLE_SYST, JECSHIFTS_USABLE_PROCS, card columns, BR_HZZ4l). higgs_plus_c stays on ggH/VBF
     only. per_process_scale: the background scalevar_muR/muF become one pair per process
     (scalevar_muR_<proc>, same parquet column), qqZZ included (its normalisation stays
-    decoupled into QCDscale_qqZZ); HPlusB gets none (weights broken, HPLUSBOTTOM_BUGGY_SYST)."""
+    decoupled into QCDscale_qqZZ); HPlusB gets none (weights broken, HPLUSBOTTOM_BUGGY_SYST) unless HCZZ_HB_TRANSFER=1."""
     global CLASS_NAMES, CARD_MC_PROCS, HIGGS_BKG_PROCS
     new = list(dict.fromkeys(HIGGS_SPLIT.values()))
     for k, v in HIGGS_SPLIT.items():
@@ -949,7 +1076,7 @@ def split_other_higgs(per_process_scale=False):
         for proc in ["qqZZ"] + new:
             for s_ in PER_PROCESS_SCALE:
                 USABLE_SYST[proc].discard(s_)
-                if proc == "HPlusB":
+                if proc == "HPlusB" and not HB_TRANSFER:
                     continue
                 name = f"{s_}_{proc}"
                 SYSTEMATICS[name] = dict(SYSTEMATICS[s_])     # same parquet column weight_scalevar_mu*
@@ -1147,12 +1274,27 @@ def write_datacard(histograms, root_filename, output_dir, include_zx=True, autom
         dc.write("-" * 80 + "\n")
 
         def syst_row(name, stype, vals):
-            line = f"{name:<25}{stype:<8}"
+            line = f"{name:<24} {stype:<8}"  # 2026-11-10: always a separator (CMS_scale_j_Absolute_2022 = 25 chars ran into "shape")
             for p in procs:
                 line += f"{vals.get(p, '-'):<{col_w}}"
             return line + "\n"
 
-        dc.write(syst_row("lumi_Run3",     "lnN", {p: "1.014" for p in procs}))
+        if os.environ.get("HCZZ_LUMI_SPLIT"):
+            # 2026-11-03: one lnN per data-taking year, HCZZ_LUMI_SPLIT="2022:1.014,2023:<k>" (official values,
+            # no default). Each MC process gets 1 + (k - 1) * f_year with f_year = that year's share of the
+            # luminosity in the card's eras (MC yields scale with lumi). Not on ZX: it is estimated from data.
+            unc = dict(t.split(":") for t in os.environ["HCZZ_LUMI_SPLIT"].split(","))
+            lumi_year = defaultdict(float)
+            for era in ERAS:
+                lumi_year[era_year(era)] += LUMINOSITY_PB[era]
+            tot = sum(lumi_year.values())
+            for yr, lum in sorted(lumi_year.items()):
+                if yr not in unc:
+                    raise SystemExit(f"HCZZ_LUMI_SPLIT has no value for {yr}")
+                val = f"{1 + (float(unc[yr]) - 1) * lum / tot:.4f}"
+                dc.write(syst_row(f"lumi_13p6TeV_{yr}", "lnN", {p: val for p in procs if p != "ZX"}))
+        else:
+            dc.write(syst_row("lumi_Run3",     "lnN", {p: "1.014" for p in procs}))
         # QCDscale_gg / pdf_gg / kfactor_ggZZ: rate lnN's retained only where a
         # real per-event shape systematic isn't available (Signal's LHE
         # weights are anomalous -- see analysis/corrections/lhepdf.py note;
@@ -1170,7 +1312,8 @@ def write_datacard(histograms, root_filename, output_dir, include_zx=True, autom
         # correction itself was silently missing from every histogram).
         dc.write(syst_row("QCDscale_gg",   "lnN", {"ggZZ": "1.039", "Signal": "1.039"}))
         dc.write(syst_row("pdf_gg",        "lnN", {"ggZZ": "1.032", "Signal": "1.032"}))
-        dc.write(syst_row("kfactor_ggZZ",  "lnN", {"ggZZ": "1.10"}))
+        if not ZZ_KFACTOR_WEIGHTS:   # else: computed kfactor_ggZZ_<source> shapes (SYSTEMATICS)
+            dc.write(syst_row("kfactor_ggZZ",  "lnN", {"ggZZ": "1.10"}))
         # Added 2026-08-17, sourced from Felix Heyen thesis Appendix D (no
         # per-event weight column exists for either -- pure rate lnN):
         # BR_HZZ4l=2% CHASED 2026-09-14, inconclusive-but-plausible (not a

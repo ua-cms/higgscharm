@@ -63,7 +63,7 @@ def is_private_query(query) -> bool:
 def get_nano_version(year: str):
     if year.startswith("201"):
         nano_version = "9"
-    elif year in ("2024", "2025"):
+    elif year in ("2024", "2025", "2026"):
         nano_version = "15"
     else:
         nano_version = "12"

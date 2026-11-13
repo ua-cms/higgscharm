@@ -702,7 +702,7 @@ def main():
     if 'bookkeep' in stages or 'plot' in stages:
         args.raw_dir = str(input_dir)
         args.scored_dir = str(output_dir)
-        order = ['2022preEE', '2022postEE', '2023preBPix', '2023postBPix', '2024', '2025']
+        order = ['2022preEE', '2022postEE', '2023preBPix', '2023postBPix', '2024', '2025', '2026']
         args.eras = sorted(eras, key=lambda e: order.index(e) if e in order else len(order))
         args.output_dir = args.bookkeep_dir or str(output_dir / 'bookkeeping')
         if 'bookkeep' in stages:

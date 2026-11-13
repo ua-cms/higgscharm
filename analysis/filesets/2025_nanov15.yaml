@@ -1,9 +1,5 @@
-# 2025 (Run3-25Prompt-Summer24-NanoAODv15), created 2026-10-05.
-# Data: PromptReco NANOAOD, Runs C-G (Run B excluded: 24 golden runs / 0.259 fb-1, no B
-# in the JEC or jet-veto-map tags). C and F have PromptReco-v1 and -v2 with disjoint runs.
-# MC: 2025 is analysed against the Summer24 samples, so everything below the data block
-# is copied verbatim from 2024_nanov15.yaml (keys *_2024 renamed *_2025).
-
+# 2026-11-13 HcZZ_full_c26: coffea-2026 data/MC names + HcZZ production signal (smsignal), H+b (hb), 3FS stitch and SMEFT entries;
+# upstream hplusc/hplusb entries kept with corrected xsec (H+c 2.6381e-5 pb, H+b 1.73299e-4 pb) and the HPlusCharm_v2 key/xsec swap fixed.
 Muon0v1C:
   era: C
   query: Muon0/Run2025C-PromptReco-v1/NANOAOD
@@ -321,8 +317,8 @@ TTto2L2Nu:
   query: TTto2L2Nu_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
   process: tt
   key:
-    - tt
-    - tt_semileptonic
+  - tt
+  - tt_semileptonic
   xsec: 97.78
 TTto4Q:
   era: mc
@@ -401,21 +397,21 @@ WW:
   query: WW_TuneCP5_13p6TeV_pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: Diboson
   key: diboson
-  xsec: 122.30
+  xsec: 122.3
 WZ:
   era: mc
   query: WZ_TuneCP5_13p6TeV_pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: Diboson
   key: diboson
-  xsec: 54.30
+  xsec: 54.3
 ZZ:
   era: mc
   query: ZZ_TuneCP5_13p6TeV_pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: Diboson
-  key: 
-    - diboson
-    - zz
-  xsec: 16.70
+  key:
+  - diboson
+  - zz
+  xsec: 16.7
 WZto3LNu:
   era: mc
   query: WZto3LNu_TuneCP5_13p6TeV_powheg-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
@@ -502,28 +498,28 @@ GluGlu2Zto4Tau:
   xsec: 0.003
 bbH_Hto2Zto4L:
   era: mc
-  query: BBH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  query: BBH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
   process: H(125)
   key: higgs
   xsec: 0.000144
 GluGluHtoZZto4L:
   era: mc
   query: GluGluH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.01434
 VBFHto2Zto4L:
   era: mc
   query: VBFH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.00112
 ZHto2Zto4L:
   era: mc
   query: ZH-Hto2Z_Fil-4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
-  xsec: 0.000775
+  xsec: 0.0007062
 WminusH_Hto2Zto4L:
   era: mc
   query: WminusH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
@@ -533,7 +529,7 @@ WminusH_Hto2Zto4L:
 WplusH_Hto2Zto4L:
   era: mc
   query: WplusH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
-  process: H(125) 
+  process: H(125)
   key: higgs
   xsec: 0.000244
 TTH_Hto2Z:
@@ -541,28 +537,19 @@ TTH_Hto2Z:
   query: TTH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: H(125)
   key: higgs
-  xsec: 0.0004437  # 2026-10-16: was 0.00312 (7x too high); same filter type as 2023 (GenPart, 4284 ev: 37.0% pure H->4l, rest 1 H-Z->ll + 2 leptonic tops); sigma_ttH 0.5700 pb x BR(H->ZZ) 0.02641 x filter 0.029474
-# =============================================================================
-# H+c and H+b signal samples (private, USER instance prod/phys03)
-# Run3Summer24NanoAOD, 150X_mcRun3_2024_realistic_v2
-# Handled by make_signal_filesets.py (not make_filesets.py)
-# =============================================================================
+  xsec: 0.0004383
 HPlusCharm:
   era: mc
   query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v1-00000000000000000000000000000000/USER
   process: smsignal
   key: smsignal
-  xsec: 0.000026381
-# H+c 4FS v2 (CRAB task 260812_121119, 4803 files, 9.94M events), added 2026-10-05.
-# v1 above (HPlusCharm, task 260728_144233) is a separate 334-file / 345k-event production.
-# Both contain "HPlusCharm" -> both map to Signal in the datacard builders: do NOT feed
-# both into one datacard as-is (each is normalised to the full xsec -> double count).
+  xsec: 2.6381e-05
 HPlusCharm_v2_2025:
   era: mc
   query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v2-00000000000000000000000000000000/USER
   process: smsignal
   key: smsignal
-  xsec: 0.000026381
+  xsec: 2.6381e-05
 HPlusBottom_2025:
   era: mc
   query: HPlusBottom_5FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v1-00000000000000000000000000000000/USER

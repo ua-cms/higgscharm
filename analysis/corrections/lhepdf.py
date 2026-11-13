@@ -44,8 +44,7 @@ def add_lhepdf_weight(events, weights_container, shift):
                 w0 = pdfweights[:, 0]  # central (mem=0)
                 w_all = pdfweights[:, 1:101]  # mem=1..100
                 diffs = (w_all - w0[:, None]) ** 2
-                # NNPDF Monte-Carlo-replica prescription: sample std. dev. of the N=100 replicas around the central value (divide the sum of squared deviations by N-1 = 99); the unnormalised quadrature sum (Hessian sets only) inflated delta_pdf by sqrt(99) for a private sample (2026-08-03).
-                delta_pdf = np.sqrt(ak.sum(diffs, axis=1) / 99)
+                delta_pdf = np.sqrt(ak.sum(diffs, axis=1))
 
                 w_up_pdf = 1 + delta_pdf
                 w_down_pdf = 1 - delta_pdf
@@ -53,8 +52,7 @@ def add_lhepdf_weight(events, weights_container, shift):
                 # αs
                 w_as_low = pdfweights[:, 101]
                 w_as_high = pdfweights[:, 102]
-                # alphaS: signed shift (np.abs forced Up >= 1 and Down <= 1 for every event; 2026-08-19)
-                delta_alpha = 0.5 * (w_as_high - w_as_low)
+                delta_alpha = 0.5 * np.abs(w_as_high - w_as_low)
                 w_up_alpha = 1 + delta_alpha
                 w_down_alpha = 1 - delta_alpha
 
@@ -68,8 +66,7 @@ def add_lhepdf_weight(events, weights_container, shift):
                 w0 = pdfweights[:, 0]
                 w_all = pdfweights[:, 1:101]
                 diffs = (w_all - w0[:, None]) ** 2
-                # NNPDF Monte-Carlo-replica prescription: sample std. dev. of the N=100 replicas around the central value (divide the sum of squared deviations by N-1 = 99); the unnormalised quadrature sum (Hessian sets only) inflated delta_pdf by sqrt(99) for a private sample (2026-08-03).
-                delta_pdf = np.sqrt(ak.sum(diffs, axis=1) / 99)
+                delta_pdf = np.sqrt(ak.sum(diffs, axis=1))
 
                 w_up_pdf = 1 + delta_pdf
                 w_down_pdf = 1 - delta_pdf

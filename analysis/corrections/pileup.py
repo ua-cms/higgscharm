@@ -40,8 +40,9 @@ def add_pileup_weight(
         "2022postEE": "Collisions2022_359022_362760_eraEFG_GoldenJson",
         "2023preBPix": "Collisions2023_366403_369802_eraBC_GoldenJson",
         "2023postBPix": "Collisions2023_369803_370790_eraD_GoldenJson",
+        "2024": "Collisions24_CDEFGHI_goldenJSON",  # 2024 data = C-I (no Run2024B in the filesets)
         "2025": "Collisions25_goldenJSON",
-        "2024": "Collisions24_CDEFGHI_goldenJSON",
+        "2026": "Collisions25_goldenJSON",  # 2026 borrows the 2025 profile (no 2026 LUM file yet, 2026-11-08)
     }
     # get number of true interactions
     nti = events.Pileup.nTrueInt

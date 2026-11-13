@@ -165,6 +165,7 @@ class ElectronWeights:
             "2023postBPix": "2023PromptD",
             "2024": "2024Prompt",
             "2025": "2025Prompt",
+            "2026": "2025Prompt",  # 2026 borrows the 2025 EGM file (no 2026 ID/reco SFs yet, 2026-11-08)
         }
         cset_args = [
             year_map.get(self.year, self.year),
@@ -243,6 +244,7 @@ class ElectronWeights:
             "2023postBPix": "2023PromptD",
             "2024": "2024Prompt",
             "2025": "2025Prompt",
+            "2026": "2025Prompt",  # 2026 borrows the 2025 EGM file (no 2026 ID/reco SFs yet, 2026-11-08)
         }
         cset_args = [
             year_map.get(self.year, self.year),
@@ -324,6 +326,7 @@ class ElectronWeights:
             "2023postBPix": "2023PromptD",
             "2024": "2024Prompt",
             "2025": "2025Prompt",
+            "2026": "2025Prompt",  # 2026 borrows the 2025 EGM file (no 2026 ID/reco SFs yet, 2026-11-08)
         }
         sf_syst_map = {"nom": "sf", "up": "sfup", "down": "sfdown"}
 

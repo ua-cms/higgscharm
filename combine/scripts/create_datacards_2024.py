@@ -18,7 +18,7 @@ Set here, for 2024:
     signal MUON_ID_SF is 1.0 and --recompute-muon-id-sf is not used.
 
 Scope decisions (user, 2026-10-23): plain 4FS signal (--signal-mode 4fs), no Z+X (--skip-zx) until
-pkatris has 2024 fake rates. Only --eras 2024 is accepted (combination with 2022/23: later, by card).
+pkatris has 2024 fake rates (2026-11-10: he has, Z+X allowed via --zx-dir). Only --eras 2024 is accepted (combination with 2022/23: later, by card).
 
 Usage: as create_datacards_ctag2d_100150_stitched_decorr.py, with --eras 2024, without --sumw-table,
 --preveto-genc-4fs, --fs-prescribed and --recompute-muon-id-sf.
@@ -44,8 +44,8 @@ if _eras != ERAS_2024:
 for _bad in ("--sumw-table", "--preveto-genc-4fs", "--recompute-muon-id-sf", "--fs-prescribed"):
     if _bad in _a:
         raise SystemExit(f"create_datacards_2024.py: {_bad} is not supported for 2024 (see docstring)")
-if "--skip-zx" not in _a:
-    raise SystemExit("create_datacards_2024.py: no 2024 Z+X yet, pass --skip-zx")
+# 2026-11-10: the --skip-zx requirement is lifted: pkatris OS 2024 FR (fake_rates/OS/2024, 10-29) -> Z+X 2024 via
+# full_chain zx_final.sh 2024; pass --zx-dir <dir with 2024/zx_{3p1f,2p2f}_2024_mva.parquet> or --skip-zx.
 
 # Open the era list BEFORE the other modules import: decorr builds its per-era stat sources at import.
 import create_datacards_ctag2d_100150 as dc
