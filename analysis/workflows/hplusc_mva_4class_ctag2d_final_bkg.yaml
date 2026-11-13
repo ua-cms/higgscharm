@@ -132,9 +132,9 @@ object_selection:
       - np.abs(events.FsrPhoton.eta) < 2.4
       - events.FsrPhoton.relIso03 < 1.8
   leptons:
-    field: select_zzto4l_leptons
+    field: select_zzto4l_leptons_hczz
   zcandidates:
-    field: select_zcandidates
+    field: select_zcandidates_hczz
     add_cut:
       is_ossf:
         - objects['zcandidates'].l1.pdgId == -objects['zcandidates'].l2.pdgId

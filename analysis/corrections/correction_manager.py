@@ -144,7 +144,10 @@ def _object_corrector_manager_hczz(events, year, dataset, objcorr_config):
             hczz_electron_ss.apply_electron_ss_corrections(
                 events=events, year=year, variation="nominal"
             )
-        jec_variants = hczz_jerc.apply_jerc_shifts(events, year, dataset)
+        # jes_regrouped (2026-11-03): the 11 JME Regrouped JES sources per era + JER per era instead of Total JES + JER per year
+        jec_variants = hczz_jerc.apply_jerc_shifts(
+            events, year, dataset, jes_regrouped="jes_regrouped" in objcorr_config
+        )
         nominal_jet = jec_variants[0][0]["Jet"]
         nominal_met = jec_variants[0][0]["MET"]
         events["Jet"] = nominal_jet
