@@ -289,16 +289,6 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                         weights_container=weights_container,
                         shift=shift,
                     )
-        if "higgsHFWeight" in weights_config:
-            if weights_config["higgsHFWeight"]:
-                # ggH/VBF only (see higgs_hf.py); per-event, keyed on gen-jet heavy
-                # flavour, replaces a flat lnN on the pooled Other_Higgs group
-                add_higgs_hf_weight(
-                    events=pruned_ev,
-                    weights_container=weights_container,
-                    dataset=dataset,
-                    flav="c",
-                )
         if "nnlopsWeight" in weights_config:
             if weights_config["nnlopsWeight"]:
                 if dataset.startswith("GluGluH"):
