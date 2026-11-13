@@ -44,8 +44,7 @@ object_selection:
         - objects['electrons'].is_loose
         - objects['electrons'].is_relaxed
         - working_points.electron_id(events, 'bdt', year)
-    cuts:
-      - delta_r_higher(events.Electron, objects['muons'], 0.05)
+    # no electron-muon cleaning (as CJLST Run-3 NanoAnalysis); ghost removal is done on the lepton pairs (dR > 0.02)
   fsr_photons:
     field: events.FsrPhoton
     cuts:
