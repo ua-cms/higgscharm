@@ -159,7 +159,8 @@ class BaseProcessor(processor.ProcessorABC):
                 uuid = uuid.hex()
             tree = quote(f"/{md['treename'].strip('/').split(';')[0]};1", safe="")
             return f"{uuid}_{tree}_{md['entrystart']}-{md['entrystop']}"
-        return self.partition_key.replace("/", "_")
+        # coffea-2026: per-chunk partition key of the events factory (as parquet_writer.dump_parquet)
+        return events.attrs["@events_factory"]._partition_key.replace("/", "_")
 
     def add_cutflow(self, events, output, selection_manager):
         for category, category_cuts in self.workflow_config.event_selection[
