@@ -30,6 +30,7 @@ def add_higgs_hf_weight(
     events,
     weights_container,
     dataset,
+    shift,
     flav="c",
     pt_min=25.0,
     eta_max=2.5,
@@ -63,11 +64,17 @@ def add_higgs_hf_weight(
         up = np.where(has_hf, 1.0 + rel_unc, 1.0)
         down = np.where(has_hf, 1.0 - rel_unc, 1.0)
 
-        weights_container.add(
-            name=f"higgs_plus_{flav}",
-            weight=np.ones(len(events)),
-            weightUp=up,
-            weightDown=down,
-        )
+        if shift is None:
+            weights_container.add(
+                name=f"higgs_plus_{flav}",
+                weight=np.ones(len(events)),
+                weightUp=up,
+                weightDown=down,
+            )
+        else:
+            weights_container.add(
+                name=f"higgs_plus_{flav}",
+                weight=np.ones(len(events)),
+            )
     except Exception as exc:  # noqa: BLE001
         print(f"Failed to build Higgs+HF weight, skipping systematic: {exc}")

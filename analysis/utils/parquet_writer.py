@@ -101,10 +101,9 @@ def dump_pa_table(
     extra_metadata: Optional[dict] = None,
 ):
     subdirs = subdirs or []
-    xrd_prefix = "root://"
-    pfx_len = len(xrd_prefix)
     xrootd = False
-    if xrd_prefix in location:
+
+    if location.startswith("root://"):
         try:
             import XRootD
             import XRootD.client
@@ -118,12 +117,15 @@ def dump_pa_table(
     # checkout, and 2024/2025 jobs on the same input file produce the same fname
     local_file = os.path.join(tempfile.mkdtemp(prefix="pqstage_"), fname)
     merged_subdirs = "/".join(subdirs) if xrootd else os.path.sep.join(subdirs)
+
     destination = (
         location + merged_subdirs + f"/{fname}"
         if xrootd
         else os.path.join(location, os.path.join(merged_subdirs, fname))
     )
+
     out = {}
+
     for variable, array in arrays.items():
         # awkward arrays: collapse option-in-list shapes that pyarrow cannot write
         # (see _fix_option_in_list; keeps genuine jagged lists such as per-jet columns).
@@ -146,10 +148,12 @@ def dump_pa_table(
         table = pa.Table.from_pydict(out)
     if extra_metadata:
         existing = dict(table.schema.metadata or {})
+
         for k, v in extra_metadata.items():
             kk = k.encode() if isinstance(k, str) else k
             vv = v.encode() if isinstance(v, str) else v
             existing[kk] = vv
+
         table = table.replace_schema_metadata(existing)
 
     if len(table) != 0:  # skip dataframes with empty entries
@@ -281,7 +285,6 @@ def dump_parquet(
     year,
     category,
     output_location,
-    partition_key,
     shift,
 ):
     is_mc = hasattr(events, "genWeight")
@@ -323,8 +326,9 @@ def dump_parquet(
             "xsec": str(dataset_info.get("xsec", "")),
             "era": str(dataset_info.get("era", "")),
         }
-
-    fname = partition_key.replace("/", "_") + ".parquet"
+    fname = (
+        events.attrs["@events_factory"]._partition_key.replace("/", "_") + ".parquet"
+    )
     dump_pa_table(
         variables_map, fname, output_location, subdirs, extra_metadata=extra_metadata
     )

@@ -128,7 +128,6 @@ class BaseProcessor(processor.ProcessorABC):
         year: str,
         output_format: str,
         output_location: str,
-        partition_key: str,
         mode="virtual",
     ):
         assert mode in ["eager", "virtual", "dask"]
@@ -137,7 +136,6 @@ class BaseProcessor(processor.ProcessorABC):
         self.workflow = workflow
         self.output_format = output_format
         self.output_location = output_location
-        self.partition_key = partition_key
         self.run = "2" if year.startswith("201") else "3"
 
         config_builder = WorkflowConfigBuilder(workflow)
@@ -320,13 +318,20 @@ class BaseProcessor(processor.ProcessorABC):
                     )
                 # histograms: only the variables of the layout; parquet: every axis
                 variables_map = {}
-                layout_axes = self.histogram_config.layout.values()
+                layout = self.histogram_config.layout
+                if layout != "individual":
+                    layout_axes = {
+                        variable
+                        for variables in layout.values()
+                        for variable in variables
+                    }
                 for variable, axis in self.histogram_config.axes.items():
-                    if self.output_format == "parquet" or variable in ak.flatten(
-                        layout_axes
-                    ):
-                        variables_map[variable] = eval(axis.expression)[category_mask]
+                    # parquet output keeps every axis (MVA/datacard inputs); histograms only the layout's
+                    if self.output_format != "parquet" and layout != "individual" and variable not in layout_axes:
+                        continue
+                    variables_map[variable] = eval(axis.expression)[category_mask]
 
+                # save variables
                 if self.output_format == "coffea":
                     fill_histograms(
                         histogram_config=self.histogram_config,
@@ -353,7 +358,6 @@ class BaseProcessor(processor.ProcessorABC):
                         year=year,
                         category=category,
                         output_location=self.output_location,
-                        partition_key=self._chunk_key(events),
                         shift=shift,
                     )
         # add histograms to output dictionary

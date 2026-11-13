@@ -481,31 +481,16 @@ TTH_Hto2Z:
   query: TTH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: H(125)
   key: higgs
-  xsec: 0.0004437  # 2026-10-16: was 0.00312 (7x too high); same filter type as 2023 (GenPart, 4284 ev: 37.0% pure H->4l, rest 1 H-Z->ll + 2 leptonic tops); sigma_ttH 0.5700 pb x BR(H->ZZ) 0.02641 x filter 0.029474
-# =============================================================================
-# H+c and H+b signal samples (private, USER instance prod/phys03)
-# Run3Summer24NanoAOD, 150X_mcRun3_2024_realistic_v2
-# Handled by make_signal_filesets.py (not make_filesets.py)
-# =============================================================================
+  xsec: 0.00312
 HPlusCharm:
-  era: mc
-  query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v1-00000000000000000000000000000000/USER
-  process: smsignal
-  key: smsignal
-  xsec: 0.000026381
-# H+c 4FS v2 (CRAB task 260812_121119, 4803 files, 9.94M events), added 2026-10-05.
-# v1 above (HPlusCharm, task 260728_144233) is a separate 334-file / 345k-event production.
-# Both contain "HPlusCharm" -> both map to Signal in the datacard builders: do NOT feed
-# both into one datacard as-is (each is normalised to the full xsec -> double count).
-HPlusCharm_v2_2024:
-  era: mc
+  era: signal
   query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v2-00000000000000000000000000000000/USER
-  process: smsignal
-  key: smsignal
-  xsec: 0.000026381
-HPlusBottom_2024:
-  era: mc
+  key: hplusc
+  process: hplusc
+  xsec: 0.000026
+HPlusBottom:
+  era: signal
   query: HPlusBottom_5FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v1-00000000000000000000000000000000/USER
-  process: hb
-  key: hb
-  xsec: 0.000173299
+  key: hplusb
+  process: hplusb
+  xsec: 0.000026

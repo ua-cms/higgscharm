@@ -3,25 +3,30 @@ import numpy as np
 from coffea.analysis_tools import Weights
 from analysis.filesets.utils import get_nano_version
 from analysis.corrections.muon import MuonWeights
+from analysis.corrections.hzz_muon import MuonHZZWeights
 from analysis.corrections.ctag import CTagCorrector
 from analysis.corrections.jetvetomaps import jet_veto
 from analysis.corrections.pileup import add_pileup_weight
 from analysis.corrections.nnlops import add_nnlops_weight
 from analysis.corrections.lhepdf import add_lhepdf_weight
+from analysis.corrections.top_pt import add_top_pt_weight
+from analysis.corrections.higgs_hf import add_higgs_hf_weight
 from analysis.corrections.electron import ElectronWeights
+from analysis.corrections.hzz_electron import ElectronHZZWeights
 from analysis.corrections.jec import apply_jerc_corrections
+from analysis.corrections.kfactors import add_kfactor_weights
 from analysis.corrections.lhescale import add_scalevar_weight
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections
 from analysis.corrections.partonshower import add_partonshower_weight
-from analysis.corrections.electron_ss import apply_electron_ss_corrections
+from analysis.corrections.correctionlib_files import correction_files
 from analysis.corrections.ctag2d import CTag2DCorrector, BOUNDARIES_BY_ERA
-from analysis.corrections.utils import correction_files
-from analysis.corrections.higgs_hf import add_higgs_hf_weight
+from analysis.corrections.electron_ss import apply_electron_ss_corrections
 from analysis.corrections.hczz_legacy import jerc as hczz_jerc
 from analysis.corrections.hczz_legacy import muon_ss as hczz_muon_ss
 from analysis.corrections.hczz_legacy import electron_ss as hczz_electron_ss
 from analysis.corrections.hczz_legacy import jetvetomaps as hczz_jetvetomaps
+from analysis.corrections.tau_energy import apply_tau_energy_scale_corrections
 
 
 def object_corrector_manager(events, year, run, dataset, workflow_config):
@@ -43,9 +48,9 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
     shifts = [({}, None)]
     vetoed_events = events
     if objcorr_config:
-        shifts = []
-        # apply jet energy scale and smearing corrections
+
         if "jet" in objcorr_config:
+            # apply jet energy scale and smearing corrections
             shifts = apply_jerc_corrections(
                 events=events,
                 year=year,
@@ -82,7 +87,27 @@ def object_corrector_manager(events, year, run, dataset, workflow_config):
             for i in range(len(shifts)):
                 shifts[i][0]["Electron"] = events.Electron
 
-        # apply jet veto
+        if "tau" in objcorr_config:
+            shifts = apply_tau_energy_scale_corrections(
+                events=events,
+                year=year,
+                shifts=shifts,
+                corrections_config=corrections_config,
+            )
+        else:
+            for i in range(len(shifts)):
+                shifts[i][0]["Tau"] = events.Tau
+
+        if "met" in objcorr_config:
+            # apply met phi modulation corrections
+            if year in correction_files["met"]:
+                shifts = apply_met_phi_corrections(
+                    events=events,
+                    year=year,
+                    shifts=shifts,
+                    corrections_config=corrections_config,
+                )
+
         if "jetveto" in objcorr_config:
             event_veto = jet_veto(events, year)
             vetoed_events = events[~event_veto]
@@ -356,11 +381,65 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                 ctag_corrector.add_ctag_weights(flavor="b")
                 ctag_corrector.add_ctag_weights(flavor="c")
                 ctag_corrector.add_ctag_weights(flavor="light")
+
+        if "topPtWeight" in weights_config:
+            if weights_config["topPtWeight"]:
+                add_top_pt_weight(
+                    events=pruned_ev,
+                    year=year,
+                    weights_container=weights_container,
+                    dataset=dataset,
+                )
+
+        if "muon_hzz" in weights_config:
+            if weights_config["muon_hzz"]:
+                if "selected_muons" in pruned_ev.fields:
+                    if year in correction_files["muon_hzz"]:
+                        muon_hzz_weights = MuonHZZWeights(
+                            events=pruned_ev,
+                            year=year,
+                            shift=shift,
+                            weights=weights_container,
+                        )
+                        muon_hzz_weights.add_id_weights()
+
+        if "electron_hzz" in weights_config:
+            if weights_config["electron_hzz"]:
+                if "selected_electrons" in pruned_ev.fields:
+                    if year in correction_files["electron_hzz"]:
+                        electron_hzz_weights = ElectronHZZWeights(
+                            events=pruned_ev,
+                            year=year,
+                            shift=shift,
+                            weights=weights_container,
+                        )
+                        electron_hzz_weights.add_id_weights()
+                        electron_hzz_weights.add_reco_weights("low")
+                        electron_hzz_weights.add_reco_weights("mid")
+                        electron_hzz_weights.add_reco_weights("high")
+
+        if "kFactorWeight" in weights_config:
+            if weights_config["kFactorWeight"]:
+                # NNLO QCD k-factors for ggZZ (vs m4l) and NNLO QCD x NLO EW for
+                # qqZZ (vs m4l, |cos theta*|), from gen-level hard-process leptons.
+                # Only applied to datasets matching the ggzz/qqzz name prefixes
+                # (see kfactors.py); a no-op for everything else.
+                add_kfactor_weights(
+                    events=pruned_ev,
+                    weights_container=weights_container,
+                    year=year,
+                    dataset=dataset,
+                    config=weights_config["kFactorWeight"],
+                )
+
         if "ctagging_2d" in weights_config:
             if weights_config["ctagging_2d"] and (
                 year not in BOUNDARIES_BY_ERA
                 or year not in correction_files["ctagging_2d"]
             ):
+                # Safety net for eras without a boundary table or SF file. Since 2026-10-23
+                # 2024 and 2025 (2024 file as placeholder) are wired, so this no longer
+                # triggers for any analysis era.
                 warnings.warn(
                     f"ctagging_2d requested but not available for year '{year}' -- "
                     f"NO c-tag SF applied (weight = 1, no CMS_ctag2d nuisance).",
@@ -368,14 +447,24 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     stacklevel=2,
                 )
             elif weights_config["ctagging_2d"]:
-                # nominal pass: nominal + up/down; object-shift passes: nominal only
                 ctag2d_corrector = CTag2DCorrector(
                     events=pruned_ev,
                     weights=weights_container,
                     year=year,
-                    variation="nominal" if shift is None else shift,
+                    shift=shift,
                 )
                 ctag2d_corrector.add_weights()
+
+        if "higgsHFWeight" in weights_config:
+            if weights_config["higgsHFWeight"]:
+                # ggH/VBF only (see higgs_hf.py); per-event, keyed on gen-jet heavy
+                # flavour, replaces a flat lnN on the pooled Other_Higgs group
+                add_higgs_hf_weight(
+                    events=pruned_ev,
+                    weights_container=weights_container,
+                    dataset=dataset,
+                    shift=shift,
+                )
     else:
         weights_container.add("weight", np.ones(len(pruned_ev)))
     return weights_container

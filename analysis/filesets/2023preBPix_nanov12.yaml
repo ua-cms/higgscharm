@@ -350,54 +350,21 @@ ZHto2Zto4L:
   process: H(125)
   key: higgs
   xsec: 0.000775
-# H+c signal samples for MVA
-SomeSMSignal:
-  era: signal
-  query: 2023preBPix_signal
-  key: smsignal
-  process: smsignal
-  xsec: 0.000026381
-# H+b background samples (from JSON)
-2023preBPixHB:
-  era: signal
-  query: 2023preBPixHB
-  key: hb
-  process: hb
-  xsec: 0.000173299
-# H+b background samples (from DAS - phys03)
-HPlusBottom_2023preBPix:
-  era: signal
-  query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
-  key: hb
-  process: hb
-  xsec: 0.000173299
-# H+c signal samples (from DAS - phys03)
-HPlusCharm_2023preBPix:
-  era: signal
-  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1la-00000000000000000000000000000000/USER
-  key: smsignal
-  process: smsignal
-  xsec: 0.000026381
-HPlusCharm_new_2023preBPix:
+HPlusCharm_v1:
   era: signal
   query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
-  key: smsignal
-  process: smsignal
-  xsec: 0.000026381
-# H+c 3FS (massive charm, pp -> h c c~) for the 3FS/4FS stitching, added 2026-09-27.
-# 2026-10-09: switched to the NEW production from the rebuilt gridpack ("-pythia8new"/"-v1new"),
-# as for 2022 on 2026-10-07. The July sample is retired.
-# !! The preBPix Nano dataset contains 225 EXACT duplicate files (recovery CRAB tasks re-ran
-# lumis at RECO): 618 files / 393 lumis. fileset_2023preBPix_nanov12_lxplus.json lists the
-# 393 deduplicated files (one per lumi, 982,500 events). Do NOT regenerate this entry from the
-# DAS query (fetch.py), or the duplicates come back. See second-brain
-# Notes/hczz-3fs-new-2023-nano-dedup-2026-10-09.md.
-# Deliberately NOT named HPlusCharm*: the datacard builders map any name containing
-# "HPlusCharm" to Signal. xsec = 55.0 fb (gridpack / LHCHWG Table 3, production only)
-# x BR(H->ZZ->4l incl. tau) 2.694e-4; the stitching builder renormalises anyway.
-Stitch3FS_cH_2023preBPix:
+  key: hplusc
+  process: hplusc
+  xsec: 0.000026
+HPlusCharm_v2:
   era: signal
-  query: HPlusCharm_3FS_MuRFScaleDynX0p50_HToZZTo4L_M125_TuneCP5_13p6TeV_amcatnlo-JHUGen-pythia8new/snandaku-Run3Summer23NanoAODv13-3FS-HToZZTo4L-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1new-00000000000000000000000000000000/USER
-  key: smsignal
-  process: smsignal
-  xsec: 0.0000148
+  query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1la-00000000000000000000000000000000/USER
+  key: hplusc
+  process: hplusc
+  xsec: 0.000026
+HPlusBottom:
+  era: signal
+  query: HPlusBottom_5FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
+  key: hplusb
+  process: hplusb
+  xsec: 0.000026

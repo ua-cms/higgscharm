@@ -3,6 +3,56 @@ from pathlib import Path
 
 # summary of pog scale factors: https://cms-analysis-corrections.docs.cern.ch/
 correction_files = {
+    # Preliminary 2D pseudo-continuous HF-tagging SF ("2D_HF_Tagging"), distinct scheme from
+    # "ctagging" above -- see analysis/corrections/ctag2d.py. Paths confirmed readable
+    # 2026-08-10 (second-brain memory hczz_pnet_ctag_sf_migration); correction name
+    # ParticleNetAK4_pseudocontinuous for 2022/2023, UParTAK4_pseudocontinuous for 2024.
+    # 2025: no 2D calibration exists (BTV/HGG, checked 2026-10-23: only the 2024 file in
+    # ingredients/2024/2D_HF_Tagging, none for 2025); uses the 2024 file as a placeholder
+    # (user, 2026-10-23), same as the 2024 MVA scoring 2025.
+    "ctagging_2d": {
+        "2022preEE": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2022/2D_HF_Tagging/flavTaggingSF_2022preEE.json.gz",
+        "2022postEE": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2022/2D_HF_Tagging/flavTaggingSF_2022postEE.json.gz",
+        "2023preBPix": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2023/2D_HF_Tagging/flavTaggingSF_2023preBPix.json.gz",
+        "2023postBPix": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2023/2D_HF_Tagging/flavTaggingSF_2023postBPix.json.gz",
+        "2024": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2024/2D_HF_Tagging/flavTaggingSF_2024.json.gz",
+        "2025": "/eos/cms/store/group/phys_higgs/cmshgg/ingredients/2024/2D_HF_Tagging/flavTaggingSF_2024.json.gz",
+    },
+    "electron_hzz": {
+        "2022preEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2022preEE.json.gz",
+        "2022postEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2022postEE.json.gz",
+        "2023preBPix": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2023preBPix.json.gz",
+        "2023postBPix": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2023postBPix.json.gz",
+        "2024": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/electron_sf_2024.json.gz",
+    },
+    "muon_hzz": {
+        "2022preEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2022preEE.json.gz",
+        "2022postEE": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2022postEE.json.gz",
+        "2023preBPix": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2023preBPix.json.gz",
+        "2023postBPix": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2023postBPix.json.gz",
+        "2024": f"{Path.cwd()}/analysis/data/hzz_lepton_sf/muon_sf_2024.json.gz",
+    },
+    "tau": {
+        "2016preVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run2-2016preVFP-UL-NanoAODv9/latest/tau.json.gz",
+        "2016postVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run2-2016postVFP-UL-NanoAODv9/latest/tau.json.gz",
+        "2017": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run2-2017-UL-NanoAODv9/latest/tau.json.gz",
+        "2018": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run2-2018-UL-NanoAODv9/latest/tau.json.gz",
+        "2022preEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run3-22CDSep23-Summer22-NanoAODv12/latest/tau.json.gz",
+        "2022postEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run3-22EFGSep23-Summer22EE-NanoAODv12/latest/tau.json.gz",
+        "2023preBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run3-23CSep23-Summer23-NanoAODv12/latest/tau.json.gz",
+        "2023postBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run3-23DSep23-Summer23BPix-NanoAODv12/latest/tau.json.gz",
+        "2024": "/cvmfs/cms-griddata.cern.ch/cat/metadata/TAU/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/latest/tau.json.gz",
+    },
+    "met": {
+        "2016postVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016postVFP-UL-NanoAODv9/latest/met.json.gz",
+        "2016preVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2016preVFP-UL-NanoAODv9/latest/met.json.gz",
+        "2017": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2017-UL-NanoAODv9/latest/met.json.gz",
+        "2018": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run2-2018-UL-NanoAODv9/latest/met.json.gz",
+        "2022preEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22CDSep23-Summer22-NanoAODv12/latest/met_xyCorrections_2022_2022.json.gz",
+        "2022postEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-22EFGSep23-Summer22EE-NanoAODv12/latest/met_xyCorrections_2022_2022EE.json.gz",
+        "2023preBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23CSep23-Summer23-NanoAODv12/latest/met_xyCorrections_2023_2023.json.gz",
+        "2023postBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/JME/Run3-23DSep23-Summer23BPix-NanoAODv12/latest/met_xyCorrections_2023_2023BPix.json.gz",
+    },
     "jerc": {
         # dated snapshots verified 2026-08-18 to contain exactly the correction
         # names jec_params_correctionlib.yaml expects for each era (Total JES +
@@ -31,8 +81,8 @@ correction_files = {
         "2022postEE": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-22EFGSep23-Summer22EE-NanoAODv12/2024-01-31/puWeights.json.gz",
         "2023preBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-23CSep23-Summer23-NanoAODv12/2024-01-31/puWeights.json.gz",
         "2023postBPix": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-23DSep23-Summer23BPix-NanoAODv12/2024-01-31/puWeights.json.gz",
-        "2024": f"{Path.cwd()}/analysis/data/pileup/2024_puWeights.json.gz",  # taken from /eos/cms/store/user/evourlio/pileupJson_forHiggsDNA
         "2025": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-25Prompt-Summer24-NanoAODv15/2026-06-05/puWeights_2025pp_Golden_Summer24_25ns_69200ub.json.gz",
+        "2024": "/cvmfs/cms-griddata.cern.ch/cat/metadata/LUM/Run3-24CDEReprocessingFGHIPrompt-Summer24-NanoAODv15/latest/puWeights_CDEFGHI.json.gz",
     },
     "muon": {
         "2016preVFP": "/cvmfs/cms-griddata.cern.ch/cat/metadata/MUO/Run2-2016preVFP-UL-NanoAODv9/2024-07-02/muon_Z.json.gz",

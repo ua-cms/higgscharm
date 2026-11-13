@@ -2,9 +2,31 @@ import os
 import yaml
 import json
 import argparse
+import subprocess
 from pathlib import Path
-from analysis.filesets.utils import get_nano_version, is_private_query
+from analysis.filesets.utils import get_nano_version
 from coffea.dataset_tools.dataset_query import DataDiscoveryCLI
+
+
+def get_signal_fileset(query):
+    query = f"file dataset=/{query}"
+
+    env = os.environ.copy()
+    env.pop("PYTHONHOME", None)
+
+    result = subprocess.run(
+        ["dasgoclient", f"-query={query} instance=prod/phys03"],
+        stdout=subprocess.PIPE,
+        universal_newlines=True,
+        check=True,
+        env=env,
+    )
+    stdout_array = result.stdout.splitlines()
+
+    if stdout_array:
+        stdout_array[-1] = stdout_array[-1].replace(",", "")
+    return stdout_array
+
 
 if __name__ == "__main__":
     years = [
@@ -17,7 +39,6 @@ if __name__ == "__main__":
         "2023preBPix",
         "2023postBPix",
         "2024",
-        "2025",
     ]
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -39,6 +60,7 @@ if __name__ == "__main__":
     filesets_dir = Path.cwd() / "analysis" / "filesets"
     nano_version = get_nano_version(args.year)
     datasets_dir = filesets_dir / f"{args.year}_nanov{nano_version}.yaml"
+    fileset_file = filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
     with open(datasets_dir, "r") as f:
         dataset_configs = yaml.safe_load(f)
 
@@ -47,51 +69,107 @@ if __name__ == "__main__":
         samples_to_use = args.samples
     else:
         samples_to_use = list(dataset_configs.keys())
-    das_queries = {}
+    non_signal_das_queries = {}
+    signal_das_queries = {}
     for sample in samples_to_use:
-        if sample not in dataset_configs:
-            print(f"Sample '{sample}' not found in dataset config, skipping")
-            continue
         query = dataset_configs[sample]["query"]
-        if not query:
-            print(f"No available query for: {sample}")
-        elif is_private_query(query):
-            # USER (phys03) and local signal datasets are added by make_signal_filesets.py
-            print(f"Skipping private dataset (handled by make_signal_filesets.py): {sample}")
+        if query:
+            if dataset_configs[sample]["era"] == "signal":
+                signal_das_queries[sample] = query
+            else:
+                non_signal_das_queries[sample] = query
         else:
-            das_queries[sample] = query
+            print(f"No available query for: {sample}")
 
-    fileset_file = filesets_dir / f"fileset_{args.year}_nanov{nano_version}_lxplus.json"
-    if not das_queries:
-        # only private samples requested: do_save below would overwrite the fileset with {}
-        print("No DAS samples to query")
-        raise SystemExit(0)
+    # NON-SIGNAL SAMPLES
+    if non_signal_das_queries:
+        # create a dataset_definition dict for each year
+        dataset_definition = {}
+        for dataset_key, query in non_signal_das_queries.items():
+            dataset_definition[f"/{query}"] = {"short_name": dataset_key}
 
-    # create a dataset_definition dict for each year
-    dataset_definition = {}
-    for dataset_key, query in das_queries.items():
-        dataset_definition[f"/{query}"] = {"short_name": dataset_key}
-    # the dataset definition is passed to a DataDiscoveryCLI
-    ddc = DataDiscoveryCLI()
-    # set the allow sites to look for replicas
-    sites_file = filesets_dir / f"{args.year}_sites.yaml"
-    with open(sites_file, "r") as f:
-        sites = yaml.safe_load(f)["white"]
-    ddc.do_allowlist_sites(sites)
-    # query rucio and get replicas
-    ddc.load_dataset_definition(
-        dataset_definition,
-        query_results_strategy="all",
-        replicas_strategy="round-robin",
-    )
-    # do_save rewrites the whole file: keep the entries of the samples not queried now
-    # (e.g. signal samples added by make_signal_filesets.py)
-    if fileset_file.exists():
-        with open(fileset_file, "r") as f:
-            old_fileset = json.load(f)
-        for key, entry in old_fileset.items():
-            if not isinstance(entry, dict) or key in ddc.final_output:
-                continue
-            if entry.get("metadata", {}).get("short_name") not in das_queries:
-                ddc.final_output[key] = entry
-    ddc.do_save(fileset_file)
+        # set the allow sites to look for replicas
+        sites_file = filesets_dir / f"{args.year}_sites.yaml"
+        with open(sites_file, "r") as f:
+            sites = yaml.safe_load(f)
+        white_sites = sites["white"]
+        black_sites = sites["black"]
+
+        # the dataset definition is passed to a DataDiscoveryCLI
+        ddc = DataDiscoveryCLI()
+        ddc.do_allowlist_sites(white_sites)
+        ddc.do_blocklist_sites(black_sites)
+        # query rucio and get replicas
+        ddc.load_dataset_definition(
+            dataset_definition,
+            query_results_strategy="all",
+            replicas_strategy="round-robin",
+        )
+
+        ddc.do_save(fileset_file)
+
+        # Remove known files with zero events.
+        # https://cms-talk.web.cern.ch/t/empty-files-in-muoneg-datasets-for-2022/145956
+        files_to_remove = {
+            "2022postEE": {
+                "/MuonEG/Run2022F-22Sep2023-v1/NANOAOD": [
+                    "store/data/Run2022F/MuonEG/NANOAOD/22Sep2023-v1/50000/4fb72196-3b02-4499-8f6c-a54e15692b32.root",
+                    "store/data/Run2022F/MuonEG/NANOAOD/22Sep2023-v1/50000/4d76213a-ef14-411a-9558-559a6df3f978.root",
+                ],
+                "/MuonEG/Run2022G-22Sep2023-v1/NANOAOD": [
+                    "store/data/Run2022G/MuonEG/NANOAOD/22Sep2023-v1/2520000/cd404eb6-8218-4787-b5ed-af6cd9fe3750.root",
+                ],
+            }
+        }
+        if args.year in files_to_remove:
+            with open(fileset_file, "r") as f:
+                fileset = json.load(f)
+
+            for dataset_name, files_to_remove_for_dataset in files_to_remove[
+                args.year
+            ].items():
+                if dataset_name not in fileset:
+                    continue
+
+                original_files = fileset[dataset_name]["files"]
+
+                filtered_files = {
+                    file: metadata
+                    for file, metadata in original_files.items()
+                    if not any(
+                        file.endswith(file_to_remove)
+                        for file_to_remove in files_to_remove_for_dataset
+                    )
+                }
+
+                removed_count = len(original_files) - len(filtered_files)
+
+                fileset[dataset_name]["files"] = filtered_files
+
+                print(f"{dataset_name}: removed {removed_count} files with zero events")
+
+            with open(fileset_file, "w") as json_file:
+                json.dump(fileset, json_file, indent=4, sort_keys=True)
+
+    # SIGNAL SAMPLES
+    if signal_das_queries:
+        if fileset_file.exists():
+            with open(fileset_file, "r") as f:
+                fileset = json.load(f)
+        else:
+            fileset = {}
+
+        for sample, query in signal_das_queries.items():
+            files = get_signal_fileset(query)
+            if files:
+                files = [f"root://maite.iihe.ac.be:1094/{f}" for f in files]
+                print(f"Adding signal sample {sample}")
+                fileset[sample] = {
+                    "files": {f: "Events" for f in files},
+                    "metadata": {"short_name": sample},
+                }
+            else:
+                print(f"query for '{sample}' sample did not work!")
+
+        with open(fileset_file, "w") as json_file:
+            json.dump(fileset, json_file, indent=4, sort_keys=True)

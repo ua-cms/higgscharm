@@ -87,17 +87,29 @@ cells from the uncertainty specifically, deferred (not requested this session).
 Full writeup: second-brain `Tasks/HcZZ-fake-rate.md` "Update 2026-08-31", memory
 `hczz_ctag2d_impact_investigation`.
 """
+
 import numpy as np
 import awkward as ak
 import correctionlib
 from typing import Type
 from coffea.analysis_tools import Weights
-from analysis.corrections.utils import correction_files
+from analysis.corrections.correctionlib_files import correction_files
 
 CATS = ["L0", "C0", "C1", "C2", "C3", "C4", "B0", "B1", "B2", "B3", "B4"]
 CID = {n: i for i, n in enumerate(CATS)}
-WP_ID = {"L0": 0, "C0": 40, "C1": 41, "C2": 42, "C3": 43, "C4": 44,
-         "B0": 50, "B1": 51, "B2": 52, "B3": 53, "B4": 54}
+WP_ID = {
+    "L0": 0,
+    "C0": 40,
+    "C1": 41,
+    "C2": 42,
+    "C3": 43,
+    "C4": 44,
+    "B0": 50,
+    "B1": 51,
+    "B2": 52,
+    "B3": 53,
+    "B4": 54,
+}
 CAT_TO_WP = np.array([WP_ID[c] for c in CATS], dtype=np.int64)
 
 # Per-era PNet 2D-category boundaries in (pBplusC=HFvLF, pBvsC=BvC=1-CvB) space, i.e.
@@ -107,7 +119,7 @@ CAT_TO_WP = np.array([WP_ID[c] for c in CATS], dtype=np.int64)
 # (byte-for-byte match). wp_id -> category: 0=L0, 40-44=C0-C4, 50-54=B0-B4.
 BOUNDARIES_BY_ERA = {
     "2022preEE": {
-        "L0": {"x": (0.0,   0.160), "y": (0.0,   1.0)},
+        "L0": {"x": (0.0, 0.160), "y": (0.0, 1.0)},
         "C0": {"x": (0.160, 0.332), "y": (0.000, 1.000)},
         "C1": {"x": (0.332, 0.706), "y": (0.000, 1.000)},
         "C2": {"x": (0.706, 1.000), "y": (0.090, 0.261)},
@@ -120,7 +132,7 @@ BOUNDARIES_BY_ERA = {
         "B4": {"x": (0.706, 1.000), "y": (0.993, 1.000)},
     },
     "2022postEE": {
-        "L0": {"x": (0.0,   0.160), "y": (0.0,   1.0)},
+        "L0": {"x": (0.0, 0.160), "y": (0.0, 1.0)},
         "C0": {"x": (0.160, 0.332), "y": (0.000, 1.000)},
         "C1": {"x": (0.332, 0.706), "y": (0.000, 1.000)},
         "C2": {"x": (0.706, 1.000), "y": (0.090, 0.261)},
@@ -133,7 +145,7 @@ BOUNDARIES_BY_ERA = {
         "B4": {"x": (0.706, 1.000), "y": (0.993, 1.000)},
     },
     "2023preBPix": {
-        "L0": {"x": (0.0,   0.144), "y": (0.0,   1.0)},
+        "L0": {"x": (0.0, 0.144), "y": (0.0, 1.0)},
         "C0": {"x": (0.144, 0.292), "y": (0.000, 1.000)},
         "C1": {"x": (0.292, 0.646), "y": (0.000, 1.000)},
         "C2": {"x": (0.646, 1.000), "y": (0.078, 0.240)},
@@ -146,7 +158,7 @@ BOUNDARIES_BY_ERA = {
         "B4": {"x": (0.646, 1.000), "y": (0.992, 1.000)},
     },
     "2023postBPix": {
-        "L0": {"x": (0.0,   0.144), "y": (0.0,   1.0)},
+        "L0": {"x": (0.0, 0.144), "y": (0.0, 1.0)},
         "C0": {"x": (0.144, 0.288), "y": (0.000, 1.000)},
         "C1": {"x": (0.288, 0.640), "y": (0.000, 1.000)},
         "C2": {"x": (0.640, 1.000), "y": (0.082, 0.243)},
@@ -189,9 +201,14 @@ def correction_name(era):
     return CORRECTION_NAME_UPART if era in UPART_ERAS else CORRECTION_NAME_PNET
 
 
-NUIS_YEAR = {"2022preEE": "2022", "2022postEE": "2022",
-             "2023preBPix": "2023", "2023postBPix": "2023",
-             "2024": "2024", "2025": "2024"}  # 2025 = 2024 calibration, same nuisance
+NUIS_YEAR = {
+    "2022preEE": "2022",
+    "2022postEE": "2022",
+    "2023preBPix": "2023",
+    "2023postBPix": "2023",
+    "2024": "2024",
+    "2025": "2024",
+}  # 2025 = 2024 calibration, same nuisance
 # single-nuisance source keys, matching the hww-analysis reference (decision there: 2026-07-23,
 # Total; per-source decorrelation deferred to a whole-card decorrelation pass -- same deferral
 # applies here, not yet revisited).
@@ -218,7 +235,12 @@ def _category_np(cvsl, cvsb, era):
         cat[m] = CID[name]
     # closed upper corner (x=1, y=1) falls just outside every "< hi" box -- assign it to
     # whichever category owns the (x_hi, y_hi)=(1,1) corner (B4 always, per the tiling above).
-    edge = good & (cat < 0) & (x >= boundaries["B4"]["x"][0]) & (y >= boundaries["B4"]["y"][0])
+    edge = (
+        good
+        & (cat < 0)
+        & (x >= boundaries["B4"]["x"][0])
+        & (y >= boundaries["B4"]["y"][0])
+    )
     cat[edge] = CID["B4"]
     return cat
 
@@ -243,7 +265,7 @@ class CTag2DCorrector:
             polarity, which is inverted)
     """
 
-    def __init__(self, events, weights: Type[Weights], year: str, variation: str = "nominal") -> None:
+    def __init__(self, events, weights: Type[Weights], year: str, shift: str) -> None:
         if year not in BOUNDARIES_BY_ERA:
             raise ValueError(
                 f"CTag2DCorrector has no category boundaries for year '{year}' "
@@ -251,7 +273,7 @@ class CTag2DCorrector:
             )
         self._year = year
         self._weights = weights
-        self._variation = variation
+        self._shift = shift
         self._corr = correctionlib.CorrectionSet.from_file(
             correction_files["ctagging_2d"][year]
         )[correction_name(year)]
@@ -270,8 +292,12 @@ class CTag2DCorrector:
         self._nj = ak.num(jets)
         j = ak.flatten(jets)
         tagger = "UParTAK4" if year in UPART_ERAS else "PNet"
-        self._cvsl = ak.to_numpy(ak.fill_none(j[f"btag{tagger}CvL"], np.nan)).astype(np.float64)
-        self._cvsb = ak.to_numpy(ak.fill_none(j[f"btag{tagger}CvB"], np.nan)).astype(np.float64)
+        self._cvsl = ak.to_numpy(ak.fill_none(j[f"btag{tagger}CvL"], np.nan)).astype(
+            np.float64
+        )
+        self._cvsb = ak.to_numpy(ak.fill_none(j[f"btag{tagger}CvB"], np.nan)).astype(
+            np.float64
+        )
         self._pt = ak.to_numpy(ak.fill_none(j.pt, np.nan)).astype(np.float64)
         flav = ak.fill_none(getattr(j, "hadronFlavour", ak.zeros_like(j.pt)), 0)
         self._flav = ak.to_numpy(flav).astype(np.int64)
@@ -287,7 +313,9 @@ class CTag2DCorrector:
                 syst,
                 self._flav[ok],
                 wp[ok],
-                np.zeros(ok.sum(), dtype=np.float64),  # abseta -- inclusive, per reference impl
+                np.zeros(
+                    ok.sum(), dtype=np.float64
+                ),  # abseta -- inclusive, per reference impl
                 np.clip(self._pt[ok], *PT_BINS),
             )
         return sf
@@ -319,7 +347,7 @@ class CTag2DCorrector:
         revert writeup for the full before/after re-investigation.
         """
         sf_c = self._eval_event("central")
-        if self._variation == "nominal":
+        if self._shift is None:
             sf_up = self._eval_event(SYST_UP)
             sf_dn = self._eval_event(SYST_DN)
             r_up = np.where(sf_c != 0, sf_up / sf_c, 1.0)

@@ -163,6 +163,7 @@ class ElectronWeights:
             "2022preEE": "2022Re-recoBCD",
             "2023preBPix": "2023PromptC",
             "2023postBPix": "2023PromptD",
+            "2024": "2024Prompt",
             "2025": "2025Prompt",
         }
         cset_args = [
@@ -174,6 +175,7 @@ class ElectronWeights:
         ]
         if self.year.startswith("2023"):
             cset_args += [electron_phi]
+            
         weights = unflat_sf(
             self.cset_id["Electron-ID-SF"].evaluate(*cset_args),
             in_electron_mask,
