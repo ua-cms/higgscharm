@@ -52,7 +52,9 @@ def add_lhepdf_weight(events, weights_container, shift):
                 # αs
                 w_as_low = pdfweights[:, 101]
                 w_as_high = pdfweights[:, 102]
-                delta_alpha = 0.5 * np.abs(w_as_high - w_as_low)
+                # signed shift: Up follows alpha_S up (mem 102) in every event; np.abs() forced Up >= 1 and
+                # Down <= 1 everywhere and lost the per-event direction of the alpha_S variation
+                delta_alpha = 0.5 * (w_as_high - w_as_low)
                 w_up_alpha = 1 + delta_alpha
                 w_down_alpha = 1 - delta_alpha
 
