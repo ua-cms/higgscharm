@@ -119,9 +119,12 @@ def read_parquet(path, columns=None):
     req = columns
     if columns is not None:
         columns = [c for c in columns if c in avail]
+    pdf_fix = os.environ.get("HCZZ_PDF_HESSIAN_FIX") == "1" and any(c in avail for c in _PDF_COLS)
+    if pdf_fix and columns is not None and any(c in columns for c in _PDF_COLS) and "weight_nominal" not in columns:
+        return _drop(read_parquet(path, columns + ["weight_nominal"]), ["weight_nominal"])
     k = _kappa()
     if k is None or (columns is not None and "mva_score_Signal" not in columns) or "mva_score_Signal" not in avail:
-        return pf.read(columns=columns)
+        return _pdf_hessian(pf.read(columns=columns)) if pdf_fix else pf.read(columns=columns)
     if not all(c in avail for c in _KAPPA_CLASSES):
         raise KeyError(f"HCZZ_KAPPA set but {path} lacks one of {_KAPPA_CLASSES}")
     extra = [c for c in _KAPPA_CLASSES if columns is not None and c not in columns]
@@ -135,6 +138,35 @@ def read_parquet(path, columns=None):
     tab = tab.set_column(tab.column_names.index("mva_score_Signal"), "mva_score_Signal", pa.array(d))
     for c in extra:
         tab = tab.drop([c])
+    return _pdf_hessian(tab) if pdf_fix else tab
+
+
+# 2026-11-04: lhe_pdf Hessian fix. analysis/corrections/lhepdf.py (until 11-04) computed
+# delta_pdf = sqrt(sum_k (w_k - w_0)^2 / 99), the MC-replica RMS, but every sample's LHEPdfWeight is an MC-Hessian
+# set (LHA 325300-325402 official, 325500-325600 private H+c) whose uncertainty is the plain quadrature sum
+# (PDF4LHC15, arXiv:1510.03865 eq. 20), i.e. the stored weight_lhe_pdf{Up,Down} = nom * (1 +- delta/sqrt(99)) are
+# sqrt(99) too small (ZZto4L [105,160) rate +-0.41% stored vs +-4.07% Hessian; HIG-24-013 +3.1/-3.4%).
+# With HCZZ_PDF_HESSIAN_FIX=1 (productions made before the source fix) Up/Down -> nom +- sqrt(99) |Up/Down - nom|,
+# exact because delta >= 0. The combined weight_lhe_pdf_alphaS* columns are not used by the builders, left as is.
+_PDF_COLS = ("weight_lhe_pdfUp", "weight_lhe_pdfDown")
+
+
+def _drop(tab, cols):
+    return tab.drop([c for c in cols if c in tab.column_names])
+
+
+def _pdf_hessian(tab):
+    import numpy as np
+    import pyarrow as pa
+    names = tab.column_names
+    if "weight_nominal" not in names:
+        return tab
+    col = lambda c: np.asarray(tab.column(c).combine_chunks().to_numpy(zero_copy_only=False), dtype=float)
+    nom = col("weight_nominal")
+    for c, sign in (("weight_lhe_pdfUp", 1.0), ("weight_lhe_pdfDown", -1.0)):
+        if c in names:
+            w = col(c)
+            tab = tab.set_column(names.index(c), c, pa.array(nom + sign * np.sqrt(99.0) * np.abs(w - nom)))
     return tab
 
 

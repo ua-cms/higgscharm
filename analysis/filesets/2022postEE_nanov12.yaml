@@ -391,7 +391,7 @@ ZHto2Zto4L:
   query: ZHto2Zto4L_M125_TuneCP5_13p6TeV_powheg2-minlo-HZJ-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.000775
+  xsec: 0.0007062  # 2026-11-04 (user): = HIG-24-013/CJLST samplesNano csv (Run3, 7bbeb10): 0.9439 pb x 0.00074812; was 0.000775 (old CJLST value)
 WminusH_Hto2Zto4L:
   era: mc
   query: WminusH_Hto2Zto4L_M-125_TuneCP5_13p6TeV_powheg2-minlo-HWJ-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
@@ -406,10 +406,10 @@ WplusH_Hto2Zto4L:
   xsec: 0.000244
 TTH_Hto2Z:
   era: mc
-  query: TTH_Hto2Z_M-125_4LFilter_TuneCP5_13p6TeV_powheg2-JHUGenV752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
+  query: TTH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer22EENanoAODv12-130X_mcRun3_2022_realistic_postEE_v6-v2/NANOAODSIM
   process: H(125)
   key: higgs
-  xsec: 0.0001535  # 2026-10-16: was 0.00312 (~20x/7x too high); sigma_ttH 0.5700 pb x BR(H->ZZ) 0.02641 x BR(ZZ->4l,e/mu/tau) 0.010199 (sample = pure H->ZZ->4l, checked on GenPart)
+  xsec: 0.0004383  # 2026-11-04 (user): = HIG-24-013/CJLST samplesNano csv (Run3, 7bbeb10): 0.5700 pb x 0.0007689 (BR incl. 4LFilter); was 0.0004437 (ours, BR 125.09) ; 2022 sample switched to CJLST's 4LFilter_M-125 jhugenv752 (was M-125_4LFilter powheg2-JHUGenV752, 1.535e-4)
 # H+c signal samples for MVA
 SomeSMSignal:
   era: signal

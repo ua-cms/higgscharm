@@ -143,6 +143,18 @@ def concat_tables_schema_safe(tables):
         for name, types in col_types.items()
         if len(types) > 1 and all(pat.is_integer(ty) or pat.is_floating(ty) for ty in types)
     }
+    # 2026-11-06: jagged columns (e.g. z_pt) are written as list<double> in some chunk files and
+    # large_list<double> in others (same values, 32- vs 64-bit offsets): "Unable to merge: Field z_pt has
+    # incompatible types: list<item: double> vs large_list<element: double>" in --output_format parquet
+    # postprocessing (also list<bool>, e.g. lepton_is_tight). Cast such columns to large_list of the common element
+    # type, or of float64 if the element types are different numeric types -- lossless; other clashes still raise.
+    for name, types in col_types.items():
+        if len(types) > 1 and all(pat.is_list(ty) or pat.is_large_list(ty) for ty in types):
+            vtypes = {ty.value_type for ty in types}
+            if len(vtypes) == 1:
+                to_cast[name] = pa.large_list(vtypes.pop())
+            elif all(pat.is_integer(v) or pat.is_floating(v) for v in vtypes):
+                to_cast[name] = pa.large_list(pa.float64())
     if to_cast:
         cast_tables = []
         for t in tables:

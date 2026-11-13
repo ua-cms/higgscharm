@@ -177,9 +177,10 @@ BOUNDARIES_BY_ERA = {
 }
 # 2025: no calibration of its own; 2024 table (the 2024 MVA scores 2025 too)
 BOUNDARIES_BY_ERA["2025"] = BOUNDARIES_BY_ERA["2024"]
+BOUNDARIES_BY_ERA["2026"] = BOUNDARIES_BY_ERA["2024"]  # 2026: same placeholder as 2025 (2026-11-08)
 
 # eras tagged with UParTAK4 (NanoAOD v15) instead of PNet
-UPART_ERAS = ("2024", "2025")
+UPART_ERAS = ("2024", "2025", "2026")
 CORRECTION_NAME_PNET = "ParticleNetAK4_pseudocontinuous"
 CORRECTION_NAME_UPART = "UParTAK4_pseudocontinuous"
 CORRECTION_NAME = CORRECTION_NAME_PNET  # kept for existing imports
@@ -191,7 +192,7 @@ def correction_name(era):
 
 NUIS_YEAR = {"2022preEE": "2022", "2022postEE": "2022",
              "2023preBPix": "2023", "2023postBPix": "2023",
-             "2024": "2024", "2025": "2024"}  # 2025 = 2024 calibration, same nuisance
+             "2024": "2024", "2025": "2024", "2026": "2024"}  # 2025/2026 = 2024 calibration, same nuisance
 # single-nuisance source keys, matching the hww-analysis reference (decision there: 2026-07-23,
 # Total; per-source decorrelation deferred to a whole-card decorrelation pass -- same deferral
 # applies here, not yet revisited).

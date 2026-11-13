@@ -28,8 +28,15 @@ Normalisation is the builder's: --sumw-table (the pre-veto table of the 2022/23 
 entries) or the sidecars with --sumw-key (default sumw_preveto, as the 2024 builder). Other_Higgs
 is split per production mode (dc.split_other_higgs) unless --no-split-higgs.
 
-Not reproduced here: the stitched 4FS+3FS signal of the 2022/23 cards (the Signal column is the
-plain 4FS sample(s), normalised to 4FS sigma x BR), its flat muon ID SF, and Z+X.
+Signal: by default the plain 4FS sample(s) of the sources, normalised to 4FS sigma x BR (NLO).
+With --stitched-signal <card>/stitch_summary.json (2026-11-09) it is the signal of that card
+(create_datacards_ctag2d_100150_stitched.py, signal modes stitched / 4fs / 3fs): the 4FS and 3FS
+parquets of the card's --fs-scored-dir, split on n_genc10 as the builder does, each event weighted
+weight_nominal * sigma_s K_s S BR lumi / sumw_s(era) * muSF(era) with every factor taken from the
+summary, i.e. normalised to the NNLO total (73.30 fb). The .coffea cutflow rows of the signal are
+then empty (no per-region cutflow); its "generated" row is sigma_total x BR x lumi.
+
+Not reproduced here: Z+X.
 
 Data (Muon*/EGamma*/DoubleMuon*/SingleMuon* directories): weight 1. Blinded unless --unblind:
 no data in the mass-window region and in the yield table's window columns; the m4l histograms
@@ -93,6 +100,8 @@ HIST_VARS = {
 }
 REGIONS = ("selected", "window")   # all selected events / mass window and mva_score_Signal >= 0
 MASS_COL, SCORE_COL, WEIGHT_COL = "zz_mass_inclusive", "mva_score_Signal", "weight_nominal"
+GENC_COL = "n_genc10"              # GEN c-jets (hadronFlavour 4, pT > 10 GeV): the stitching split
+FS_PREFIX = {"4FS": "HPlusCharm", "3FS": "Stitch3FS_cH_"}   # as the stitched builder
 
 
 # ---------------------------------------------------------------------------
@@ -153,6 +162,48 @@ def load_sidecar_sumw(raw_dir, kinds="all"):
         g = dc.norm_group(part)
         return (era, g) if g else None
     return dict(dc.load_sumw(raw_dir, key_fn=key))
+
+
+def load_stitched_signal(path, eras, fs_scored_dir=None):
+    """Signal normalisation of a stitched-builder card from its stitch_summary.json: per (era, piece)
+    the per-event scale sigma_s K_s S BR lumi / sumw_s * muSF and the n_genc10 region. The lumi is
+    the builder's, recovered from expected_total_events_pre_selection."""
+    summ = json.loads(Path(path).read_text())
+    cfg = summ["_config"]
+    mode = cfg["signal_mode"]
+    if mode not in ("stitched", "4fs", "3fs"):
+        raise SystemExit(f"{path}: signal mode {mode} not supported (4fs_rw needs the per-event stitch weights)")
+    missing = [e for e in eras if e not in summ]
+    if missing:
+        raise SystemExit(f"{path}: no signal normalisation for {missing}")
+    br, s_tot = cfg["BR_H4L"], cfg["sigma_total_fb"]
+    kf = cfg["K_FACTOR"] if mode == "stitched" else {"4FS": 1.0, "3FS": 1.0}
+    sigma_pb = {"4FS": cfg["sigma_4fs_fb"] * 1e-3, "3FS": cfg["sigma_3fs_fb"] * 1e-3}
+    out = {"path": str(path), "mode": mode, "cut": 2 if cfg.get("massless_1c") else 1,
+           "scored_dir": fs_scored_dir or cfg["fs_scored_dir"], "sigma_total_fb": s_tot,
+           "scale": {}, "generated": {}, "lumi_pb": {}}
+    for era in eras:
+        rec = summ[era]
+        if s_tot > 0:
+            lumi = rec["expected_total_events_pre_selection"] / (s_tot * 1e-3 * br)
+        else:
+            lumi = dc.LUMINOSITY_PB[era]
+        if abs(lumi / dc.LUMINOSITY_PB[era] - 1) > 1e-6:
+            raise SystemExit(f"{era}: card lumi {lumi:.2f} != bookkeeping lumi {dc.LUMINOSITY_PB[era]:.2f} pb^-1")
+        out["lumi_pb"][era] = lumi
+        out["generated"][era] = rec["expected_total_events_pre_selection"]
+        for piece in ("4FS", "3FS"):
+            sw = rec["sumw"][piece]
+            if sw["region"] == 0:          # piece not used (4fs / 3fs mode, or no 3FS sample for the era)
+                continue
+            out["scale"][(era, piece)] = (sigma_pb[piece] * kf[piece] * rec["global_rescale_S"] * br * lumi
+                                          / sw["all"] * rec["muon_id_sf"])
+    return out
+
+
+def signal_region(st, piece):
+    """(piece, n_genc10 cut) for _file_acc; None = every event of the piece."""
+    return None if st["mode"] != "stitched" else (piece, st["cut"])
 
 
 def year_of(era):
@@ -251,12 +302,23 @@ def _read_file(path, columns):
     return E.read_parquet(path, cols).to_pandas()
 
 
-def _file_acc(path, scale, window, data):
-    columns = sorted({MASS_COL, SCORE_COL, WEIGHT_COL} | {c for c, _ in HIST_VARS.values()})
+def _file_acc(path, scale, window, data, region=None):
+    """region: (piece, cut) keeps the stitched-signal events of the piece (4FS: n_genc10 < cut,
+    3FS: n_genc10 >= cut) and drops the others, as the builder's region_mask."""
+    columns = sorted({MASS_COL, SCORE_COL, WEIGHT_COL} | {c for c, _ in HIST_VARS.values()}
+                     | ({GENC_COL} if region else set()))
     df = _read_file(path, columns)
     acc = _empty_acc()
     if len(df) == 0:
         return acc
+    if region:
+        if GENC_COL not in df:
+            raise RuntimeError(f"no {GENC_COL} column for the stitched signal: {path}")
+        piece, cut = region
+        n = df[GENC_COL].values
+        df = df[(n < cut) if piece == "4FS" else (n >= cut)]
+        if len(df) == 0:
+            return acc
     w = np.ones(len(df)) if data else df[WEIGHT_COL].fillna(0).values * scale
     m4l = df[MASS_COL].values
     in_m4l = (m4l >= window[0]) & (m4l < window[1])
@@ -302,6 +364,30 @@ def collect_yields(scored_dir, era, sumw_by_group, window, exclude, workers, kin
     return out
 
 
+def collect_stitched_signal(st, era, window, workers):
+    """Accumulated yields/histograms of the stitched signal of one era (the builder's
+    _signal_samples: <fs_scored_dir>/<era>/<HPlusCharm*|Stitch3FS_cH_*>/base/*.parquet)."""
+    era_dir = os.path.join(st["scored_dir"], era)
+    tasks = []
+    for name in E.listdir(era_dir):
+        piece = next((s for s, pre in FS_PREFIX.items() if name.startswith(pre)), None)
+        if piece is None or (era, piece) not in st["scale"]:
+            continue
+        base = os.path.join(era_dir, name, "base")
+        for f in E.files(base, ".parquet"):
+            tasks.append((piece, f))
+    for piece in ("4FS", "3FS"):
+        if (era, piece) in st["scale"] and not any(p == piece for p, _ in tasks):
+            raise SystemExit(f"{era}: no {piece} signal parquets in {era_dir}")
+    logger.info(f"  {era}: {len(tasks)} stitched-signal parquet files ({st['mode']})")
+    acc = _empty_acc()
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = [ex.submit(_file_acc, f, st["scale"][(era, p)], window, False, signal_region(st, p)) for p, f in tasks]
+        for fut in as_completed(futs):
+            _add_acc(acc, fut.result())
+    return acc
+
+
 # ---------------------------------------------------------------------------
 # tables
 # ---------------------------------------------------------------------------
@@ -313,11 +399,12 @@ def _ordered(procs, mc_order):
     return head + tail + sig + data
 
 
-def make_tables(eras, cutflows, yields, sumw_by_group, window, mc_order, blind):
+def make_tables(eras, cutflows, yields, sumw_by_group, window, mc_order, blind, signal_generated=None):
     """Cutflow, efficiency, yields, sumw check and job coverage summed over `eras`. Job coverage: the
     events written according to the .coffea files (raw_final_nevents) must equal the rows of the scored
     parquets; otherwise .coffea jobs (or parquets) are missing and the process gets NaN in the
-    .coffea-based cutflow rows."""
+    .coffea-based cutflow rows. signal_generated (era -> sigma x BR x lumi): stitched signal, whose
+    only .coffea-based row is "generated" and which is left out of the job check."""
     steps_seen = []
     cf = defaultdict(lambda: defaultdict(float))     # proc -> row -> value
     check = []
@@ -358,6 +445,8 @@ def make_tables(eras, cutflows, yields, sumw_by_group, window, mc_order, blind):
             coffea_raw[proc] += rec["raw_final"]
             n_jobs[proc] += rec["n_jobs"]
         for proc in sorted(set(coffea_raw) | set(yields[era])):
+            if signal_generated is not None and proc == "Signal":
+                continue
             pq_raw = yields[era][proc]["n_raw_sel"] if proc in yields[era] else 0
             jobs.append({"era": era, "process": proc, "n_coffea_jobs": n_jobs[proc],
                          "events_written_coffea": coffea_raw[proc], "events_in_parquets": pq_raw,
@@ -367,6 +456,8 @@ def make_tables(eras, cutflows, yields, sumw_by_group, window, mc_order, blind):
     for proc in set(jobs.loc[~jobs["complete"].astype(bool), "process"]):
         for r in rows[:-3]:
             cf[proc][r] = np.nan
+    if signal_generated is not None and "Signal" in cf:
+        cf["Signal"]["generated (pre jet veto)"] = sum(signal_generated[e] for e in eras)
     procs = _ordered(cf.keys(), mc_order)
     cutflow = pd.DataFrame({p: [cf[p].get(r, np.nan) for r in rows] for p in procs}, index=rows)
     bkg = [p for p in procs if p not in ("Signal", "Data")]
@@ -486,10 +577,20 @@ def run_bookkeep(a):
                 if clash:
                     raise SystemExit(f"{era}: {sorted(clash)} come from two --source productions; restrict their kinds")
                 dst.update(src)
+    stitched = None
+    if getattr(a, "stitched_signal", None):
+        # the card's signal replaces any plain-4FS Signal of the sources
+        stitched = load_stitched_signal(a.stitched_signal, eras, getattr(a, "fs_scored_dir", None))
+        logger.info(f"stitched signal ({stitched['mode']}, total {stitched['sigma_total_fb']} fb) from "
+                    f"{stitched['scored_dir']}, normalisation {a.stitched_signal}")
+        for era in eras:
+            for k in [k for k in cutflows[era] if k[0] == "Signal"]:
+                del cutflows[era][k]
+            yields[era]["Signal"] = collect_stitched_signal(stitched, era, a.mass_window, a.workers)
     blind = not a.unblind
     for tag, es in era_groups(eras).items():
         cutflow, eff, ydf, check, jobs = make_tables(es, cutflows, yields, sumw_by_group, a.mass_window,
-                                                     mc_order, blind)
+                                                     mc_order, blind, stitched["generated"] if stitched else None)
         cutflow.to_csv(out_dir / f"cutflow_{tag}.csv")
         eff.to_csv(out_dir / f"cutflow_eff_{tag}.csv")
         ydf.to_csv(out_dir / f"yields_{tag}.csv")
@@ -507,6 +608,10 @@ def run_bookkeep(a):
             "sources": [{"raw_dir": r, "scored_dir": sc, "kinds": k} for r, sc, k in sources], "sumw": sumw_src,
             "mass_window": list(a.mass_window), "split_higgs": not a.no_split_higgs, "blind": blind,
             "exclude": a.exclude, "created": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "signal": ({"kind": f"card signal ({stitched['mode']})", "stitch_summary": stitched["path"],
+                        "scored_dir": stitched["scored_dir"], "sigma_total_fb": stitched["sigma_total_fb"],
+                        "scale": {f"{e} {p}": v for (e, p), v in stitched["scale"].items() if e in es}}
+                       if stitched else {"kind": "plain 4FS of the sources, sigma_4FS x BR"}),
             "cutflow": json.loads(cutflow.to_json()), "yields": json.loads(ydf.to_json()),
             "sumw_check_mismatches": json.loads(bad.to_json(orient="records")),
             "job_check_incomplete": json.loads(incomplete.to_json(orient="records")),
@@ -633,6 +738,11 @@ def add_arguments(p, standalone=True):
     p.add_argument("--unblind", action="store_true")
     p.add_argument("--blind-m4l", nargs=2, type=float, default=(115.0, 135.0))
     p.add_argument("--signal-scale", type=float, default=100.0, help="H+c overlay scale in the plots")
+    p.add_argument("--stitched-signal", default=None, metavar="STITCH_SUMMARY_JSON",
+                   help="stitch_summary.json of a stitched-builder card: Signal = that card's signal (4FS+3FS "
+                        "stitched, normalised to the NNLO total) instead of the plain 4FS of the sources")
+    p.add_argument("--fs-scored-dir", default=None,
+                   help="with --stitched-signal: scored 4FS+3FS signal dir (default: the card's --fs-scored-dir)")
     return p
 
 

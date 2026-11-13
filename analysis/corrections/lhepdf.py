@@ -16,7 +16,7 @@ def add_lhepdf_weight(events, weights_container):
 
     where:
       • mem = 0       → central PDF (αs = 0.118)
-      • mem = 1–100   → PDF eigenvector members
+      • mem = 1–100   → PDF eigenvector members (MC-Hessian: δ_pdf = quadrature sum, no 1/(N-1))
       • mem = 101–102 → αs variations (αs = 0.116, 0.120)
 
     The LHEPdfWeight branch contains ratios (w_var / w_nominal) for LHA IDs 306000–306102.
@@ -43,13 +43,14 @@ def add_lhepdf_weight(events, weights_container):
             w0 = pdfweights[:, 0]  # central (mem=0)
             w_all = pdfweights[:, 1:101]  # mem=1..100
             diffs = (w_all - w0[:, None]) ** 2
-            # NNPDF Monte-Carlo-replica prescription: sample std. dev. of the
-            # N=100 replicas around the central value, i.e. divide the sum of
-            # squared deviations by (N-1) before taking the sqrt. The
-            # unnormalized quadrature sum (correct only for Hessian-eigenvector
-            # PDF sets) was found to inflate delta_pdf by ~sqrt(99)=9.95x for
-            # at least one private sample (confirmed 2026-08-03).
-            delta_pdf = np.sqrt(ak.sum(diffs, axis=1) / 99)
+            # MC-Hessian set (official samples LHA 325300-325402, private H+c 325500-325600, checked
+            # 2026-11-04 in the NanoAOD branch titles): PDF4LHC15 Hessian prescription, quadrature sum of
+            # the 100 eigenvector deviations (arXiv:1510.03865 eq. 20), NO 1/(N-1) -- that is the MC-replica
+            # RMS and made delta_pdf sqrt(99) too small (ZZto4L [105,160): 0.41% instead of 4.1%,
+            # HIG-24-013 +3.1/-3.4%). The 2026-08-03 '/99' was added for the private H+c/H+b samples,
+            # whose members 1-100 are normalised differently from member 0 (all ~1.7-2.3 vs 1.0), so
+            # their delta is unusable with any normalisation (excluded in the datacard builders).
+            delta_pdf = np.sqrt(ak.sum(diffs, axis=1))
 
             w_up_pdf = 1 + delta_pdf
             w_down_pdf = 1 - delta_pdf
@@ -77,13 +78,14 @@ def add_lhepdf_weight(events, weights_container):
             w0 = pdfweights[:, 0]
             w_all = pdfweights[:, 1:101]
             diffs = (w_all - w0[:, None]) ** 2
-            # NNPDF Monte-Carlo-replica prescription: sample std. dev. of the
-            # N=100 replicas around the central value, i.e. divide the sum of
-            # squared deviations by (N-1) before taking the sqrt. The
-            # unnormalized quadrature sum (correct only for Hessian-eigenvector
-            # PDF sets) was found to inflate delta_pdf by ~sqrt(99)=9.95x for
-            # at least one private sample (confirmed 2026-08-03).
-            delta_pdf = np.sqrt(ak.sum(diffs, axis=1) / 99)
+            # MC-Hessian set (official samples LHA 325300-325402, private H+c 325500-325600, checked
+            # 2026-11-04 in the NanoAOD branch titles): PDF4LHC15 Hessian prescription, quadrature sum of
+            # the 100 eigenvector deviations (arXiv:1510.03865 eq. 20), NO 1/(N-1) -- that is the MC-replica
+            # RMS and made delta_pdf sqrt(99) too small (ZZto4L [105,160): 0.41% instead of 4.1%,
+            # HIG-24-013 +3.1/-3.4%). The 2026-08-03 '/99' was added for the private H+c/H+b samples,
+            # whose members 1-100 are normalised differently from member 0 (all ~1.7-2.3 vs 1.0), so
+            # their delta is unusable with any normalisation (excluded in the datacard builders).
+            delta_pdf = np.sqrt(ak.sum(diffs, axis=1))
 
             w_up_pdf = 1 + delta_pdf
             w_down_pdf = 1 - delta_pdf

@@ -563,11 +563,18 @@ def load_signal_nominal(scales):
                         col = dc.syst_col(syst, d, era)
                         if syst in ctag:
                             systw[syst][d].append(ctag[syst][0 if d == "Up" else 1])
+                        elif ctag and syst.startswith("CMS_ctag2d"):
+                            # 2026-11-09: another era's per-era ctag2d source -> nominal by design (as the bkg
+                            # decorr loader); recording it made check_missing_syst flag it as 100% missing.
+                            systw[syst][d].append(nom)
                         elif col in df.columns:
+                            dc.note_syst_col("Signal", syst, d, True, nom, sample_name)
                             systw[syst][d].append(df[col].fillna(0).values * fac)
-                        else:   # CMS_eff_m_id: not in the jecshifts workflows
+                        else:   # e.g. CMS_eff_m_id in the jecshifts workflows; recorded, checked below (11-09)
+                            dc.note_syst_col("Signal", syst, d, False, nom, sample_name)
                             systw[syst][d].append(nom)
     events = {k: np.concatenate(v) for k, v in ev.items()}
+    dc.check_missing_syst()
     return scores, weights, systw, raw_weight, events
 
 
@@ -579,7 +586,8 @@ def load_signal_jecshifts(scales):
             sc, wt = [], []
             for era in ERAS:
                 for sample_name, piece, sdir in _signal_samples(era):
-                    cat = os.path.join(sdir, f"{syst}_{dc.era_year(era)}{d}")
+                    sd = dc.shift_dir(syst, era, d)
+                    cat = os.path.join(sdir, sd) if sd else sdir   # None: nominal events of this era
                     if not E.isdir(cat):
                         raise RuntimeError(f"missing shift dir: {cat}")
                     for pq_file in E.files(cat, ".parquet"):
@@ -714,11 +722,19 @@ def load_jecshifts_pershift(jecshifts_dir, sumw_by_shift):
             g = dc.norm_group(sample_name)
             for syst in dc.JECSHIFTS_SYSTEMATICS:
                 for direction in ("Up", "Down"):
-                    shift = f"{syst}_{year}{direction}"
-                    cat_dir = os.path.join(era_dir, sample_name, "base", shift)
+                    shift = dc.shift_dir(syst, era, direction)
+                    if shift is None:   # nuisance not acting on this era: its nominal events and sumw
+                        cat_dir = os.path.join(era_dir, sample_name, "base")
+                        rec = SUMW_TABLE["nom"].get(era, {}).get(g)
+                        if rec is None or rec["n_missing"]:
+                            raise RuntimeError(f"sumw table: no complete nominal sumw for ({era}, {g})")
+                        sw = rec["sumw"]
+                    else:
+                        cat_dir = os.path.join(era_dir, sample_name, "base", shift)
+                        sw = None
                     if not E.isdir(cat_dir):
                         continue
-                    sw = sumw_by_shift.get((shift, era, g))
+                    sw = sw or sumw_by_shift.get((shift, era, g))
                     if not sw:
                         raise RuntimeError(f"no table sumw for ({shift}, {era}, {g}) [sample {sample_name}]")
                     scale = dc.group_xs_pb(era, g) * dc.LUMINOSITY_PB[era] / sw
@@ -840,7 +856,7 @@ def write_datacard_fs(histograms, root_filename, output_dir, include_zx=True, au
         if tok and tok[0] == "pdf_gg" and CFG.pdf_ch:
             vals = tok[2:]
             vals[isig] = "-"
-            out.append(f"{tok[0]:<25}{tok[1]:<8}" + "".join(f"{v:<{max(12, len(v) + 1)}}" for v in vals).rstrip())
+            out.append(f"{tok[0]:<24} {tok[1]:<8}" + "".join(f"{v:<{max(12, len(v) + 1)}}" for v in vals).rstrip())
             cc = ["-"] * len(procs)
             cc[isig] = CFG.pdf_ch
             out.append(f"{'pdf_cH':<25}{'lnN':<8}" + "".join(f"{v:<{max(12, len(v) + 1)}}" for v in cc).rstrip())
@@ -850,7 +866,7 @@ def write_datacard_fs(histograms, root_filename, output_dir, include_zx=True, au
             vals[isig] = "-"
             name, stype = tok[0], tok[1]
             w = len(l) - len(l.lstrip())
-            out.append(f"{name:<25}{stype:<8}" + "".join(f"{v:<{max(12, len(v) + 1)}}" for v in vals).rstrip())
+            out.append(f"{name:<24} {stype:<8}" + "".join(f"{v:<{max(12, len(v) + 1)}}" for v in vals).rstrip())
             if CFG.fs_prescribed == "shape":
                 cc = ["-"] * len(procs)
                 cc[isig] = "0.973/1.044"
@@ -863,7 +879,7 @@ def write_datacard_fs(histograms, root_filename, output_dir, include_zx=True, au
                 if p_ in procs:
                     rows.setdefault(name, ["-"] * len(procs))[procs.index(p_)] = val
             for name, vals in rows.items():
-                out.append(f"{name:<25}{'lnN':<8}" + "".join(f"{v:<{max(12, len(v) + 1)}}" for v in vals).rstrip())
+                out.append(f"{name:<24} {'lnN':<8}" + "".join(f"{v:<{max(12, len(v) + 1)}}" for v in vals).rstrip())
     open(path, "w").write("\n".join(out))
     if CFG.higgs_scale_norm:
         print(f"  datacard: Higgs QCDscale lnN rows added ({sorted(set(n for n, _ in HIGGS_QCDSCALE.values()))})")

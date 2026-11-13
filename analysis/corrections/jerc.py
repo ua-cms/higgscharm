@@ -421,7 +421,7 @@ def apply_jerc_correctionlib(events, year, dataset):
 
 
 def apply_jerc_corrections(events, year, dataset):
-    if year in ("2024", "2025"):
+    if year in ("2024", "2025", "2026"):
         apply_jerc_correctionlib(events, year, dataset)
     else:
         apply_jerc_coffea(events, year, dataset)
@@ -438,7 +438,7 @@ def apply_jerc_corrections(events, year, dataset):
 # ----------------------------------------------------------------------------------------------------
 
 
-def get_corrected_jets_with_shifts(events, year):
+def get_corrected_jets_with_shifts(events, year, jes_regrouped=False):
     """Build corrected Jet/MET collections plus .JES_jes.up/.down and .JER.up/.down
     variant sub-collections, using the correctionlib JERC json (same file/tags as
     apply_jerc_correctionlib, extended here to also evaluate the Total JES
@@ -522,30 +522,44 @@ def get_corrected_jets_with_shifts(events, year):
     )
 
     if is_mc:
-        jesuncmap = cset[f"{jecname}_Total_AK4PFPuppi"]
-        jesunc = ak.unflatten(jesuncmap.evaluate(j.eta, j.pt), nj)
+        # JES sources: "jes" = Total (default), or (2026-11-03, jes_regrouped=True) the JME
+        # Regrouped sources of this era's JEC tag, keyed "jes_<source>" with <source> as in the json
+        # (Absolute, Absolute_2022EE, ..., FlavorQCD; no Total)
+        if jes_regrouped:
+            prefix = f"{jecname}_Regrouped_"
+            jes_maps = {
+                "jes_" + k[len(prefix):-len("_AK4PFPuppi")]: cset[k]
+                for k in sorted(cset.keys())
+                if k.startswith(prefix) and k.endswith("_AK4PFPuppi") and "_Total_" not in k
+            }
+            if len(jes_maps) != 11:
+                raise ValueError(f"expected 11 regrouped JES sources for {jecname}, got {sorted(jes_maps)}")
+        else:
+            jes_maps = {"jes": cset[f"{jecname}_Total_AK4PFPuppi"]}
         unc_jets, unc_met = {}, {}
+        for jes_key, jesuncmap in jes_maps.items():
+            jesunc = ak.unflatten(jesuncmap.evaluate(j.eta, j.pt), nj)
+            for var in ["up", "down"]:
+                fac = 1.0 if var == "up" else -1.0
+                unc_jets[f"{jes_key}{var}"] = copy.copy(jets)
+                unc_jets[f"{jes_key}{var}"]["pt"] = ak.values_astype(
+                    jets["pt"] * (1 + fac * jesunc), np.float32
+                )
+                unc_jets[f"{jes_key}{var}"]["mass"] = ak.values_astype(
+                    jets["mass"] * (1 + fac * jesunc), np.float32
+                )
+                unc_met_inputs = [
+                    nocorrmet.pt, nocorrmet.phi,
+                    unc_jets[f"{jes_key}{var}"]["pt"], jets.phi, jets.pt_raw,
+                ]
+                unc_met[f"{jes_key}{var}"] = copy.copy(met)
+                unc_met[f"{jes_key}{var}"]["pt"] = ak.values_astype(
+                    corrected_polar_met(*unc_met_inputs).pt, np.float32
+                )
+                unc_met[f"{jes_key}{var}"]["phi"] = ak.values_astype(
+                    corrected_polar_met(*unc_met_inputs).phi, np.float32
+                )
         for var in ["up", "down"]:
-            fac = 1.0 if var == "up" else -1.0
-            # JES total
-            unc_jets[f"jes{var}"] = copy.copy(jets)
-            unc_jets[f"jes{var}"]["pt"] = ak.values_astype(
-                jets["pt"] * (1 + fac * jesunc), np.float32
-            )
-            unc_jets[f"jes{var}"]["mass"] = ak.values_astype(
-                jets["mass"] * (1 + fac * jesunc), np.float32
-            )
-            unc_met_inputs = [
-                nocorrmet.pt, nocorrmet.phi,
-                unc_jets[f"jes{var}"]["pt"], jets.phi, jets.pt_raw,
-            ]
-            unc_met[f"jes{var}"] = copy.copy(met)
-            unc_met[f"jes{var}"]["pt"] = ak.values_astype(
-                corrected_polar_met(*unc_met_inputs).pt, np.float32
-            )
-            unc_met[f"jes{var}"]["phi"] = ak.values_astype(
-                corrected_polar_met(*unc_met_inputs).phi, np.float32
-            )
 
             # JER (SF evaluated with the up/down systematic, same smearing formula)
             if sf_jersmear is None:
@@ -576,19 +590,21 @@ def get_corrected_jets_with_shifts(events, year):
                     corrected_polar_met(*unc_jer_met_inputs).phi, np.float32
                 )
 
-        jets["JES_jes"] = ak.zip({"up": unc_jets["jesup"], "down": unc_jets["jesdown"]})
+        for jes_key in jes_maps:
+            field = "JES_" + jes_key
+            jets[field] = ak.zip({"up": unc_jets[f"{jes_key}up"], "down": unc_jets[f"{jes_key}down"]})
+            met[field] = ak.zip({"up": unc_met[f"{jes_key}up"], "down": unc_met[f"{jes_key}down"]})
         jets["JER"] = ak.zip({"up": unc_jets["jerup"], "down": unc_jets["jerdown"]})
-        met["JES_jes"] = ak.zip({"up": unc_met["jesup"], "down": unc_met["jesdown"]})
         met["JER"] = ak.zip({"up": unc_met["jerup"], "down": unc_met["jerdown"]})
 
     return jets, met
 
 
-def apply_jerc_shifts(events, year, dataset):
+def apply_jerc_shifts(events, year, dataset, jes_regrouped=False):
     """Return a list of (collections_dict, shift_name) tuples: nominal plus, for MC
     only, CMS_scale_j_<year>Up/Down and CMS_res_j_<year>Up/Down. Mirrors
     apply_jerc_correctionlib's era coverage (correctionlib-based eras only --
-    2022preEE/2022postEE/2023preBPix/2023postBPix/2024/2025; the coffea/.txt-file eras
+    2022preEE/2022postEE/2023preBPix/2023postBPix/2024/2025/2026; the coffea/.txt-file eras
     have no shift production wired, same as before this addition).
     """
     if year not in correction_files["jerc"]:
@@ -596,14 +612,29 @@ def apply_jerc_shifts(events, year, dataset):
             f"apply_jerc_shifts has no correctionlib JERC file for year '{year}' "
             f"(only {list(correction_files['jerc'])} are wired)."
         )
-    jets, met = get_corrected_jets_with_shifts(events, year)
+    jets, met = get_corrected_jets_with_shifts(events, year, jes_regrouped=jes_regrouped)
     shifts = [({"Jet": jets, "MET": met}, None)]
     if hasattr(events, "genWeight"):
         y4 = year[:4]
+        if jes_regrouped:
+            # 2026-11-03: one pass per JME Regrouped source, CMS_scale_j_<source>Up/Down; sources with an
+            # era suffix (Absolute_2022EE, ...) are uncorrelated between eras by name, the others correlated
+            for field in sorted(f for f in jets.fields if f.startswith("JES_jes_")):
+                src = field[len("JES_jes_"):]
+                shifts += [
+                    ({"Jet": jets[field].up, "MET": met[field].up}, f"CMS_scale_j_{src}Up"),
+                    ({"Jet": jets[field].down, "MET": met[field].down}, f"CMS_scale_j_{src}Down"),
+                ]
+        else:
+            shifts += [
+                ({"Jet": jets.JES_jes.up, "MET": met.JES_jes.up}, f"CMS_scale_j_{y4}Up"),
+                ({"Jet": jets.JES_jes.down, "MET": met.JES_jes.down}, f"CMS_scale_j_{y4}Down"),
+            ]
+        # JER: per year (default) or, with jes_regrouped (2026-11-03), per era (pre/postEE and
+        # pre/postBPix have separate JER measurements -> uncorrelated nuisances)
+        jer_tag = year if jes_regrouped else y4
         shifts += [
-            ({"Jet": jets.JES_jes.up, "MET": met.JES_jes.up}, f"CMS_scale_j_{y4}Up"),
-            ({"Jet": jets.JES_jes.down, "MET": met.JES_jes.down}, f"CMS_scale_j_{y4}Down"),
-            ({"Jet": jets.JER.up, "MET": met.JER.up}, f"CMS_res_j_{y4}Up"),
-            ({"Jet": jets.JER.down, "MET": met.JER.down}, f"CMS_res_j_{y4}Down"),
+            ({"Jet": jets.JER.up, "MET": met.JER.up}, f"CMS_res_j_{jer_tag}Up"),
+            ({"Jet": jets.JER.down, "MET": met.JER.down}, f"CMS_res_j_{jer_tag}Down"),
         ]
     return shifts

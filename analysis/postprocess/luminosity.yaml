@@ -14,3 +14,6 @@
 # Run B, 24 golden runs / 0.259 fb-1, excluded -- no B in JEC/vetomap), STABLE BEAMS,
 # NO normtag (normtag_PHYSICS does not cover 2025 yet, 2026-10-05) -- preliminary, revisit.
 '2025': 110931.5
+# 2026: brilcalc on Cert_Collisions2026_401624_403937_Golden.json (107 runs 401630-403867, low-PU era
+# not in the golden JSON), STABLE BEAMS, NO normtag -- preliminary (2026-11-08); update with each new golden JSON.
+'2026': 25843.3

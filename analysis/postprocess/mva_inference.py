@@ -290,9 +290,10 @@ JET_TAG_BOUNDARIES_BY_ERA = {
     },
 }
 JET_TAG_BOUNDARIES_BY_ERA["2025"] = JET_TAG_BOUNDARIES_BY_ERA["2024"]
+JET_TAG_BOUNDARIES_BY_ERA["2026"] = JET_TAG_BOUNDARIES_BY_ERA["2024"]  # 2026-11-13: 2026 (UParT, Summer24 calibration) = 2024 boundaries, as the AFS production checkout
 # eras whose jet_is_* inputs come from UParTAK4 scores (the training-time processor swaps
 # PNet -> jet_btagUParTAK4* for 2024, lz4_hczz_processor.py::callColumnAccumulator)
-UPART_ERAS = ("2024", "2025")
+UPART_ERAS = ("2024", "2025", "2026")
 
 MVA_JET_TAG_BOUNDARIES_LEGACY_FALLBACK = {
     "C0": {"x": (0.15, 0.4), "y": (0.0, 0.9)},
@@ -386,7 +387,29 @@ class MVAPostProcessor:
         state_dict = checkpoint.get('model_state_dict', checkpoint)
 
         # Auto-detect architecture from state dict keys
-        if 'jet_encoder.0.weight' in state_dict:
+        if any(k.startswith('pair_embed.') for k in state_dict):
+            # 2026-11-02: per-object (ParT-style) b-hive models have no standalone copy here -> build the b-hive class
+            # itself (needs the b-hive python env, py>=3.10) and feed it through its own get_inpt, as in training.
+            # prepare_features() reproduces the training flat vector (validated for the flat MLPs, same layout).
+            self._model_type = 'bhive'
+            bhive = os.environ.get('HCZZ_BHIVE_DIR', '/eos/user/s/snandaku/b-hive_ttcc')
+            os.environ.setdefault('B_HIVE_DIR', bhive)
+            if bhive not in sys.path:
+                sys.path.insert(0, bhive)
+            from utils.config.config_loader import ConfigLoader
+            from utils.models.models import BTaggingModels
+            name = os.environ.get('HCZZ_BHIVE_MODEL') or os.path.normpath(self.bhive_model_path).split(os.sep)[-4]
+            cwd = os.getcwd(); os.chdir(bhive)
+            try:
+                cfg = ConfigLoader.load_config(os.path.splitext(os.path.basename(self.bhive_config_path))[0])
+            finally:
+                os.chdir(cwd)
+            self._model = BTaggingModels(name, cfg)
+            self._model.create_integers_defaults(); self._model.create_feature_shapes()
+            self._model.mixed_precision = False; self._model.use_torch_compile = False
+            num_classes = len(self._model.classes)
+            logging.info(f"Detected b-hive per-object model {name}: {num_classes} classes")
+        elif 'jet_encoder.0.weight' in state_dict:
             # MLP_HcZZ_MW_Deep_4class_Optimized — separate encoders per feature group
             self._model_type = 'optimized'
             num_classes = state_dict['head.4.weight'].shape[0]
@@ -634,6 +657,9 @@ class MVAPostProcessor:
                 all_features.append(count)
             elif feat == 'n_lepton':
                 all_features.append(np.full(n, 4, dtype=np.float32))
+            elif feat == 'is_2024':
+                # 2026-11-06: era flag of the combined 2022+2023+2024 training (1 = UParT 2D categories, 0 = PNet)
+                all_features.append(np.full(n, 1.0 if self.era in UPART_ERAS else 0.0, dtype=np.float32))
             else:
                 names = col_map.get(feat, [feat])
                 all_features.append(self._get_col(df, names))
@@ -799,6 +825,13 @@ class MVAPostProcessor:
                 lt  = torch.from_numpy(features[:, self._vtx_end:self._lt_end]).float()
                 # n_lt=1 → no swapaxes needed in b-hive either
                 logits = self._model(g, cp, np_, vt, lt)
+            elif self._model_type == 'bhive':
+                logits = []
+                for i0 in range(0, len(features), 8192):
+                    x = torch.from_numpy(features[i0:i0 + 8192]).float()
+                    inpt, _ = self._model.get_inpt(x)
+                    logits.append(self._model(inpt).float())
+                logits = torch.cat(logits) if logits else torch.zeros(0, self._num_classes)
             else:
                 x = torch.from_numpy(features).float()
                 logits = self._model(x)

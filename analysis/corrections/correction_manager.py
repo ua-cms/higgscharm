@@ -12,6 +12,7 @@ from analysis.corrections.lhepdf import add_lhepdf_weight
 from analysis.corrections.electron import ElectronWeights
 from analysis.corrections.jerc import apply_jerc_corrections, apply_jerc_shifts
 from analysis.corrections.lhescale import add_scalevar_weight
+from analysis.corrections.hb_syst_transfer import is_old_hplusbottom, add_hb_syst_transfer_weights
 from analysis.corrections.met import apply_met_phi_corrections
 from analysis.corrections.muon_ss import apply_muon_ss_corrections, apply_muon_ss_shifts
 from analysis.corrections.partonshower import add_partonshower_weight
@@ -62,7 +63,9 @@ def object_corrector_manager(events, year, dataset, workflow_config):
                         events=events, year=year, variation="nominal"
                     )
 
-            jec_variants = apply_jerc_shifts(events, year, dataset)
+            jec_variants = apply_jerc_shifts(
+                events, year, dataset, jes_regrouped="jes_regrouped" in objcorr_config
+            )
             nominal_jet = jec_variants[0][0]["Jet"]
             nominal_met = jec_variants[0][0]["MET"]
             events["Jet"] = nominal_jet
@@ -199,14 +202,19 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, variation="nominal
                         events=pruned_ev,
                         weights_container=weights_container,
                     )
-        if "lhepdfWeight" in weights_config:
+        # 2026-11-09: old-gridpack private H+b (broken LHE weights) -> scale/PDF/alphaS transferred from the
+        # official H+b -> gamma gamma 5FS FxFx sample (hb_syst_transfer.py) instead of its own LHE weights
+        old_hb = is_old_hplusbottom(dataset) and (weights_config.get("lhepdfWeight") or weights_config.get("lhescaleWeight"))
+        if old_hb:
+            add_hb_syst_transfer_weights(pruned_ev, weights_container)
+        if "lhepdfWeight" in weights_config and not old_hb:
             if weights_config["lhepdfWeight"]:
                 if "LHEPdfWeight" in pruned_ev.fields:
                     add_lhepdf_weight(
                         events=pruned_ev,
                         weights_container=weights_container,
                     )
-        if "lhescaleWeight" in weights_config:
+        if "lhescaleWeight" in weights_config and not old_hb:
             if weights_config["lhescaleWeight"]:
                 if "LHEScaleWeight" in pruned_ev.fields:
                     add_scalevar_weight(
@@ -229,6 +237,18 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, variation="nominal
                     dataset=dataset,
                     flav="c",
                 )
+        # 2026-11-03: m(ZZ)-dependent ZZ k-factors (corrections/zz_kfactor.py; gg->ZZ NNLO incl. variations,
+        # qq->ZZ NNLO/NLO QCD); the card builder must then drop its flat gg->ZZ 2.27 (HCZZ_ZZ_KFACTOR_WEIGHTS=1)
+        if weights_config.get("zz_kfactors"):
+            from analysis.corrections.zz_kfactor import add_zz_kfactor_weights
+            add_zz_kfactor_weights(pruned_ev, weights_container, dataset, variation=variation)
+        # 2026-11-03: HZZ lepton SFs on the 4 leptons of the best candidate (corrections/hzz_lepton.py).
+        # Use with muon: id: false and electron: id/reco: false (it replaces both, see module docstring).
+        if weights_config.get("hzz_leptons"):
+            from analysis.corrections.hzz_lepton import HZZLeptonWeights
+            HZZLeptonWeights(
+                events=pruned_ev, weights=weights_container, year=year, variation=variation
+            ).add_all()
         if "muon" in weights_config:
             if weights_config["muon"]:
                 if "selected_muons" in pruned_ev.fields:

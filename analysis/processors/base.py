@@ -1,4 +1,5 @@
 import numpy as np
+from analysis.corrections.zz_kfactor import lhe_four_lepton  # 2026-11-03: LHE m4l columns
 import awkward as ak
 from copy import deepcopy
 from coffea import processor
@@ -217,6 +218,8 @@ class BaseProcessor(processor.ProcessorABC):
         sumw = ak.sum(events.genWeight) if is_mc else len(events)
         output["metadata"].update({"sumw": sumw})
 
+        # LHE four-lepton mass / same-flavour flag for the ZZ k-factors (MC with LHEPart only)
+        lhe4l = lhe_four_lepton(events) if (is_mc and "LHEPart" in events.fields) else None
         # GEN c-jet count for the 3FS/4FS stitching (MC with GenJet only)
         n_genc = None
         sumw_extra = {}
@@ -392,6 +395,11 @@ class BaseProcessor(processor.ProcessorABC):
                             variables_map["n_genc10"] = n_genc[
                                 ak.to_numpy(category_mask)
                             ]
+                        if lhe4l is not None:
+                            variables_map["lhe_m4l"] = lhe4l[0][ak.to_numpy(category_mask)]
+                            variables_map["lhe_4l_sameflavour"] = lhe4l[1][ak.to_numpy(category_mask)]
+                            # 2026-11-09: LHE |cos theta*| (zz_kfactor.py, qq->ZZ k-factor binning); -1 if no OSSF pairing
+                            variables_map["lhe_abscosthetastar"] = lhe4l[2][ak.to_numpy(category_mask)]
                         if chad is not None:
                             for key, val in chad.items():
                                 variables_map[key] = val[ak.to_numpy(category_mask)]

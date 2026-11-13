@@ -265,7 +265,7 @@ TTH_Hto2Z:
   query: TTH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.0004437  # 2026-10-16: was 0.00312 (~20x/7x too high); sigma_ttH 0.5700 pb x BR(H->ZZ) 0.02641 x filter 0.029474 (4l from H, or 1 H-Z->ll + 2 leptonic tops; 36% pure 4l on GenPart; = Heyen 0.393 fb at 13 TeV)
+  xsec: 0.0004383  # 2026-11-04 (user): = HIG-24-013/CJLST samplesNano csv (Run3, 7bbeb10): 0.5700 pb x 0.0007689 (BR incl. 4LFilter); was 0.0004437 (ours, BR 125.09)
 VBFHto2Zto4L:
   era: mc
   query: VBFHto2Zto4L_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
@@ -289,7 +289,7 @@ ZHto2Zto4L:
   query: ZH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
   process: H(125)
   key: higgs
-  xsec: 0.000775
+  xsec: 0.0007062  # 2026-11-04 (user): = HIG-24-013/CJLST samplesNano csv (Run3, 7bbeb10): 0.9439 pb x 0.00074812; was 0.000775 (old CJLST value)
 # H+c signal samples for MVA
 SomeSMSignal:
   era: signal

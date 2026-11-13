@@ -18,6 +18,7 @@ if __name__ == "__main__":
         "2023postBPix",
         "2024",
         "2025",
+        "2026",
     ]
     parser = argparse.ArgumentParser()
     parser.add_argument(

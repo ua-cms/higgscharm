@@ -142,7 +142,7 @@ def load(args):
             files = E.files(os.path.join(era_dir, sample, "base"), ".parquet")
             proc = dc.get_process_from_path(sample)
             if proc is not None:
-                is_hb = proc == "Other_Higgs" and "HPlusBottom" in sample
+                is_hb = proc == "Other_Higgs" and dc.is_old_hplusbottom(sample)
                 sc = dc.event_scale(era, sample, sumw)
                 mc_jobs += [(f, proc, era, is_hb, sc) for f in files]
             elif sample.startswith(DATA_PREFIXES):

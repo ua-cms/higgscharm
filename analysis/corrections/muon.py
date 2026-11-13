@@ -271,6 +271,7 @@ class MuonWeights:
             "2023postBPix": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
             "2024": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
             "2025": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
+            "2026": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
         }
 
         if not ((id_wp == "tight") & (iso_wp == "tight")):

@@ -442,7 +442,7 @@ GluGlu2Zto4Tau:
   xsec: 0.003
 bbH_Hto2Zto4L:
   era: mc
-  query: BBH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
+  query: BBH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v3/NANOAODSIM
   process: H(125)
   key: higgs
   xsec: 0.000144
@@ -463,7 +463,7 @@ ZHto2Zto4L:
   query: ZH-Hto2Z_Fil-4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.000775
+  xsec: 0.0007062  # 2026-11-04 (user): = HIG-24-013/CJLST samplesNano csv (Run3, 7bbeb10): 0.9439 pb x 0.00074812; was 0.000775 (old CJLST value)
 WminusH_Hto2Zto4L:
   era: mc
   query: WminusH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
@@ -481,7 +481,7 @@ TTH_Hto2Z:
   query: TTH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: H(125)
   key: higgs
-  xsec: 0.0004437  # 2026-10-16: was 0.00312 (7x too high); same filter type as 2023 (GenPart, 4284 ev: 37.0% pure H->4l, rest 1 H-Z->ll + 2 leptonic tops); sigma_ttH 0.5700 pb x BR(H->ZZ) 0.02641 x filter 0.029474
+  xsec: 0.0004383  # 2026-11-04 (user): = HIG-24-013/CJLST samplesNano csv (Run3, 7bbeb10): 0.5700 pb x 0.0007689 (BR incl. 4LFilter); was 0.0004437 (ours, BR 125.09)
 # =============================================================================
 # H+c and H+b signal samples (private, USER instance prod/phys03)
 # Run3Summer24NanoAOD, 150X_mcRun3_2024_realistic_v2

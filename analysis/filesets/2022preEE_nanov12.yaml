@@ -376,10 +376,10 @@ GluGluHtoZZto4L:
   xsec: 0.01434
 TTH_Hto2Z:
   era: mc
-  query: TTH_Hto2Z_M-125_4LFilter_TuneCP5_13p6TeV_powheg2-JHUGenV752-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
+  query: TTH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.0001535  # 2026-10-16: was 0.00312 (~20x/7x too high); sigma_ttH 0.5700 pb x BR(H->ZZ) 0.02641 x BR(ZZ->4l,e/mu/tau) 0.010199 (sample = pure H->ZZ->4l, checked on GenPart)
+  xsec: 0.0004383  # 2026-11-04 (user): = HIG-24-013/CJLST samplesNano csv (Run3, 7bbeb10): 0.5700 pb x 0.0007689 (BR incl. 4LFilter); was 0.0004437 (ours, BR 125.09) ; 2022 sample switched to CJLST's 4LFilter_M-125 jhugenv752 (was M-125_4LFilter powheg2-JHUGenV752, 1.535e-4)
 VBFHto2Zto4L:
   era: mc
   query: VBFHto2Zto4L_M125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
@@ -403,7 +403,7 @@ ZHto2Zto4L:
   query: ZHto2Zto4L_M125_TuneCP5_13p6TeV_powheg2-minlo-HZJ-JHUGenV752-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: H(125)
   key: higgs
-  xsec: 0.000775
+  xsec: 0.0007062  # 2026-11-04 (user): = HIG-24-013/CJLST samplesNano csv (Run3, 7bbeb10): 0.9439 pb x 0.00074812; was 0.000775 (old CJLST value)
 # H+c signal samples for MVA
 SomeSMSignal:
   era: signal
@@ -445,88 +445,6 @@ HPlusCharm_new_2022preEE:
   key: smsignal
   process: smsignal
   xsec: 0.000026381
-# H+c 3FS (massive charm, pp -> h c c~) for the 3FS/4FS stitching, added 2026-09-27.
-# 2026-10-07: switched to the NEW production from the rebuilt gridpack (nf_3 PDF 321900,
-# maxjetflavor 3, scale reweighting on; "-pythia8new"/"-v1new"). The July sample (4FS PDF,
-# broken scale weights) is retired. Validated vs the official H->gamgam 3FS: second-brain
-# Notes/hczz-3fs-new-2022-validation-2026-10-07.md.
-# Deliberately NOT named HPlusCharm*: the datacard builders map any name containing
-# "HPlusCharm" to Signal. xsec = 55.0 fb (gridpack / LHCHWG Table 3, production only)
-# x BR(H->ZZ->4l incl. tau) 2.694e-4; the stitching builder renormalises anyway.
-Stitch3FS_cH_2022preEE:
-  era: signal
-  query: HPlusCharm_3FS_MuRFScaleDynX0p50_HToZZTo4L_M125_TuneCP5_13p6TeV_amcatnlo-JHUGen-pythia8new/snandaku-Run3Summer22NanoAODv13-3FS-HToZZTo4L-JHUGen-133X_mcRun3_2022_realistic_ForNanov13_v1-v1new-00000000000000000000000000000000/USER
-  key: smsignal
-  process: smsignal
-  xsec: 0.0000148
-
-# ─── SMEFT H+c samples (4FS, LO+MLM, JHUGen H→ZZ→4ℓ, NanoAODv13, 2022preEE) ─
-SMEFT_SM_HplusC_2022preEE:
-  era: signal
-  query: SM_HplusC_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-SM-HplusC-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
-  key: smeft_sm
-  process: smeft_sm
-  xsec: 0.00004975
-SMEFT_CuG22_HplusC_FULL_2022preEE:
-  era: signal
-  query: SMEFT_CuG22_HplusC_FULL_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cuG22-HplusC-FULL-133X_mcRun3_2022_realistic_ForNanov13_v1-v2-00000000000000000000000000000000/USER
-  key: smeft_cug_full
-  process: smeft_cug_full
-  xsec: 0.00003533
-SMEFT_CuG22_HplusC_INT_2022preEE:
-  era: signal
-  query: SMEFT_CuG22_HplusC_INT_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cuG22-HplusC-INT-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
-  key: smeft_cug_int
-  process: smeft_cug_int
-  xsec: 0.00003533
-SMEFT_CuG22_HplusC_QUAD_2022preEE:
-  era: signal
-  query: SMEFT_CuG22_HplusC_QUAD_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cuG22-HplusC-QUAD-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
-  key: smeft_cug_quad
-  process: smeft_cug_quad
-  xsec: 0.00003533
-SMEFT_CuH22_HplusC_FULL_2022preEE:
-  era: signal
-  query: SMEFT_CuH22_HplusC_FULL_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cuH22-HplusC-FULL-133X_mcRun3_2022_realistic_ForNanov13_v1-v2-00000000000000000000000000000000/USER
-  key: smeft_cuh_full
-  process: smeft_cuh_full
-  xsec: 0.00002784
-SMEFT_CuH22_HplusC_QUAD_2022preEE:
-  era: signal
-  query: SMEFT_CuH22_HplusC_QUAD_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cuH22-HplusC-QUAD-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
-  key: smeft_cuh_quad
-  process: smeft_cuh_quad
-  xsec: 0.00002784
-SMEFT_cHG_HplusC_FULL_2022preEE:
-  era: signal
-  query: SMEFT_cHG_HplusC_FULL_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cHG-HplusC-FULL-133X_mcRun3_2022_realistic_ForNanov13_v1-v2-00000000000000000000000000000000/USER
-  key: smeft_chg_full
-  process: smeft_chg_full
-  xsec: 0.00003194
-SMEFT_cHGxCuH22_HplusC_FULL_2022preEE:
-  era: signal
-  query: SMEFT_cHGxCuH22_HplusC_FULL_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cHGxCuH22-HplusC-FULL-133X_mcRun3_2022_realistic_ForNanov13_v1-v2-00000000000000000000000000000000/USER
-  key: smeft_chgxcuh22_full
-  process: smeft_chgxcuh22_full
-  xsec: 0.00004975
-SMEFT_CuG22xCuH22_HplusC_FULL_2022preEE:
-  era: signal
-  query: SMEFT_CuG22xCuH22_HplusC_FULL_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-CuG22xCuH22-HplusC-FULL-133X_mcRun3_2022_realistic_ForNanov13_v1-v2-00000000000000000000000000000000/USER
-  key: smeft_cug22xcuh22_full
-  process: smeft_cug22xcuh22_full
-  xsec: 0.000326069
-SMEFT_cHGxCuG22_HplusC_FULL_2022preEE:
-  era: signal
-  query: SMEFT_cHGxCuG22_HplusC_FULL_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cHGxCuG22-HplusC-FULL-133X_mcRun3_2022_realistic_ForNanov13_v1-v2-00000000000000000000000000000000/USER
-  key: smeft_chgxcug22_full
-  process: smeft_chgxcug22_full
-  xsec: 0.000823305
-SMEFT_CuH22_HplusC_INT_2022preEE:
-  era: signal
-  query: SMEFT_CuH22_HplusC_INT_HToZZTo4l_M125_TuneCP5_13p6TeV_madgraph_JHUGen_pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-cuH22-HplusC-INT-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
-  key: smeft_cuh_int
-  process: smeft_cuh_int
-  xsec: 0.00002784
 # H+c 3FS (massive charm, pp -> h c c~) for the 3FS/4FS stitching, added 2026-09-27.
 # 2026-10-07: switched to the NEW production from the rebuilt gridpack (nf_3 PDF 321900,
 # maxjetflavor 3, scale reweighting on; "-pythia8new"/"-v1new"). The July sample (4FS PDF,

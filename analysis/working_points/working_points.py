@@ -1,7 +1,7 @@
 import numpy as np
 import awkward as ak
 from analysis.filesets.utils import get_nano_version
-from analysis.working_points.utils import get_ctag_mask, get_ctag_mask_2d
+from analysis.working_points.utils import get_ctag_mask
 
     
 class WorkingPoints:
@@ -9,7 +9,11 @@ class WorkingPoints:
     # -----------------------------------------------------------------
     # Electrons
     # -----------------------------------------------------------------
-    def electron_id(self, events, wp):
+    def electron_id(self, events, wp, year=None):
+        # 2026-11-09: `year` (optional, passed by the lepsf workflows) selects the HZZ BDT WP as
+        # CJLST getEleBDTCut.py: NanoAOD v15 eras (2024+) use the bool Electron_mvaIso_WPHZZ
+        # (Winter22 HZZ training; the CJLST 2024 HZZ electron SF is measured for it), v12 eras
+        # keep the UL-training cuts on mvaHZZIso below. Without `year` the old behaviour is kept.
         wps = {
             "wp80iso": (
                 events.Electron.mvaFall17V2Iso_WP80
@@ -76,6 +80,19 @@ class WorkingPoints:
                 )
             )
             wps["bdt"] = bdt_id
+        if year in ("2024", "2025", "2026"):
+            wps["bdt"] = events.Electron.mvaIso_WPHZZ
+        elif year is not None and hasattr(events.Electron, "mvaHZZIso"):
+            # 2026-11-09: v12 eras with `year` (lepsf workflows): CJLST eleBDTCut_RunIII_ULTraining, i.e. the same
+            # thresholds as above but binned in SUPERCLUSTER |eta| (eta + deltaEtaSC) and with pt <= 10 / pt > 10
+            sc = np.abs(events.Electron.eta + events.Electron.deltaEtaSC)
+            pt, bdt = events.Electron.pt, events.Electron.mvaHZZIso
+            low = pt <= 10
+            wps["bdt"] = (
+                ((sc < 0.8) & ak.where(low, bdt > 0.9044286167, bdt > 0.1968600840))
+                | ((sc >= 0.8) & (sc < 1.479) & ak.where(low, bdt > 0.9094166886, bdt > 0.0759172100))
+                | ((sc >= 1.479) & ak.where(low, bdt > 0.9443653660, bdt > -0.5169136775))
+            )
 
         if wp not in wps:
             raise ValueError(
@@ -241,6 +258,3 @@ class WorkingPoints:
 
     def jet_ctagging(self, events, wp, year):
         return get_ctag_mask(events.Jet, year, wp)
-
-    def jet_ctagging_2d(self, events, wp, year):
-        return get_ctag_mask_2d(events.Jet, year, wp)
