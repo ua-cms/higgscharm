@@ -133,7 +133,8 @@ def get_JER(
 
     # New JERC format (2026): ScaleFactor and SFUncertainty are separate keys,
     # both taking (JetEta, JetPt) with no systematic string argument.
-    # Variations are computed as SF * (1 ± SFUncertainty).
+    # SFUncertainty is ABSOLUTE (= up - nom of the older JSONs with a "systematic" input, same nominal SF),
+    # so the variations are SF +- SFUncertainty, not SF * (1 +- SFUncertainty).
     JERSF_corr = correct_map["JME"][f"{jername}_ScaleFactor_{jet_algo}"]
     sf_nom = JERSF_corr.evaluate(*get_corr_inputs(j, JERSF_corr))
 
@@ -141,9 +142,9 @@ def get_JER(
     sf_unc = JERSF_unc_corr.evaluate(*get_corr_inputs(j, JERSF_unc_corr))
 
     if jersyst == "up":
-        j["JERSF"] = sf_nom * (1 + sf_unc)
+        j["JERSF"] = sf_nom + sf_unc
     elif jersyst == "down":
-        j["JERSF"] = sf_nom * (1 - sf_unc)
+        j["JERSF"] = sf_nom - sf_unc
     else:
         j["JERSF"] = sf_nom
 
