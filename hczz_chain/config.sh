@@ -8,6 +8,7 @@ export HCZZ_OUTPUTS=${HCZZ_OUTPUTS:-/eos/user/s/snandaku/higgscharm/outputs}    
 HCZZ_WF_SR=${HCZZ_WF_SR:-hplusc_mva_4class_ctag2d_final_bkg}                            # SR: backgrounds + data (+ signal for 2024+)
 HCZZ_WF_SIG=${HCZZ_WF_SIG:-hplusc_mva_4class_ctag2d_final_fschad}                      # 2022/23 signal (4FS n_genc10 == 0 + 3FS n_genc10 >= 1)
 HCZZ_WF_CR=${HCZZ_WF_CR:-hplusc_mva_4class_CR_merged_final}                            # Z+X control regions (2P2F, 3P1F, SS)
+HCZZ_WF_HB=${HCZZ_WF_HB:-hplusc_mva_4class_ctag2d_final_hb}                            # 2022/23 H+b 5FS FxFx + 4FS with n_genb10 (2026-11-16, for HCZZ_HB_MODE=stitched)
 HCZZ_NFILES=${HCZZ_NFILES:-15}; HCZZ_JOBFLAVOR=${HCZZ_JOBFLAVOR:-workday}
 export HCZZ_CONDOR_DIRS=${HCZZ_CONDOR_DIRS:-$HCZZ_REPO/condor:/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/condor}  # partitions.json of the jobs (Σw table, completeness check)
 export X509_USER_PROXY=${X509_USER_PROXY:-$HOME/private/x509up_u178308}
@@ -28,6 +29,7 @@ HCZZ_ERAS_2223=${HCZZ_ERAS_2223:-"2022preEE 2022postEE 2023preBPix 2023postBPix"
 HCZZ_SIGMA_4FS_FB=97.62; HCZZ_SIGMA_3FS_FB=55.0; HCZZ_SIGMA_TOTAL_FB=73.30; HCZZ_PDF_CH=1.065   # FS-stitched H+c -> ZZ* signal (Heyen FS envelope), pdf_cH lnN
 HCZZ_OPT=${HCZZ_OPT:-"--km 16 --ks 8 --budgets 20,30,40,50 --bmin 0.1 --relmax 0.5"}       # 2D (D, m4l) bin optimiser; the 40-bin layout is the nominal card
 HCZZ_SIGNAL_2024=${HCZZ_SIGNAL_2024:-stitched}   # 2024 signal: stitched (4FS 0c + 3FS >=1c, 3FS samples since 2026-11-16) or 4fs
+HCZZ_HB_MODE=${HCZZ_HB_MODE:-pooled}   # H+b background: pooled (old 5FS samples of the SR production at the fileset xsec) or stitched (5FS n_genb10 == 0 + 4FS >= 1, K = NNLO/NLO, sum = bbH NNLO 574.8 fb; combine/scripts/hb_stitch.py; 2024 5FS only); stitched cards/combos get the suffix _hbst
 HCZZ_ALLOW_MISSING_SYST_2024=${HCZZ_ALLOW_MISSING_SYST_2024:-scalevar_muR_bbH,scalevar_muF_bbH}
 
 # --- environments ---

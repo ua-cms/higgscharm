@@ -6,6 +6,7 @@
 #   run.sh sumw                                         pre-veto generated Σw table of the 2022/23 MC (card normalisation)
 #   run.sh score <era> <bkg|sig>                        MVA scores ($HCZZ_MODEL, out-of-fold for k-fold models) -> *_scored_<model>
 #   run.sh zx <2223|2024>                               Z+X: merge CR parquets, estimate with the pkatris fake rates, MVA-score it
+#   run.sh score <era> hb                               H+b samples with n_genb10 (2022/23, HCZZ_HB_MODE=stitched)
 #   run.sh card2223                                     2022/23 2D (D, m4l) card: event dump -> bin optimiser -> 40-bin card -> limit
 #   run.sh card2024 <kappa|plain> [stitched|4fs]        2024 2D card (D_kappa or P(S)), FS-stitched signal (default) or 4FS alone -> limit
 #   run.sh combo <kappa|plain>                          2022/23 + 2024 combination (2024 card of that kind, 2024 nuisances decorrelated)
@@ -14,6 +15,7 @@ HERE=${HCZZ_REPO:+$HCZZ_REPO/hczz_chain}; HERE=${HERE:-$(cd "$(dirname "${BASH_S
 TOOLS=$HERE/tools; INPUTS=$HERE/inputs; SCRIPTS=$HCZZ_REPO/combine/scripts; cd $HCZZ_REPO
 RAWB=$HCZZ_OUTPUTS/$HCZZ_WF_SR; RAWS=$HCZZ_OUTPUTS/$HCZZ_WF_SIG
 BKG=${RAWB}_scored_$HCZZ_MODEL; SIG=${RAWS}_scored_$HCZZ_MODEL                    # scored copies (same names as the 2026-11 chain)
+RAWH=$HCZZ_OUTPUTS/$HCZZ_WF_HB; HBS=${RAWH}_scored_$HCZZ_MODEL; HBSFX=; [ "$HCZZ_HB_MODE" = stitched ] && HBSFX=_hbst   # stitched H+b (HCZZ_HB_MODE)
 MO=$HCZZ_OUTPUTS/${HCZZ_WF_CR}_merged_perjet; ZXEST=$HCZZ_RUN/zx_estimate; ZX=$HCZZ_RUN/zx_mva_$HCZZ_MODEL
 SUMW=$HCZZ_RUN/sumw; KT=k$(echo $HCZZ_KAPPA | tr -d . | tr , _); CARDS=$HCZZ_RUN/cards/${HCZZ_MODEL}_$KT
 lcg() { source $HCZZ_LCG_POST >/dev/null 2>&1; }
@@ -43,9 +45,9 @@ case $stage in
 produce)
   ERA=$1; WHAT=${2:-all}; SUBMIT=; [ "${3:-$2}" = --submit ] && SUBMIT=--submit; [ "$WHAT" = --submit ] && WHAT=all
   source $HCZZ_REPO/setup.sh >/dev/null; mkdir -p $HCZZ_RUN; touch $HCZZ_RUN/submitted.txt
-  for k in sr sig cr; do
+  for k in sr sig cr hb; do
     [ "$WHAT" = all ] || [ "$WHAT" = $k ] || continue
-    case $k in sr) W=$HCZZ_WF_SR; DS="$(mc_keys sr $ERA) $(data_keys $ERA)";; sig) W=$HCZZ_WF_SIG; DS=$(mc_keys sig $ERA);;
+    case $k in sr) W=$HCZZ_WF_SR; DS="$(mc_keys sr $ERA) $(data_keys $ERA)";; sig) W=$HCZZ_WF_SIG; DS=$(mc_keys sig $ERA);; hb) W=$HCZZ_WF_HB; DS=$(mc_keys hb $ERA);;
                cr) W=$HCZZ_WF_CR; DS=$(mc_keys cr $ERA); [ -n "$DS" ] && DS="$DS $(data_keys $ERA)";; esac
     for d in $DS; do
       grep -q "^$W $ERA $d " $HCZZ_RUN/submitted.txt && continue
@@ -56,13 +58,15 @@ produce)
   done ;;
 prodcheck)
   WAIT=; ARGS=(); for a in "$@"; do [ "$a" = --wait ] && WAIT=--wait || ARGS+=("$a"); done
-  python3 $TOOLS/prodcheck.py --workflows $HCZZ_WF_SR $HCZZ_WF_SIG $HCZZ_WF_CR --eras "${ARGS[@]}" $WAIT ;;
+  python3 $TOOLS/prodcheck.py --workflows $HCZZ_WF_SR $HCZZ_WF_SIG $HCZZ_WF_CR --eras "${ARGS[@]}" $WAIT || exit 1
+  H=$(echo " ${ARGS[*]} " | grep -oE " (2223|2022preEE|2022postEE|2023preBPix|2023postBPix)" | tr '\n' ' ')   # the H+b production is 2022/23 only
+  [ "$HCZZ_HB_MODE" = stitched ] && [ -n "$H" ] && { python3 $TOOLS/prodcheck.py --workflows $HCZZ_WF_HB --eras $H $WAIT || exit 1; }; exit 0 ;;
 sumw)
   lcg; mkdir -p $SUMW
   python3 -u $TOOLS/make_sumw_table.py --scored-dir $BKG --jecshifts-dir $BKG --fs-scored-dir $SIG --out $SUMW > $SUMW/sumw.log 2>&1 || { log "SUMW FAILED ($SUMW/sumw.log)"; exit 1; }
   log "Σw table $SUMW/sumw_table.json" ;;
 score)
-  ERA=$1; KIND=$2; [ "$KIND" = sig ] && { IN=$RAWS; OUT=$SIG; } || { IN=$RAWB; OUT=$BKG; }
+  ERA=$1; KIND=$2; case $KIND in sig) IN=$RAWS; OUT=$SIG;; hb) IN=$RAWH; OUT=$HBS;; *) IN=$RAWB; OUT=$BKG;; esac
   source $HCZZ_CONDA; conda activate $HCZZ_CONDA_ENV; E=$(mktemp)
   python3 -u analysis/postprocess/run_mva_postprocess.py --input-dir $IN --output-dir $OUT --model-name $HCZZ_MODEL --era $ERA \
     --no-mass-window --no-histograms --workers 8 ${HCZZ_SCORE_DATASETS:+--datasets $HCZZ_SCORE_DATASETS} 2> >(tee $E >&2); rc=$?; sleep 2   # HCZZ_SCORE_DATASETS: only these dataset prefixes
@@ -80,10 +84,11 @@ zx)
   python3 -u scripts/run_zx_inference.py --model-name $HCZZ_MODEL --input $ZXEST --output $ZX --eras $ERAS > $ZX/inference_$P.log 2>&1
   rc=$?; log "Z+X inference rc $rc, errors: $(grep -ci error $ZX/inference_$P.log)"; exit $rc ;;
 card2223)
-  W=$CARDS/2223; KC=$W/card_b0p1r0p5cat40; mkdir -p $W $KC; lcg; export HCZZ_KAPPA
+  W=$CARDS/2223$HBSFX; KC=$W/card_b0p1r0p5cat40; mkdir -p $W $KC; lcg; export HCZZ_KAPPA
   A="--scored-dir $BKG --jecshifts-dir $BKG --automcstats-threshold 10 --eras $HCZZ_ERAS_2223 --zx-dir $ZX --mass-window 105 160 --sumw-table $SUMW/sumw_table.json --fs-scored-dir $SIG --sumw-4fs-dir $RAWS"
   ST="--signal-mode stitched --sigma-4fs-fb $HCZZ_SIGMA_4FS_FB --sigma-3fs-fb $HCZZ_SIGMA_3FS_FB --sigma-total-fb $HCZZ_SIGMA_TOTAL_FB --sumw-3fs-dir $RAWS --preveto-genc-4fs $INPUTS/preveto_genc_4fs.json --pdf-ch $HCZZ_PDF_CH --gg-scale-json-dir $INPUTS/gg_scale_new4fs"
   K="--ctag2d-capfix none --fs-prescribed full --fs-scale-mode separate --split-other-higgs --per-process-bkg-scale --higgs-scale-norm"
+  [ -n "$HBSFX" ] && K="$K --hb-mode stitched --hb-scored-dir $HBS --hb-sumw-dir $RAWH"
   ( cd $SCRIPTS; python3 -u $TOOLS/dump_events_2d.py --dump $W/events_2d.npz $A $ST $K --output $W/card_dumpbuild > $W/dump.log 2>&1 ) || { log "DUMP FAILED"; exit 1; }
   rm -rf $W/card_dumpbuild
   ( cd $W; python3 -u $TOOLS/optimise_2d.py events_2d.npz opt_b0.1_r0.5.json $HCZZ_OPT > opt_b0.1_r0.5.log 2>&1 && \
@@ -96,7 +101,7 @@ card2223)
   limit $KC datacard_mva_with_zx.txt binned_cat40 $W/limits.txt ;;
 card2024)
   T=${1:-kappa}; SM=${2:-$HCZZ_SIGNAL_2024}; if [ $T = plain ]; then unset HCZZ_KAPPA; else export HCZZ_KAPPA; fi
-  W=$CARDS/2024_$T$([ $SM = 4fs ] && echo _4fs); KC=$W/card_b0p1r0p5cat40; mkdir -p $W $KC; lcg; export HCZZ_ALLOW_MISSING_SYST=$HCZZ_ALLOW_MISSING_SYST_2024
+  W=$CARDS/2024_$T$([ $SM = 4fs ] && echo _4fs)$HBSFX; KC=$W/card_b0p1r0p5cat40; mkdir -p $W $KC; lcg; export HCZZ_ALLOW_MISSING_SYST=$HCZZ_ALLOW_MISSING_SYST_2024
   if [ $SM = stitched ]; then   # 4FS n_genc10 == 0 + 3FS (Stitch3FS_cH_*_2024) n_genc10 >= 1, as 2022/23 (2026-11-16)
     SIGA="--signal-mode stitched --sigma-4fs-fb $HCZZ_SIGMA_4FS_FB --sigma-3fs-fb $HCZZ_SIGMA_3FS_FB --sigma-total-fb $HCZZ_SIGMA_TOTAL_FB --preveto-genc-4fs $INPUTS/preveto_genc_4fs.json --gg-scale-json-dir $INPUTS/gg_scale_new4fs --fs-prescribed full --fs-scale-mode separate"
   else
@@ -104,6 +109,7 @@ card2024)
   fi
   A="--scored-dir $BKG --jecshifts-dir $BKG --sumw-dir $RAWB --zx-dir $ZX --automcstats-threshold 10 --eras 2024 --mass-window 105 160 --fs-scored-dir $BKG \
    --sumw-4fs-dir $RAWB --sumw-3fs-dir $RAWB $SIGA --pdf-ch $HCZZ_PDF_CH --ctag2d-capfix none --split-other-higgs --per-process-bkg-scale --higgs-scale-norm"
+  [ -n "$HBSFX" ] && A="$A --hb-mode stitched --hb-scored-dir $BKG --hb-sumw-dir $RAWB"   # no 2024 4FS H+b: the SR 5FS sample over its whole phase space at K_5FS
   ( cd $SCRIPTS; python3 -u $TOOLS/dump_events_2d_2024.py --dump $W/events_2d.npz $A --output $W/card_dumpbuild > $W/dump.log 2>&1 ) || { log "DUMP FAILED"; exit 1; }
   rm -rf $W/card_dumpbuild
   ( cd $W; python3 -u $TOOLS/optimise_2d_2024.py events_2d.npz opt_b0.1_r0.5.json $HCZZ_OPT > opt_b0.1_r0.5.log 2>&1 && \
@@ -115,7 +121,7 @@ card2024)
   rm -f $W/events_2d.npz
   limit $KC datacard_mva_with_zx.txt binned_cat40 $W/limits.txt ;;
 combo)
-  T=${1:-kappa}; C23=$CARDS/2223/card_b0p1r0p5cat40; C24=$CARDS/2024_$T/card_b0p1r0p5cat40; W=$HCZZ_RUN/combo/${HCZZ_MODEL}_${KT}_2024$T; mkdir -p $W
+  T=${1:-kappa}; C23=$CARDS/2223$HBSFX/card_b0p1r0p5cat40; C24=$CARDS/2024_$T$HBSFX/card_b0p1r0p5cat40; W=$HCZZ_RUN/combo/${HCZZ_MODEL}_${KT}_2024$T$HBSFX; mkdir -p $W
   env -i HOME=$HOME USER=$USER PATH=/usr/bin:/bin bash -c "
   source /cvmfs/cms.cern.ch/cmsset_default.sh >/dev/null 2>&1; cd $HCZZ_COMBINE_SRC; eval \$(scramv1 runtime -sh 2>/dev/null)
   T=\$(mktemp -d /tmp/hczz_comb_XXXX); cd \$T; mkdir y2223 y2024; cp $C23/* y2223/

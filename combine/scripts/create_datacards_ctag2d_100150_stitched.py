@@ -54,6 +54,7 @@ import json
 import argparse
 import numpy as np
 from collections import defaultdict
+from contextlib import contextmanager
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # this combine/scripts (was the EOS Higgscharmnew checkout)
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repository root (was the EOS Higgscharmnew checkout)
@@ -154,8 +155,26 @@ def _parse_own_args():
                         "scalevar_muF_cH on the 4FS signal, yields kept (Heyen thesis), per-event ratio = the "
                         "rebuilt-4FS per-class LHE ratio ([7]/[1], [5]/[3]; class 0 / >=1 c-hadron > 10 GeV, "
                         "n_chad10), 'pooled'/'floorfix' of new4fs_pooled.json; QCDscale_gg dropped from Signal")
+    # 2026-11-16: H+b (HPlusB) as the 5FS FxFx + 4FS flavour-scheme stitch, hb_stitch.py (LHCHWG-2026-007 sec. 4.4, as the H+c signal)
+    p.add_argument("--hb-mode", choices=["pooled", "stitched"], default="pooled",
+                   help="pooled: the H+b samples of --scored-dir at the fileset cross section (before 2026-11-16); stitched: hb_stitch.py "
+                        "(5FS n_genb10 == 0 + 4FS n_genb10 >= 1, K = NNLO/NLO per scheme, sum = --hb-sigma-total-fb), needs --split-other-higgs")
+    p.add_argument("--hb-scored-dir", default=None, help="--hb-mode stitched: scored H+b samples (hplusc_mva_4class_ctag2d_final_hb scored; "
+                                                         "an era without 4FS may point to any dir with its 5FS samples)")
+    p.add_argument("--hb-sumw-dir", default=None, help="--hb-mode stitched: raw production of --hb-scored-dir (sumw sidecars, pre-veto genb split)")
+    p.add_argument("--hb-sigma-5fs-fb", type=float, default=753.7, help="bbH 5FS FxFx NLO (post-merging), H+c workshop 06-2026")
+    p.add_argument("--hb-sigma-4fs-fb", type=float, default=397.6, help="bbH 4FS NLO (our fixed gridpack afd1d440: 397.8)")
+    p.add_argument("--hb-nnlo-5fs-fb", type=float, default=574.8, help="bbH 5FS NNLO (MiNNLOPS, arXiv:2510.18815): K_5FS = this / --hb-sigma-5fs-fb")
+    p.add_argument("--hb-nnlo-4fs-fb", type=float, default=519.6, help="bbH 4FS NNLO (MiNNLOPS): K_4FS = this / --hb-sigma-4fs-fb")
+    p.add_argument("--hb-sigma-total-fb", type=float, default=574.8,
+                   help="inclusive bbH the stitched sum is rescaled to (massless MiNNLOPS NNLO, as the H+c total); LHCHWG 13.6 TeV: 526.9 (Santander)")
     own, rest = p.parse_known_args(sys.argv[1:])
     sys.argv = sys.argv[:1] + rest
+    if own.hb_mode == "stitched":
+        if not (own.hb_scored_dir and own.hb_sumw_dir):
+            p.error("--hb-mode stitched needs --hb-scored-dir and --hb-sumw-dir")
+        if not own.split_other_higgs:
+            p.error("--hb-mode stitched needs --split-other-higgs (HPlusB as its own process)")
     if own.sumw_postveto and own.preveto_genc_4fs:
         p.error("--sumw-postveto and --preveto-genc-4fs exclude each other")
     if own.signal_mode == "stitched" and own.sumw_table and not own.preveto_genc_4fs and not own.sumw_postveto:
@@ -178,6 +197,14 @@ def _parse_own_args():
 CFG = _parse_own_args()
 if CFG.per_process_bkg_scale and not CFG.split_other_higgs:
     raise SystemExit("--per-process-bkg-scale needs --split-other-higgs")
+HB = None
+if CFG.hb_mode == "stitched":
+    # the stitched H+b reads only the n_genb10 production, whose 5FS samples carry the transferred scale/PDF/alphaS weights and whose
+    # 4FS samples their own: HCZZ_HB_TRANSFER semantics (no forced-nominal H+b systematics, scalevar_muR/muF_HPlusB), before the split
+    import hb_stitch as HB
+    HB.CFG = CFG
+    dc.HB_TRANSFER = True
+    dc.HPLUSBOTTOM_BUGGY_SYST.clear()   # the same set object as rs.HPLUSBOTTOM_BUGGY_SYST
 if CFG.split_other_higgs:
     dc.split_other_higgs(per_process_scale=CFG.per_process_bkg_scale)
 # --higgs-scale-norm (2026-10-19): HIG-24-013 treatment of the Higgs-background QCD scale. The
@@ -620,6 +647,22 @@ def _not_signal(path):
     return None if p == "Signal" else p
 
 
+@contextmanager
+def _skip_hb():
+    """--hb-mode stitched: the HPlusB samples of the main background dirs (no n_genb10) are not read; HPlusB comes from --hb-scored-dir."""
+    if not HB:
+        yield
+        return
+    orig = dc.get_process_from_path
+    dc.get_process_from_path = lambda p: None if orig(p) == "HPlusB" else orig(p)
+    rs_orig = rs.get_process_from_path
+    rs.get_process_from_path = dc.get_process_from_path
+    try:
+        yield
+    finally:
+        dc.get_process_from_path, rs.get_process_from_path = orig, rs_orig
+
+
 def load_mc_with_stitched_signal(scored_dir, sumw_by_group):
     # Backgrounds: the rawsf loader, with every Signal sample skipped.
     if SUMW_TABLE:
@@ -631,11 +674,19 @@ def load_mc_with_stitched_signal(scored_dir, sumw_by_group):
             print(f"  {era:<14} {g:<32} {old_sw if old_sw else float('nan'):>12.4g} {sw:>12.4g} "
                   f"{sw / old_sw if old_sw else float('nan'):>13.4f}")
         sumw_by_group = tab
-    rs.get_process_from_path = _not_signal
-    try:
-        mc = rs.load_mc_scored_parquets_rawsf(scored_dir, sumw_by_group)
-    finally:
-        rs.get_process_from_path = dc.get_process_from_path
+    with _skip_hb():
+        rs.get_process_from_path = _not_signal
+        try:
+            mc = rs.load_mc_scored_parquets_rawsf(scored_dir, sumw_by_group)
+        finally:
+            rs.get_process_from_path = dc.get_process_from_path
+    if HB:
+        HB.compute(ERAS, BR_H4L)
+        with HB.active():
+            mc_hb = rs.load_mc_scored_parquets_rawsf(CFG.hb_scored_dir, dict(HB.SUMW))
+        mc["HPlusB"] = mc_hb["HPlusB"]
+        HB.check_scale_weights(mc)
+        HB.write_summary(_output_dir())
 
     print(f"\n[1b'] Stitched signal: mode={CFG.signal_mode}{' massless-1c' if CFG.massless_1c else ''}, "
           f"sigma_4FS={CFG.sigma_4fs_fb} fb, sigma_3FS={CFG.sigma_3fs_fb} fb, total={CFG.sigma_total_fb} fb, "
@@ -780,9 +831,21 @@ def load_jecshifts_with_stitched_signal(jecshifts_dir, sumw_by_group):
                               if len({round(sw, 6) for (sh, e2, g2), sw in tab.items() if (e2, g2) == (era, g)}) > 1})
             print(f"  JES/JER backgrounds: sumw per shift dir from the table ({len(tab)} shift-era-groups, "
                   f"{len(groups)} era-groups, {len(varying)} with shift-dependent sumw: {varying}), muon ID SF folded in")
-            jec = load_jecshifts_pershift(jecshifts_dir, per)
+            with _skip_hb():
+                jec = load_jecshifts_pershift(jecshifts_dir, per)
+            if HB:
+                # shift dirs written by the same jobs as the nominal: one sumw per piece, / MUON_ID_SF as the other backgrounds here;
+                # a nuisance not acting on an era reads SUMW_TABLE["nom"] (load_jecshifts_pershift)
+                for (era, g), sw in HB.SUMW.items():
+                    SUMW_TABLE["nom"].setdefault(era, {})[g] = {"sumw": sw, "n_missing": 0}
+                with HB.active():
+                    jec["HPlusB"] = load_jecshifts_pershift(CFG.hb_scored_dir, HB.ShiftSumw(MUON_ID_SF))["HPlusB"]
         else:
-            jec = dc_load_jecshifts_orig(jecshifts_dir, sumw_by_group)
+            with _skip_hb():
+                jec = dc_load_jecshifts_orig(jecshifts_dir, sumw_by_group)
+            if HB:
+                with HB.active():
+                    jec["HPlusB"] = dc_load_jecshifts_orig(CFG.hb_scored_dir, dict(HB.SUMW))["HPlusB"]
     finally:
         dc.JECSHIFTS_USABLE_PROCS = procs
     jec["Signal"] = load_signal_jecshifts(_STATE["scales"])

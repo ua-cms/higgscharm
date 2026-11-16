@@ -5,6 +5,7 @@ workflows:
   sr: hplusc_mva_4class_ctag2d_final_bkg
   sig: hplusc_mva_4class_ctag2d_final_fschad
   cr: hplusc_mva_4class_CR_merged_final
+  hb: hplusc_mva_4class_ctag2d_final_hb
 mc:
   cr:
     2022postEE:
@@ -185,3 +186,22 @@ mc:
     - HPlusCharm_2023preBPix
     - HPlusCharm_new_2023preBPix
     - Stitch3FS_cH_2023preBPix
+  hb:   # 2026-11-16: H+b 5FS FxFx (old gridpack) + 4FS (fixed gridpack) with n_genb10, for the stitched H+b (HCZZ_HB_MODE=stitched)
+    2022preEE:
+    - 2022preEEHB
+    - HPlusBottom_2022preEE
+    - HPlusBottom_new_2022preEE
+    - HPlusBottom4FS_2022preEE
+    2022postEE:
+    - 2022postEEHB
+    - HPlusBottom_2022postEE
+    - HPlusBottom_new_2022postEE
+    - HPlusBottom4FS_2022postEE
+    2023preBPix:
+    - 2023preBPixHB
+    - HPlusBottom_2023preBPix
+    - HPlusBottom4FS_2023preBPix
+    2023postBPix:
+    - 2023postBPixHB
+    - HPlusBottom_2023postBPix
+    - HPlusBottom4FS_2023postBPix

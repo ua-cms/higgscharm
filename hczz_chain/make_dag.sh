@@ -9,7 +9,7 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); source $HERE/config.sh; P=${
 D=${HCZZ_DAG_DIR:-$HOME/condor_hczz_chain/$(basename $HCZZ_RUN)}; mkdir -p $D; cd $D
 printf '#!/bin/bash\nexec bash %s/run.sh "$@"\n' "$HERE" > run_chain.sh; chmod +x run_chain.sh
 # the settings of this shell go into every node explicitly (DAGMan does not pass the submitting environment reliably)
-ENVS="HCZZ_REPO=$HCZZ_REPO HCZZ_RUN=$HCZZ_RUN HCZZ_MODEL=$HCZZ_MODEL HCZZ_KAPPA=$HCZZ_KAPPA HCZZ_OUTPUTS=$HCZZ_OUTPUTS HCZZ_CONDOR_DIRS=$HCZZ_CONDOR_DIRS HCZZ_FR_DIR=$HCZZ_FR_DIR HCZZ_SIGNAL_2024=$HCZZ_SIGNAL_2024 HCZZ_WF_SR=$HCZZ_WF_SR HCZZ_WF_SIG=$HCZZ_WF_SIG HCZZ_WF_CR=$HCZZ_WF_CR X509_USER_PROXY=$X509_USER_PROXY"
+ENVS="HCZZ_REPO=$HCZZ_REPO HCZZ_RUN=$HCZZ_RUN HCZZ_MODEL=$HCZZ_MODEL HCZZ_KAPPA=$HCZZ_KAPPA HCZZ_OUTPUTS=$HCZZ_OUTPUTS HCZZ_CONDOR_DIRS=$HCZZ_CONDOR_DIRS HCZZ_FR_DIR=$HCZZ_FR_DIR HCZZ_SIGNAL_2024=$HCZZ_SIGNAL_2024 HCZZ_WF_SR=$HCZZ_WF_SR HCZZ_WF_SIG=$HCZZ_WF_SIG HCZZ_WF_CR=$HCZZ_WF_CR HCZZ_WF_HB=$HCZZ_WF_HB HCZZ_HB_MODE=$HCZZ_HB_MODE X509_USER_PROXY=$X509_USER_PROXY"
 node() {  # <name> <flavour> <cpus> <mem MB> <run.sh args...>
   local n=$1 f=$2 c=$3 m=$4; shift 4
   cat > $n.sub <<SUB
@@ -32,7 +32,8 @@ SUB
 S23=; S24=
 if [ $P = 2223 ] || [ $P = all ]; then
   node G23 nextweek 1 2000 prodcheck 2223 --wait
-  for e in $HCZZ_ERAS_2223; do for k in bkg sig; do node S_${e}_$k workday 8 16000 score $e $k; S23="$S23 S_${e}_$k"; done; done
+  KS="bkg sig"; [ "$HCZZ_HB_MODE" = stitched ] && KS="$KS hb"   # stitched H+b: its own production is scored too
+  for e in $HCZZ_ERAS_2223; do for k in $KS; do node S_${e}_$k workday 8 16000 score $e $k; S23="$S23 S_${e}_$k"; done; done
   node ZX23 nextweek 4 16000 zx 2223; node SUMW workday 4 8000 sumw; node C23 tomorrow 12 24000 card2223
   echo "PARENT G23 CHILD $S23 ZX23" >> chain.dag; echo "PARENT $S23 CHILD SUMW" >> chain.dag; echo "PARENT SUMW ZX23 CHILD C23" >> chain.dag
 fi
