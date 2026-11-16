@@ -508,3 +508,23 @@ HPlusBottom_2024:
   process: hb
   key: hb
   xsec: 0.000173299
+# H+c 3FS (massive charm, pp -> h c c~, rebuilt gridpack "-pythia8new") for the 2024 3FS/4FS stitching, added 2026-11-16 (user).
+# Two Nano datasets = ONE 3FS sample for the stitching (the builder sums the sumw of every Stitch3FS_cH_* partition):
+#   v1new: 582 files / 1.744M events. 249 lumis appear in two files with the SAME (run, lumi, event) numbers but DIFFERENT
+#          generated events (LHE_HT / Generator_weight / GenPart differ, 29 of 3000 LHE_HT values in common = ties), unlike
+#          the exact duplicates of 2023preBPix -> all 582 files kept (checked 2026-11-16 on step5_264/268 and step5_40/400).
+#   ext1:  2879 files / 2879 lumis / 8.637M events, no lumi in two files.
+# Deliberately NOT named HPlusCharm* (the builders map any name containing "HPlusCharm" to Signal).
+# xsec = 55.0 fb x BR(H->ZZ->4l incl. tau) 2.694e-4, as 2022/23; the stitching builder renormalises anyway.
+Stitch3FS_cH_2024:
+  era: mc
+  query: HPlusCharm_3FS_MuRFScaleDynX0p50_HToZZTo4L_M125_TuneCP5_13p6TeV_amcatnlo-JHUGen-pythia8new/snandaku-RunIII2024Summer24NanoAODv15-3FS-HToZZTo4L-JHUGen-150X_mcRun3_2024_realistic_v2-v1new-00000000000000000000000000000000/USER
+  process: smsignal
+  key: smsignal
+  xsec: 0.0000148
+Stitch3FS_cH_ext1_2024:
+  era: mc
+  query: HPlusCharm_3FS_MuRFScaleDynX0p50_HToZZTo4L_M125_TuneCP5_13p6TeV_amcatnlo-JHUGen-pythia8new/snandaku-RunIII2024Summer24NanoAODv15-3FS-HToZZTo4L-JHUGen-150X_mcRun3_2024_realistic_v2-ext1-v1-00000000000000000000000000000000/USER
+  process: smsignal
+  key: smsignal
+  xsec: 0.0000148

@@ -7,7 +7,7 @@
 #   run.sh score <era> <bkg|sig>                        MVA scores ($HCZZ_MODEL, out-of-fold for k-fold models) -> *_scored_<model>
 #   run.sh zx <2223|2024>                               Z+X: merge CR parquets, estimate with the pkatris fake rates, MVA-score it
 #   run.sh card2223                                     2022/23 2D (D, m4l) card: event dump -> bin optimiser -> 40-bin card -> limit
-#   run.sh card2024 <kappa|plain>                       2024 2D card (D_kappa or P(S)) -> limit
+#   run.sh card2024 <kappa|plain> [stitched|4fs]        2024 2D card (D_kappa or P(S)), FS-stitched signal (default) or 4FS alone -> limit
 #   run.sh combo <kappa|plain>                          2022/23 + 2024 combination (2024 card of that kind, 2024 nuisances decorrelated)
 set -o pipefail
 HERE=${HCZZ_REPO:+$HCZZ_REPO/hczz_chain}; HERE=${HERE:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}; source $HERE/config.sh   # condor: HCZZ_REPO from the submit file
@@ -65,7 +65,7 @@ score)
   ERA=$1; KIND=$2; [ "$KIND" = sig ] && { IN=$RAWS; OUT=$SIG; } || { IN=$RAWB; OUT=$BKG; }
   source $HCZZ_CONDA; conda activate $HCZZ_CONDA_ENV; E=$(mktemp)
   python3 -u analysis/postprocess/run_mva_postprocess.py --input-dir $IN --output-dir $OUT --model-name $HCZZ_MODEL --era $ERA \
-    --no-mass-window --no-histograms --workers 8 2> >(tee $E >&2); rc=$?; sleep 2
+    --no-mass-window --no-histograms --workers 8 ${HCZZ_SCORE_DATASETS:+--datasets $HCZZ_SCORE_DATASETS} 2> >(tee $E >&2); rc=$?; sleep 2   # HCZZ_SCORE_DATASETS: only these dataset prefixes
   n=$(grep -c 'Error processing' $E || true); rm -f $E
   [ "${n:-0}" -gt 0 ] && { log "SCORING ERRORS: $n files"; rc=4; }; exit $rc ;;
 zx)
@@ -95,11 +95,15 @@ card2223)
   rm -f $W/events_2d.npz   # 2-4 GB, the card dir has everything the limit needs
   limit $KC datacard_mva_with_zx.txt binned_cat40 $W/limits.txt ;;
 card2024)
-  T=${1:-kappa}; if [ $T = plain ]; then unset HCZZ_KAPPA; else export HCZZ_KAPPA; fi
-  W=$CARDS/2024_$T; KC=$W/card_b0p1r0p5cat40; mkdir -p $W $KC; lcg; export HCZZ_ALLOW_MISSING_SYST=$HCZZ_ALLOW_MISSING_SYST_2024
+  T=${1:-kappa}; SM=${2:-$HCZZ_SIGNAL_2024}; if [ $T = plain ]; then unset HCZZ_KAPPA; else export HCZZ_KAPPA; fi
+  W=$CARDS/2024_$T$([ $SM = 4fs ] && echo _4fs); KC=$W/card_b0p1r0p5cat40; mkdir -p $W $KC; lcg; export HCZZ_ALLOW_MISSING_SYST=$HCZZ_ALLOW_MISSING_SYST_2024
+  if [ $SM = stitched ]; then   # 4FS n_genc10 == 0 + 3FS (Stitch3FS_cH_*_2024) n_genc10 >= 1, as 2022/23 (2026-11-16)
+    SIGA="--signal-mode stitched --sigma-4fs-fb $HCZZ_SIGMA_4FS_FB --sigma-3fs-fb $HCZZ_SIGMA_3FS_FB --sigma-total-fb $HCZZ_SIGMA_TOTAL_FB --preveto-genc-4fs $INPUTS/preveto_genc_4fs.json --gg-scale-json-dir $INPUTS/gg_scale_new4fs --fs-prescribed full --fs-scale-mode separate"
+  else
+    SIGA="--signal-mode 4fs --sigma-4fs-fb $HCZZ_SIGMA_4FS_FB --sigma-total-fb $HCZZ_SIGMA_TOTAL_FB --sig4fs-scale-json $INPUTS/new4fs_pooled.json"
+  fi
   A="--scored-dir $BKG --jecshifts-dir $BKG --sumw-dir $RAWB --zx-dir $ZX --automcstats-threshold 10 --eras 2024 --mass-window 105 160 --fs-scored-dir $BKG \
-   --sumw-4fs-dir $RAWB --sumw-3fs-dir $RAWB --signal-mode 4fs --sigma-4fs-fb $HCZZ_SIGMA_4FS_FB --sigma-total-fb $HCZZ_SIGMA_TOTAL_FB \
-   --sig4fs-scale-json $INPUTS/new4fs_pooled.json --pdf-ch $HCZZ_PDF_CH --ctag2d-capfix none --split-other-higgs --per-process-bkg-scale --higgs-scale-norm"
+   --sumw-4fs-dir $RAWB --sumw-3fs-dir $RAWB $SIGA --pdf-ch $HCZZ_PDF_CH --ctag2d-capfix none --split-other-higgs --per-process-bkg-scale --higgs-scale-norm"
   ( cd $SCRIPTS; python3 -u $TOOLS/dump_events_2d_2024.py --dump $W/events_2d.npz $A --output $W/card_dumpbuild > $W/dump.log 2>&1 ) || { log "DUMP FAILED"; exit 1; }
   rm -rf $W/card_dumpbuild
   ( cd $W; python3 -u $TOOLS/optimise_2d_2024.py events_2d.npz opt_b0.1_r0.5.json $HCZZ_OPT > opt_b0.1_r0.5.log 2>&1 && \

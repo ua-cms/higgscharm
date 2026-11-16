@@ -1,5 +1,6 @@
 _comment: 'MC datasets of the final HcZZ production (2026-11-09 submission record, full_chain_2026_11_09/submitted.txt); data = every data key of the era fileset (stage produce adds them). Workflows: sr
-  = signal region bkg + data (+ 2024+ signal), sig = 2022/23 stitched signal (4FS + 3FS), cr = Z+X control regions.'
+  = signal region bkg + data (+ 2024+ signal), sig = 2022/23 stitched signal (4FS + 3FS), cr = Z+X control regions. 2026-11-16: + 2024 3FS H+c (Stitch3FS_cH_2024, Stitch3FS_cH_ext1_2024) in the SR workflow,
+  for the 2024 stitching.'
 workflows:
   sr: hplusc_mva_4class_ctag2d_final_bkg
   sig: hplusc_mva_4class_ctag2d_final_fschad
@@ -124,6 +125,8 @@ mc:
     - HPlusBottom_2024
     - HPlusCharm
     - HPlusCharm_v2_2024
+    - Stitch3FS_cH_2024
+    - Stitch3FS_cH_ext1_2024
     - TTH_Hto2Z
     - VBFHto2Zto4L
     - WminusH_Hto2Zto4L

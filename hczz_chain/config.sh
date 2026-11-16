@@ -27,6 +27,7 @@ HCZZ_ZX_MASS=${HCZZ_ZX_MASS:-"105 160"}
 HCZZ_ERAS_2223=${HCZZ_ERAS_2223:-"2022preEE 2022postEE 2023preBPix 2023postBPix"}
 HCZZ_SIGMA_4FS_FB=97.62; HCZZ_SIGMA_3FS_FB=55.0; HCZZ_SIGMA_TOTAL_FB=73.30; HCZZ_PDF_CH=1.065   # FS-stitched H+c -> ZZ* signal (Heyen FS envelope), pdf_cH lnN
 HCZZ_OPT=${HCZZ_OPT:-"--km 16 --ks 8 --budgets 20,30,40,50 --bmin 0.1 --relmax 0.5"}       # 2D (D, m4l) bin optimiser; the 40-bin layout is the nominal card
+HCZZ_SIGNAL_2024=${HCZZ_SIGNAL_2024:-stitched}   # 2024 signal: stitched (4FS 0c + 3FS >=1c, 3FS samples since 2026-11-16) or 4fs
 HCZZ_ALLOW_MISSING_SYST_2024=${HCZZ_ALLOW_MISSING_SYST_2024:-scalevar_muR_bbH,scalevar_muF_bbH}
 
 # --- environments ---

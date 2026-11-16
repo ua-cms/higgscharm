@@ -17,11 +17,14 @@ Set here, for 2024:
   - muon ID SF: inside weight_nominal in the 2024 production (workflow has the muon block), so the flat
     signal MUON_ID_SF is 1.0 and --recompute-muon-id-sf is not used.
 
+2026-11-16: 2024 3FS samples (Stitch3FS_cH_2024 + Stitch3FS_cH_ext1_2024) -> --signal-mode stitched as 2022/23 (4FS n_genc10 == 0 +
+3FS n_genc10 >= 1, pre-veto GEN-c sumw of both pieces from the sidecars, --fs-prescribed full); --signal-mode 4fs still works.
+
 Scope decisions (user, 2026-10-23): plain 4FS signal (--signal-mode 4fs), no Z+X (--skip-zx) until
 pkatris has 2024 fake rates (2026-11-10: he has, Z+X allowed via --zx-dir). Only --eras 2024 is accepted (combination with 2022/23: later, by card).
 
-Usage: as create_datacards_ctag2d_100150_stitched_decorr.py, with --eras 2024, without --sumw-table,
---preveto-genc-4fs, --fs-prescribed and --recompute-muon-id-sf.
+Usage: as create_datacards_ctag2d_100150_stitched_decorr.py, with --eras 2024, without --sumw-table and --recompute-muon-id-sf;
+--preveto-genc-4fs and --fs-prescribed only with --signal-mode stitched.
 """
 import os
 import sys
@@ -42,9 +45,16 @@ while _i < len(_a) and not _a[_i].startswith("--"):
     _i += 1
 if _eras != ERAS_2024:
     raise SystemExit(f"create_datacards_2024.py: only --eras 2024 is supported, got {_eras}")
-for _bad in ("--sumw-table", "--preveto-genc-4fs", "--recompute-muon-id-sf", "--fs-prescribed"):
+# 2026-11-16 (user: 2024 3FS samples exist -> stitch as 2022/23): --signal-mode stitched allowed with --preveto-genc-4fs (2024
+# section from the 4FS sidecars, hczz_chain/tools/make_preveto_genc_4fs.py) and --fs-prescribed; the 4FS-only modes keep the old rules.
+_stitched = "--signal-mode" in _a and _a[_a.index("--signal-mode") + 1] == "stitched"
+_banned = ("--sumw-table", "--recompute-muon-id-sf") + (() if _stitched else ("--preveto-genc-4fs", "--fs-prescribed"))
+for _bad in _banned:
     if _bad in _a:
         raise SystemExit(f"create_datacards_2024.py: {_bad} is not supported for 2024 (see docstring)")
+if _stitched and "--preveto-genc-4fs" not in _a:
+    raise SystemExit("create_datacards_2024.py: --signal-mode stitched needs --preveto-genc-4fs (pre-veto sumw for both pieces, "
+                     "as the pre-veto sumw_preveto normalisation; otherwise the region split would be post-veto)")
 # 2026-11-10: the --skip-zx requirement is lifted: pkatris OS 2024 FR (fake_rates/OS/2024, 10-29) -> Z+X 2024 via
 # full_chain zx_final.sh 2024; pass --zx-dir <dir with 2024/zx_{3p1f,2p2f}_2024_mva.parquet> or --skip-zx.
 
@@ -60,8 +70,8 @@ import create_datacards_ctag2d_100150_decorr as dec
 import create_datacards_ctag2d_100150_stitched as st
 import create_datacards_ctag2d_100150_stitched_decorr  # noqa: F401  (installs the decorr signal/background loaders)
 
-if st.CFG.signal_mode != "4fs":
-    raise SystemExit("create_datacards_2024.py: 2024 has no 3FS sample, use --signal-mode 4fs")
+if st.CFG.signal_mode not in ("4fs", "stitched"):
+    raise SystemExit("create_datacards_2024.py: --signal-mode 4fs (4FS alone) or stitched (4FS 0c + 3FS >=1c, Stitch3FS_cH_*_2024)")
 st.MUON_ID_SF["2024"] = 1.0   # already in weight_nominal
 
 if __name__ == "__main__":
