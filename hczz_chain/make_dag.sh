@@ -1,22 +1,24 @@
 #!/bin/bash
 # Write the HTCondor DAG of the chain after the production (run.sh produce ... --submit submits the parquet jobs; this DAG starts
-# with the completeness gates).  make_dag.sh [2223|2024|all] -> $HCZZ_RUN/dag/chain.dag ; submit with condor_submit_dag from there.
+# with the completeness gates).  make_dag.sh [2223|2024|all] -> $HCZZ_DAG_DIR (default ~/condor_hczz_chain/<run dir name>)/chain.dag ; submit with condor_submit_dag from there.
 #   2223: gate -> scoring (bkg + sig per era) + Z+X -> Σw -> card2223 (D_kappa)
 #   2024: gate -> scoring + Z+X -> card2024 kappa + plain
 #   all : both, then the 2022/23 + 2024 combinations (kappa, plain)
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); source $HERE/config.sh; P=${1:-all}
-D=$HCZZ_RUN/dag; mkdir -p $D; cd $D
+# DAG + submit files + logs on AFS: the CERN batch schedds refuse /eos paths in submit files; the jobs run hczz_chain/run.sh in place
+D=${HCZZ_DAG_DIR:-$HOME/condor_hczz_chain/$(basename $HCZZ_RUN)}; mkdir -p $D; cd $D
+printf '#!/bin/bash\nexec bash %s/run.sh "$@"\n' "$HERE" > run_chain.sh; chmod +x run_chain.sh
+# the settings of this shell go into every node explicitly (DAGMan does not pass the submitting environment reliably)
+ENVS="HCZZ_REPO=$HCZZ_REPO HCZZ_RUN=$HCZZ_RUN HCZZ_MODEL=$HCZZ_MODEL HCZZ_KAPPA=$HCZZ_KAPPA HCZZ_OUTPUTS=$HCZZ_OUTPUTS HCZZ_CONDOR_DIRS=$HCZZ_CONDOR_DIRS HCZZ_FR_DIR=$HCZZ_FR_DIR HCZZ_SIGNAL_2024=$HCZZ_SIGNAL_2024 HCZZ_WF_SR=$HCZZ_WF_SR HCZZ_WF_SIG=$HCZZ_WF_SIG HCZZ_WF_CR=$HCZZ_WF_CR X509_USER_PROXY=$X509_USER_PROXY"
 node() {  # <name> <flavour> <cpus> <mem MB> <run.sh args...>
   local n=$1 f=$2 c=$3 m=$4; shift 4
   cat > $n.sub <<SUB
-executable = $HERE/run.sh
+executable = $D/run_chain.sh
 arguments = $*
 output = $n.\$(ClusterId).out
 error = $n.\$(ClusterId).err
 log = $n.\$(ClusterId).log
-getenv = HCZZ_*
-environment = "HCZZ_REPO=$HCZZ_REPO"
-transfer_executable = false
+environment = "$ENVS"
 MY.SendCredential = True
 requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9")
 request_CPUs = $c

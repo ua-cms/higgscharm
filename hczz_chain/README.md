@@ -20,7 +20,7 @@ cd <repo>; source hczz_chain/config.sh             # optional: inspect / overrid
 voms-proxy-init -voms cms -valid 192:00 -out ~/private/x509up_u$(id -u)
 hczz_chain/run.sh produce 2022preEE all            # dry run: lists the jobs
 hczz_chain/run.sh produce 2022preEE all --submit   # submits (repeat per era; already-submitted datasets are skipped)
-hczz_chain/make_dag.sh all && cd $HCZZ_RUN/dag && condor_submit_dag chain.dag
+hczz_chain/make_dag.sh all && cd ~/condor_hczz_chain/$(basename $HCZZ_RUN) && condor_submit_dag chain.dag
 ```
 Every stage can also be run by hand, e.g. `hczz_chain/run.sh card2024 kappa`. Limits are appended to
 `$HCZZ_RUN/cards/<model>_<kappa>/{2223,2024_kappa,2024_plain}/limits.txt` and `$HCZZ_RUN/combo/<...>/limits.txt`.
