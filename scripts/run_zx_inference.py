@@ -23,7 +23,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 # Add higgscharm to path for MVAPostProcessor
-HIGGSCHARM = '/eos/user/s/snandaku/Higgscharmnew/higgscharm'
+HIGGSCHARM = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # repository root (was the EOS Higgscharmnew checkout)
 if HIGGSCHARM not in sys.path:
     sys.path.insert(0, HIGGSCHARM)
 
@@ -104,6 +104,8 @@ PASSTHROUGH = [
     'jet_multiplicity', 'n_cjet', 'jet_ht', 'cjet_HT', 'nSV',
     'jet_pt', 'jet_eta', 'jet_phi', 'jet_btagPNetB', 'jet_btagPNetCvL', 'jet_btagPNetCvB',
     'cjets_pt', 'cjets_eta', 'cjets_phi', 'cjets_btagPNetB', 'cjets_btagPNetCvL', 'cjets_btagPNetCvB',
+    # 2026-11-16: UParTAK4 jet scores (2024+ MVA inputs, mva_inference.py UPART_ERAS) were not passed through -> every 2024 Z+X inference failed with "UParTAK4 jet scores missing"
+    'jet_btagUParTAK4B', 'jet_btagUParTAK4CvL', 'jet_btagUParTAK4CvB',
     'weight_nominal', 'weight_zx', 'zx_weight', 'zx_sign',
 ]
 
@@ -122,6 +124,7 @@ PASSTHROUGH = [
 JET_ARRAY_COLS = [
     'jet_pt', 'jet_eta', 'jet_phi', 'jet_btagPNetB', 'jet_btagPNetCvL', 'jet_btagPNetCvB',
     'cjets_pt', 'cjets_eta', 'cjets_phi', 'cjets_btagPNetB', 'cjets_btagPNetCvL', 'cjets_btagPNetCvB',
+    'jet_btagUParTAK4B', 'jet_btagUParTAK4CvL', 'jet_btagUParTAK4CvB',  # 2026-11-16: per-jet UParT for 2024+ (see PASSTHROUGH)
 ]
 N_JET_SLOTS = 3
 
@@ -206,31 +209,51 @@ def main():
     parser = argparse.ArgumentParser(description='Run MVA inference on Z+X parquets')
     parser.add_argument('--input', required=True,
                         help='Directory with zx_3p1f/zx_2p2f parquets (from estimate_zx_background.py)')
-    parser.add_argument('--config', required=True,
-                        help='b-hive config YAML')
-    parser.add_argument('--model', required=True,
+    parser.add_argument('--model-name', default=None,
+                        help='Registered model (models/registry.yaml); sets --config/--model (and --kfold-models for k-fold entries)')
+    parser.add_argument('--config', default=None,
+                        help='b-hive config YAML (ad-hoc models; use --model-name for registered ones)')
+    parser.add_argument('--model', default=None,
                         help='Path to best_model.pt')
     parser.add_argument('--output', required=True,
                         help='Output directory for MVA-scored parquets')
     parser.add_argument('--eras', nargs='+', default=ERAS,
                         help='Eras to process (default: all 4)')
+    parser.add_argument('--kfold-models', default=None,
+                        help='2026-11-14: comma-separated 5 k-fold models (kf<k> in path); Z+X event i uses model i %% 5 (analysis/postprocess/kfold.py)')
     parser.add_argument('--no-mass-window', action='store_true',
                         help='Skip mass window filter (score all events)')
     args = parser.parse_args()
+    if args.model_name:
+        if args.config or args.model or args.kfold_models:
+            parser.error('use either --model-name or --config/--model/--kfold-models')
+        from analysis.postprocess.mva_registry import resolve_model
+        reg = resolve_model(args.model_name)
+        args.config, args.model = reg['config'], reg['model']
+        args.kfold_models = ','.join(reg['kfold_models']) if reg.get('kfold_models') else None
+        logging.info(f"Registered model {reg['name']} ({reg['entry']['status']})")
+    if not args.config or not (args.model or args.kfold_models):
+        parser.error('--model-name or --config with --model/--kfold-models is required')
 
     logging.info(f'Config:  {args.config}')
     logging.info(f'Model:   {args.model}')
     logging.info(f'Input:   {args.input}')
     logging.info(f'Output:  {args.output}')
 
-    processor = MVAPostProcessor(
-        bhive_config_path=args.config,
-        bhive_model_path=args.model,
-        apply_mass_window=not args.no_mass_window,
-        # A real era at construction avoids a spurious era='None' fallback
-        # warning; the loop below still sets processor.era for every era.
-        era=args.eras[0],
-    )
+    if args.kfold_models:
+        from analysis.postprocess.kfold import KFoldPostProcessor
+        logging.info(f'k-fold models: {args.kfold_models}')
+        processor = KFoldPostProcessor(args.config, [m for m in args.kfold_models.split(',') if m],
+                                       apply_mass_window=not args.no_mass_window, era=args.eras[0])
+    else:
+        processor = MVAPostProcessor(
+            bhive_config_path=args.config,
+            bhive_model_path=args.model,
+            apply_mass_window=not args.no_mass_window,
+            # A real era at construction avoids a spurious era='None' fallback
+            # warning; the loop below still sets processor.era for every era.
+            era=args.eras[0],
+        )
 
     for era in args.eras:
         logging.info(f'\n========== {era} ==========')

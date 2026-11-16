@@ -607,6 +607,12 @@ def main():
         help='Only score partition dirs starting with one of these dataset-name prefixes'
     )
     parser.add_argument(
+        '--kfold-models',
+        default=None,
+        help='Comma-separated 5 k-fold models (model k = trained without fold k, kf<k> in its path); each parquet chunk is '
+             'scored by the model of its fold (analysis/postprocess/kfold.py). Registered k-fold models (--model-name) set this.'
+    )
+    parser.add_argument(
         '--workers', '-w',
         type=int,
         default=8,
@@ -647,6 +653,10 @@ def main():
             from analysis.postprocess.mva_registry import resolve_model
             reg = resolve_model(args.model_name, era=args.era)
             args.config, args.model = reg['config'], reg['model']
+            if reg.get('kfold_models'):
+                if args.kfold_models:
+                    parser.error('--kfold-models is set by the registered k-fold model, do not pass it as well')
+                args.kfold_models = ','.join(reg['kfold_models'])
             logger.info(f"Registered model {reg['name']} ({reg['entry']['status']}): md5 config {reg['entry']['md5']['config']}, model {reg['entry']['md5']['model']}")
         if not args.config or not args.model:
             parser.error('--config and --model are required for --stages score')
@@ -662,11 +672,17 @@ def main():
         logger.info(f"Loading config: {args.config}")
         logger.info(f"Loading model: {args.model}")
 
-        mva_processor = MVAPostProcessor(
-            bhive_config_path=args.config,
-            bhive_model_path=args.model,
-            apply_mass_window=not args.no_mass_window,
-        )
+        if args.kfold_models:
+            from analysis.postprocess.kfold import KFoldPostProcessor
+            kf = [m for m in args.kfold_models.split(',') if m]
+            logger.info(f"k-fold scoring (out-of-fold), models: {kf}")
+            mva_processor = KFoldPostProcessor(args.config, kf, apply_mass_window=not args.no_mass_window)
+        else:
+            mva_processor = MVAPostProcessor(
+                bhive_config_path=args.config,
+                bhive_model_path=args.model,
+                apply_mass_window=not args.no_mass_window,
+            )
 
         # Override mass window if specified
         if args.mass_window_min:

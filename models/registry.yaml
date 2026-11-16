@@ -31,6 +31,42 @@ models:
       test2223: {S_vs_qqZZ: 0.7523, S_vs_ggZZ: 0.7918, S_vs_OtherHiggs: 0.8675}
       test2024: {S_vs_qqZZ: 0.7327, S_vs_ggZZ: 0.7645, S_vs_OtherHiggs: 0.8449}
       m4l_sculpting_R115_135_at_20pct_ZZ_eff: {test2223: 1.109, test2024: 1.029}
+  kf_dd_cjdphi_h128l3:
+    status: candidate  # user 2026-11-16: these 5 models for the limit; 2022/23 binned cat40 kappa card pending (64x2 k-fold r < 437.5, single n2_noid_dd_cjdphi r < 418.5)
+    description: 5-fold cross-application of the dd_cjdphi recipe (62 inputs = dd_both without kin_dphi_j_4l), MLP 128 x 3 residual blocks (207,620 parameters); model k trained without fold k, every event scored out-of-fold
+    config: models/kf_dd_cjdphi_h128l3/hc_zzto4l_mw_training_4class_fsextv2_comb2224_noid_nomult_dd_cjdphi_kfold.yml
+    model: models/kf_dd_cjdphi_h128l3/kf0/best_model.pt  # fold-0 model (used for checks); scoring uses kfold_models
+    kfold_models:
+      - models/kf_dd_cjdphi_h128l3/kf0/best_model.pt
+      - models/kf_dd_cjdphi_h128l3/kf1/best_model.pt
+      - models/kf_dd_cjdphi_h128l3/kf2/best_model.pt
+      - models/kf_dd_cjdphi_h128l3/kf3/best_model.pt
+      - models/kf_dd_cjdphi_h128l3/kf4/best_model.pt
+    md5:
+      config: d82439e3b54dfc41a61705c8e72d47f0
+      model: dd4e62d2dcb4b12e6f4b60212c138eea
+      kfold: [dd4e62d2dcb4b12e6f4b60212c138eea, d06b2a3171ba3712e1ab618e38cd9791, 3529c5b5e8dc844225c4c0a4110c5343, 085b8c6ebe5b937f41e7e7184712b9e4, ee6c5cf581175f7dbcb30848e75ca1ac]
+    fold: int(md5(parquet chunk file name)) % 5 (analysis/postprocess/kfold.py chunk_fold); Z+X rows by row index % 5
+    architecture: MLP_HcZZ_MW_Deep_4class (HCZZ_MLP_HIDDEN=128, HCZZ_MLP_LAYERS=3 in training; the scorer reads the size from the checkpoint)
+    classes: [qqZZ, ggZZ, Signal, Other_Higgs]
+    signal_class: Signal
+    discriminant: D_kappa = P(S) / (P(S) + 0.40 P(qqZZ) + 0.15 P(ggZZ) + 0.45 P(OH)) in the cards (HCZZ_KAPPA)
+    n_inputs: 62
+    eras: [2022preEE, 2022postEE, 2023preBPix, 2023postBPix, 2024, 2025, 2026]
+    tagger: {PNet: [2022preEE, 2022postEE, 2023preBPix, 2023postBPix], UParTAK4: [2024, 2025, 2026]}
+    parquet_workflow: hplusc_mva_4class_ctag2d_final_bkg + hplusc_mva_4class_ctag2d_final_fschad (training rows and fold hashes from this production)
+    training:
+      framework: b-hive (deoache/b-hive), law TrainingTask, datasets hcZZ_kf<k> built by Analysis/kfold_2026_11_13/build_kfold.py from the final production (90 < m4l < 160)
+      config: hc_zzto4l_mw_training_4class_fsextv2_comb2224_noid_nomult_dd_cjdphi_kfold
+      training_version: kf<k>_h128l3
+      sample_mix: all signal (2022/23 stitched 4FS 0c + 3FS >=1c, 2024 4FS), qqZZ powheg, ggZZ + CJLST mcfm701 2023 4e/4mu (training only), Other Higgs = all ggH + WH 25% + H+b <=10% + VBF/ZH/ttH by sqrt(card yield)
+      settings: 40 epochs, lr 5e-4, batch 4096, train/val 0.8, class weighting, DisCo lambda 1.42 (common to all folds) on qqZZ+ggZZ in 105 < m4l < 160 GeV
+      events_per_model: 1.45-1.52 M (before the train/val split)
+      date: 2026-11-16
+    performance:  # held-out fold, every (process, era) weighted equally, signal vs all background (heldout_equal_weight_auc.txt)
+      heldout_S_vs_all_Dkappa: {y2223_mean: 0.772, y2223_folds: [0.768, 0.773, 0.773, 0.773, 0.771], y2024_mean: 0.780}
+      heldout_S_vs_all_PS: {y2223_mean: 0.761, y2024_mean: 0.779}
+      m4l_sculpting_R115_135_ZZ_eff_50_20_10_5pct: {Dkappa: [1.02, 1.00, 1.00, 1.02], PS: [1.03, 1.03, 1.03, 1.05]}
   legacy_2022_2023_101inputs:
     status: legacy
     description: First 2022/2023 model (101 inputs incl. m4l-correlated and lepton-ID inputs); kept for reference only

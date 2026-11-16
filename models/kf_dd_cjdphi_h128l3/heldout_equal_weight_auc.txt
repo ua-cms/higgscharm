@@ -1,0 +1,9 @@
+
+=== 4-class k-fold, 128x3: equal-weight AUC, signal vs ...
+2022/23              kf0    kf1    kf2    kf3    kf4   mean  | mean qqZZ  ggZZ    OH
+         P(S)      0.755  0.764  0.761  0.764  0.760  0.761  |     0.726 0.741 0.770
+         D_kappa   0.768  0.773  0.773  0.773  0.771  0.772  |     0.729 0.714 0.788
+2024                 kf0    kf1    kf2    kf3    kf4   mean  | mean qqZZ  ggZZ    OH
+         P(S)      0.780  0.778  0.779  0.780  0.778  0.779  |     0.754 0.741 0.790
+         D_kappa   0.780  0.780  0.781  0.781  0.779  0.780  |     0.752 0.720 0.795
+ZZ sculpting f(115-135) ratio at 50/20/10/5% ZZ eff: P(S): 1.03 1.03 1.03 1.05 | D_kappa: 1.02 1.00 1.00 1.02
