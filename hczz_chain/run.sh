@@ -71,7 +71,10 @@ score)
   python3 -u analysis/postprocess/run_mva_postprocess.py --input-dir $IN --output-dir $OUT --model-name $HCZZ_MODEL --era $ERA \
     --no-mass-window --no-histograms --workers 8 ${HCZZ_SCORE_DATASETS:+--datasets $HCZZ_SCORE_DATASETS} 2> >(tee $E >&2); rc=$?; sleep 2   # HCZZ_SCORE_DATASETS: only these dataset prefixes
   n=$(grep -c 'Error processing' $E || true); rm -f $E
-  [ "${n:-0}" -gt 0 ] && { log "SCORING ERRORS: $n files"; rc=4; }; exit $rc ;;
+  [ "${n:-0}" -gt 0 ] && { log "SCORING ERRORS: $n files"; rc=4; }
+  # 2026-11-16: every raw parquet must have a complete scored copy (same rows, score column): EOS quota/write losses fail the node
+  [ $rc = 0 ] && { python3 -u $TOOLS/check_scored.py --raw-dir $IN --scored-dir $OUT --era $ERA ${HCZZ_SCORE_DATASETS:+--datasets $HCZZ_SCORE_DATASETS} || { log "SCORED OUTPUT INCOMPLETE"; rc=5; }; }
+  exit $rc ;;
 zx)
   P=$1; lcg; mkdir -p $ZXEST $ZX; export HCZZ_ZX_SUMW_BASE=$RAWB   # generated-Σw sidecars of the SR production (ZZ-in-3P1F correction)
   if [ "$P" = 2223 ]; then Y=all; FRF=$HCZZ_FR_DIR/2022preEE/fake_rates.pkl; ERAS="$HCZZ_ERAS_2223"; O2=$ZXEST
