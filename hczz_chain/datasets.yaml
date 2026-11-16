@@ -1,0 +1,184 @@
+_comment: 'MC datasets of the final HcZZ production (2026-11-09 submission record, full_chain_2026_11_09/submitted.txt); data = every data key of the era fileset (stage produce adds them). Workflows: sr
+  = signal region bkg + data (+ 2024+ signal), sig = 2022/23 stitched signal (4FS + 3FS), cr = Z+X control regions.'
+workflows:
+  sr: hplusc_mva_4class_ctag2d_final_bkg
+  sig: hplusc_mva_4class_ctag2d_final_fschad
+  cr: hplusc_mva_4class_CR_merged_final
+mc:
+  cr:
+    2022postEE:
+    - GluGluToContinto2Zto2E2Mu
+    - GluGluToContinto2Zto2E2Tau
+    - GluGluToContinto2Zto2Mu2Tau
+    - GluGlutoContinto2Zto4E
+    - GluGlutoContinto2Zto4Mu
+    - GluGlutoContinto2Zto4Tau
+    - ZZto4L
+    2022preEE:
+    - GluGluToContinto2Zto2E2Mu
+    - GluGluToContinto2Zto2E2Tau
+    - GluGluToContinto2Zto2Mu2Tau
+    - GluGlutoContinto2Zto4E
+    - GluGlutoContinto2Zto4Mu
+    - GluGlutoContinto2Zto4Tau
+    - ZZto4L
+    2023postBPix:
+    - GluGluToContinto2Zto2E2Mu
+    - GluGluToContinto2Zto2E2Tau
+    - GluGluToContinto2Zto2Mu2Tau
+    - GluGlutoContinto2Zto4E
+    - GluGlutoContinto2Zto4Mu
+    - GluGlutoContinto2Zto4Tau
+    - ZZto4L
+    2023preBPix:
+    - GluGluToContinto2Zto2E2Mu
+    - GluGluToContinto2Zto2E2Tau
+    - GluGluToContinto2Zto2Mu2Tau
+    - GluGlutoContinto2Zto4E
+    - GluGlutoContinto2Zto4Mu
+    - GluGlutoContinto2Zto4Tau
+    - ZZto4L
+    '2024':
+    - GluGlu2Zto2E2Mu
+    - GluGlu2Zto2E2Tau
+    - GluGlu2Zto2Mu2Tau
+    - GluGlu2Zto4E
+    - GluGlu2Zto4Mu
+    - GluGlu2Zto4Tau
+    - ZZto4L
+  sr:
+    2022postEE:
+    - 2022postEEHB
+    - GluGluHtoZZto4L
+    - GluGluToContinto2Zto2E2Mu
+    - GluGluToContinto2Zto2E2Tau
+    - GluGluToContinto2Zto2Mu2Tau
+    - GluGlutoContinto2Zto4E
+    - GluGlutoContinto2Zto4Mu
+    - GluGlutoContinto2Zto4Tau
+    - HPlusBottom_2022postEE
+    - HPlusBottom_new_2022postEE
+    - TTH_Hto2Z
+    - VBFHto2Zto4L
+    - WminusH_Hto2Zto4L
+    - WplusH_Hto2Zto4L
+    - ZHto2Zto4L
+    - ZZto4L
+    2022preEE:
+    - 2022preEEHB
+    - GluGluHtoZZto4L
+    - GluGluToContinto2Zto2E2Mu
+    - GluGluToContinto2Zto2E2Tau
+    - GluGluToContinto2Zto2Mu2Tau
+    - GluGlutoContinto2Zto4E
+    - GluGlutoContinto2Zto4Mu
+    - GluGlutoContinto2Zto4Tau
+    - HPlusBottom_2022preEE
+    - HPlusBottom_new_2022preEE
+    - TTH_Hto2Z
+    - VBFHto2Zto4L
+    - WminusH_Hto2Zto4L
+    - WplusH_Hto2Zto4L
+    - ZHto2Zto4L
+    - ZZto4L
+    2023postBPix:
+    - 2023postBPixHB
+    - GluGluHtoZZto4L
+    - GluGluToContinto2Zto2E2Mu
+    - GluGluToContinto2Zto2E2Tau
+    - GluGluToContinto2Zto2Mu2Tau
+    - GluGlutoContinto2Zto4E
+    - GluGlutoContinto2Zto4Mu
+    - GluGlutoContinto2Zto4Tau
+    - HPlusBottom_2023postBPix
+    - TTH_Hto2Z
+    - VBFHto2Zto4L
+    - WminusH_Hto2Zto4L
+    - WplusH_Hto2Zto4L
+    - ZHto2Zto4L
+    - ZZto4L
+    2023preBPix:
+    - 2023preBPixHB
+    - GluGluHtoZZto4L
+    - GluGluToContinto2Zto2E2Mu
+    - GluGluToContinto2Zto2E2Tau
+    - GluGluToContinto2Zto2Mu2Tau
+    - GluGlutoContinto2Zto4E
+    - GluGlutoContinto2Zto4Mu
+    - GluGlutoContinto2Zto4Tau
+    - HPlusBottom_2023preBPix
+    - TTH_Hto2Z
+    - VBFHto2Zto4L
+    - WminusH_Hto2Zto4L
+    - WplusH_Hto2Zto4L
+    - ZHto2Zto4L
+    - ZZto4L
+    '2024':
+    - GluGlu2Zto2E2Mu
+    - GluGlu2Zto2E2Tau
+    - GluGlu2Zto2Mu2Tau
+    - GluGlu2Zto4E
+    - GluGlu2Zto4Mu
+    - GluGlu2Zto4Tau
+    - GluGluHtoZZto4L
+    - HPlusBottom_2024
+    - HPlusCharm
+    - HPlusCharm_v2_2024
+    - TTH_Hto2Z
+    - VBFHto2Zto4L
+    - WminusH_Hto2Zto4L
+    - WplusH_Hto2Zto4L
+    - ZHto2Zto4L
+    - ZZto4L
+    - bbH_Hto2Zto4L
+    '2025':
+    - GluGlu2Zto2E2Mu
+    - GluGlu2Zto2E2Tau
+    - GluGlu2Zto2Mu2Tau
+    - GluGlu2Zto4E
+    - GluGlu2Zto4Mu
+    - GluGlu2Zto4Tau
+    - GluGluHtoZZto4L
+    - HPlusBottom_2025
+    - HPlusCharm
+    - HPlusCharm_v2_2025
+    - TTH_Hto2Z
+    - VBFHto2Zto4L
+    - WminusH_Hto2Zto4L
+    - WplusH_Hto2Zto4L
+    - ZHto2Zto4L
+    - ZZto4L
+    - bbH_Hto2Zto4L
+    '2026':
+    - GluGlu2Zto2E2Mu
+    - GluGlu2Zto2E2Tau
+    - GluGlu2Zto2Mu2Tau
+    - GluGlu2Zto4E
+    - GluGlu2Zto4Mu
+    - GluGlu2Zto4Tau
+    - GluGluHtoZZto4L
+    - HPlusBottom_2026
+    - HPlusCharm
+    - HPlusCharm_v2_2026
+    - TTH_Hto2Z
+    - VBFHto2Zto4L
+    - WminusH_Hto2Zto4L
+    - WplusH_Hto2Zto4L
+    - ZHto2Zto4L
+    - ZZto4L
+    - bbH_Hto2Zto4L
+  sig:
+    2022postEE:
+    - HPlusCharm_2022postEE
+    - Stitch3FS_cH_2022postEE
+    2022preEE:
+    - HPlusCharm_2022preEE
+    - HPlusCharm_new_2022preEE
+    - Stitch3FS_cH_2022preEE
+    2023postBPix:
+    - HPlusCharm_2023postBPix
+    - Stitch3FS_cH_2023postBPix
+    2023preBPix:
+    - HPlusCharm_2023preBPix
+    - HPlusCharm_new_2023preBPix
+    - Stitch3FS_cH_2023preBPix
