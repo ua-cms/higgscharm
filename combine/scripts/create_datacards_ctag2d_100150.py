@@ -124,7 +124,7 @@ EXPECTED_YIELDS["ggZZ"] *= GGZZ_KFACTOR
 # one private process (xs below), with all its partitions/versions pooled
 # within the era. EXPECTED_YIELDS above is kept only for older scripts.
 # ---------------------------------------------------------------------------
-FILESET_DIR = "/eos/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets"
+FILESET_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "analysis", "filesets")  # this repository (MC xsec identical to the Higgscharmnew copy, checked 2026-11-16)
 # Private samples, not in the fileset yamls. H+c: PROCESS_XS_PB["Signal"];
 # H+b: the last term of PROCESS_XS_PB["Other_Higgs"] (the 0.000144 term there
 # is bbH_Hto2Zto4L, whose sample is not in the scored production).

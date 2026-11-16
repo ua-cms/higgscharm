@@ -33,8 +33,8 @@ import pyarrow.parquet as pq
 from collections import defaultdict
 import eos_io as E   # server-side EOS listings, xrootd read fallback
 
-sys.path.insert(0, "/eos/user/s/snandaku/Higgscharmnew/higgscharm/combine/scripts")
-sys.path.insert(0, "/eos/user/s/snandaku/Higgscharmnew/higgscharm")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # this combine/scripts (was the EOS Higgscharmnew checkout)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repository root (was the EOS Higgscharmnew checkout)
 import create_datacards_ctag2d_100150 as dc
 from analysis.corrections.ctag2d import (
     _category_np, CID, CAT_TO_WP, BOUNDARIES_BY_ERA, CORRECTION_NAME, PT_BINS,

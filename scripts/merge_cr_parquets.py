@@ -11,6 +11,8 @@ Usage:
 """
 import argparse
 import glob
+import os
+_OUTPUTS = os.environ.get("HCZZ_OUTPUTS", "/eos/user/s/snandaku/higgscharm/outputs")  # production outputs base (hczz_chain/config.sh)
 import numpy as np
 import re
 import awkward as ak
@@ -125,8 +127,8 @@ def main():
                         help="Overwrite existing merged files")
     args = parser.parse_args()
 
-    cr_base   = f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}"
-    merge_out = args.merge_out or f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}_merged"
+    cr_base   = f"{_OUTPUTS}/{args.workflow}"
+    merge_out = args.merge_out or f"{_OUTPUTS}/{args.workflow}_merged"
 
     print(f"Workflow:  {args.workflow}")
     print(f"CR base:   {cr_base}")

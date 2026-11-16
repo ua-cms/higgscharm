@@ -21,14 +21,15 @@ Optional (2026-10-22) --recompute-muon-id-sf: per-event muon ID SF for the backg
 from the JES/JER shift production (JEC V4/V3, as the signal and the shifts); the flat per-era
 MUON_ID_SF on the shift sumw is then switched off.
 """
+import os
 import sys
 
 MUSF = "--recompute-muon-id-sf" in sys.argv
 if MUSF:
     sys.argv.remove("--recompute-muon-id-sf")
 
-sys.path.insert(0, "/eos/user/s/snandaku/Higgscharmnew/higgscharm/combine/scripts")
-sys.path.insert(0, "/eos/user/s/snandaku/Higgscharmnew/higgscharm")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # this combine/scripts (was the EOS Higgscharmnew checkout)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repository root (was the EOS Higgscharmnew checkout)
 import create_datacards_ctag2d_100150 as dc
 import create_datacards_ctag2d_100150_rawsf as rs
 import create_datacards_ctag2d_100150_decorr as dec

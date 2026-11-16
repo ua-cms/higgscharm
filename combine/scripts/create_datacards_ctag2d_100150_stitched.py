@@ -55,8 +55,8 @@ import argparse
 import numpy as np
 from collections import defaultdict
 
-sys.path.insert(0, "/eos/user/s/snandaku/Higgscharmnew/higgscharm/combine/scripts")
-sys.path.insert(0, "/eos/user/s/snandaku/Higgscharmnew/higgscharm")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # this combine/scripts (was the EOS Higgscharmnew checkout)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repository root (was the EOS Higgscharmnew checkout)
 import eos_io as E   # server-side EOS listings, xrootd read fallback
 import create_datacards_ctag2d_100150 as dc
 import create_datacards_ctag2d_100150_rawsf as rs

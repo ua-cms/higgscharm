@@ -23,10 +23,11 @@ pkatris has 2024 fake rates (2026-11-10: he has, Z+X allowed via --zx-dir). Only
 Usage: as create_datacards_ctag2d_100150_stitched_decorr.py, with --eras 2024, without --sumw-table,
 --preveto-genc-4fs, --fs-prescribed and --recompute-muon-id-sf.
 """
+import os
 import sys
 
-sys.path.insert(0, "/eos/user/s/snandaku/Higgscharmnew/higgscharm/combine/scripts")
-sys.path.insert(0, "/eos/user/s/snandaku/Higgscharmnew/higgscharm")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # this combine/scripts (was the EOS Higgscharmnew checkout)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repository root (was the EOS Higgscharmnew checkout)
 
 ERAS_2024 = ["2024"]
 LUMI_2024_PB = 108960.0

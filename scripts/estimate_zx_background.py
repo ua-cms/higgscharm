@@ -24,6 +24,7 @@ Usage:
 """
 
 import os
+_OUTPUTS = os.environ.get("HCZZ_OUTPUTS", "/eos/user/s/snandaku/higgscharm/outputs")  # production outputs base (hczz_chain/config.sh)
 import argparse
 import pickle
 import numpy as np
@@ -31,8 +32,8 @@ import pandas as pd
 import awkward as ak
 from glob import glob
 
-MERGED_BASE = "/eos/user/s/snandaku/higgscharm/outputs/hplusc_mva_4class_CR_merged"
-CR_BASE     = "/eos/user/s/snandaku/higgscharm/outputs/hplusc_mva_4class_CR"
+MERGED_BASE = _OUTPUTS + "/hplusc_mva_4class_CR_merged"
+CR_BASE     = _OUTPUTS + "/hplusc_mva_4class_CR"
 # These are overridden in main() via --workflow
 
 # Signal region selection cuts applied to CR events (must match hplusc_mva_4class.yaml)
@@ -240,13 +241,10 @@ def load_cr_data(year, category):
     return df
 
 
-_FILESET_YAML = {
-    '2022preEE':    '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2022preEE_nanov12.yaml',
-    '2022postEE':   '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2022postEE_nanov12.yaml',
-    '2023preBPix':  '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2023preBPix_nanov12.yaml',
-    '2023postBPix': '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2023postBPix_nanov12.yaml',
-    '2024':         '/afs/cern.ch/user/s/snandaku/Higgscharmnew/higgscharm/analysis/filesets/2024_nanov15.yaml',
-}
+# filesets of this repository (were read from the AFS Higgscharmnew checkout; ZZ/ggZZ xsec identical, checked 2026-11-16)
+_FILESETS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'analysis', 'filesets')
+_FILESET_YAML = {e: os.path.join(_FILESETS, f'{e}_nanov{v}.yaml') for e, v in
+                 (('2022preEE', 12), ('2022postEE', 12), ('2023preBPix', 12), ('2023postBPix', 12), ('2024', 15))}
 # 2026-11-10: 2024 added (was missing -> "Unknown era 2024, skipping ZZ correction" = factor 1.0, no ZZ subtraction in 3P1F);
 # lumi = create_datacards_2024.py LUMI_2024_PB 108960 pb^-1
 _LUMI_FB = {'2022preEE': 7.98, '2022postEE': 26.67, '2023preBPix': 17.79, '2023postBPix': 9.53, '2024': 108.96}
@@ -266,7 +264,7 @@ def _ggzz_samples(year):
 # not used: 2022postEE ZZto4L has only 7/14 of them (silent xrdcp failures).
 # 2026-11-03: hplusc_mva_4class_ctag2d was deleted (EOS space); HCZZ_ZX_SUMW_BASE points to another production
 # with the same generated-sumw sidecars (e.g. hplusc_mva_4class_ctag2d_lepss_bkg).
-_SUMW_BASE = os.environ.get("HCZZ_ZX_SUMW_BASE", "/eos/user/s/snandaku/higgscharm/outputs/hplusc_mva_4class_ctag2d")
+_SUMW_BASE = os.environ.get("HCZZ_ZX_SUMW_BASE", _OUTPUTS + "/hplusc_mva_4class_ctag2d")
 
 
 def _load_xsec(year, sample_key):
@@ -464,7 +462,7 @@ def load_cr_ss_data(year):
     Returns (n_data, df_mc) with the SR mass window applied, where df_mc
     carries per-dataset xs-normalizable weight sums for 'qqzz'/'ggzz'.
     """
-    cr_dir = f"/eos/user/s/snandaku/higgscharm/outputs/{SS_WORKFLOW}/{year}"
+    cr_dir = f"{_OUTPUTS}/{SS_WORKFLOW}/{year}"
     if not os.path.isdir(cr_dir):
         print(f"  SS CR directory not found: {cr_dir}")
         return 0, pd.DataFrame(columns=['dataset_folder', 'dataset_class', 'weight_sum'])
@@ -760,8 +758,8 @@ def main():
 
     # Set workflow-dependent globals before any estimation runs
     global MERGED_BASE, CR_BASE
-    MERGED_BASE = args.merged_base or f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}_merged"
-    CR_BASE     = f"/eos/user/s/snandaku/higgscharm/outputs/{args.workflow}"
+    MERGED_BASE = args.merged_base or f"{_OUTPUTS}/{args.workflow}_merged"
+    CR_BASE     = f"{_OUTPUTS}/{args.workflow}"
     print(f"Workflow:     {args.workflow}")
     print(f"Merged base:  {MERGED_BASE}")
     print(f"CR base:      {CR_BASE}")
