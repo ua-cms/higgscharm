@@ -43,6 +43,16 @@ def count_gen_cjets(events):
     return ak.to_numpy(ak.sum(is_c, axis=1))
 
 
+# H+b 4FS/5FS stitching (same LHCHWG-2026-007 recipe, added 2026-11-16): 0 GEN b-jets (GenJet hadronFlavour == 5,
+# pT > 10 GeV, no eta cut) from the 5FS FxFx H+b, >= 1 from the 4FS. Same bins and sidecar layout as the c-jets
+# (sumw_genb{0,1,2p}, sumw_preveto_genb{0,1,2p}, + _scalevar) and the per-event column n_genb10. Purely additive.
+def count_gen_bjets(events):
+    """Per-event number of GEN b-jets (hadronFlavour == 5, pT > GENC_PT_MIN)."""
+    genjets = events.GenJet
+    is_b = (genjets.hadronFlavour == 5) & (genjets.pt > GENC_PT_MIN)
+    return ak.to_numpy(ak.sum(is_b, axis=1))
+
+
 # GEN c-hadron variables (added 2026-10-02) for the FS stitching by reweighting the 4FS
 # FxFx sample with weights derived on the official H->gg 3FS/4FS samples (FS.pdf,
 # T. Bevilacqua; c-hadron definition as the HWW FS study, C. Gupta). Unlike GenJets,
@@ -201,6 +211,10 @@ class BaseProcessor(processor.ProcessorABC):
                 sumw_extra.update(
                     sumw_by_genc(events, count_gen_cjets(events), prefix="preveto_genc")
                 )
+                # same split by GEN b-jets for the H+b 4FS/5FS stitching (2026-11-16)
+                sumw_extra.update(
+                    sumw_by_genc(events, count_gen_bjets(events), prefix="preveto_genb")
+                )
 
         # apply object corrections, jet veto and prepare systematic variations
         vetoed_events, shifts = object_corrector_manager(
@@ -212,6 +226,7 @@ class BaseProcessor(processor.ProcessorABC):
         )
 
         self.n_genc = None
+        self.n_genb = None
         self.chad = None
         self.lhe4l = None
         if self.hczz:
@@ -222,6 +237,8 @@ class BaseProcessor(processor.ProcessorABC):
             if self.is_mc and "GenJet" in vetoed_events.fields:
                 self.n_genc = count_gen_cjets(vetoed_events)
                 sumw_extra.update(sumw_by_genc(vetoed_events, self.n_genc))
+                self.n_genb = count_gen_bjets(vetoed_events)   # H+b 4FS/5FS stitching (2026-11-16)
+                sumw_extra.update(sumw_by_genc(vetoed_events, self.n_genb, prefix="genb"))
             # LHE four-lepton mass, same-flavour flag and |cos theta*| for the ZZ k-factors (MC with LHEPart only)
             if self.is_mc and "LHEPart" in vetoed_events.fields:
                 self.lhe4l = lhe_four_lepton(vetoed_events)
@@ -353,6 +370,8 @@ class BaseProcessor(processor.ProcessorABC):
                     mask_np = ak.to_numpy(category_mask)
                     if self.n_genc is not None:
                         variables_map["n_genc10"] = self.n_genc[mask_np]
+                    if self.n_genb is not None:
+                        variables_map["n_genb10"] = self.n_genb[mask_np]   # H+b stitching (2026-11-16)
                     if self.chad is not None:
                         for key, val in self.chad.items():
                             variables_map[key] = val[mask_np]

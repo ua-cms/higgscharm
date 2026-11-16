@@ -406,3 +406,13 @@ Stitch3FS_cH_2023preBPix:
   key: smsignal
   process: smsignal
   xsec: 1.48e-05
+# H+b 4FS (massive b, pp -> h b b~ plain aMC@NLO, fixed gridpack afd1d440, sigma_NLO 397.8 fb = official 397.6) for the H+b 4FS/5FS stitching
+# (LHCHWG-2026-007 recipe: >= 1 GEN b-jet from this sample, 0 from the 5FS FxFx HPlusBottom* sets), added 2026-11-16 (user).
+# 594 files = 594 lumis (no duplicates), 1485000 events. Name HPlusBottom4FS_*: NOT matched by is_old_hplusbottom() (own LHE weights are sane).
+# xsec = 0.3976 pb x BR(H->ZZ->4l incl. tau) 2.694e-4; the stitching builder renormalises anyway.
+HPlusBottom4FS_2023preBPix:
+  era: signal
+  query: HPlusBottom_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnlo-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-4FS-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
+  key: hb
+  process: hb
+  xsec: 0.00010712
