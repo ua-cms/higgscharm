@@ -334,6 +334,20 @@ Stitch3FS_cH_2023postBPix:
   key: smsignal
   process: smsignal
   xsec: 1.48e-05
+# 2026-11-13 (user): CJLST's 2023 gg->ZZ 4e/4mu (HIG mcfm701 requests), TRAINING ONLY (k-fold MVA, workflow
+# hplusc_mva_4class_ctag2d_final_trainonly); never in a datacard (the card uses the SMP mcfm samples above). xsec = CJLST samplesNano.
+GluGlutoContinto2Zto4E_mcfm701:
+  era: mc
+  query: GluGlutoContinto2Zto4E_TuneCP5_13p6TeV_mcfm701-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+  process: ggToZZ
+  key: ggtozz
+  xsec: 0.00305851
+GluGlutoContinto2Zto4Mu_mcfm701:
+  era: mc
+  query: GluGlutoContinto2Zto4Mu_TuneCP5_13p6TeV_mcfm701-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+  process: ggToZZ
+  key: ggtozz
+  xsec: 0.00303575
 # H+b 4FS (massive b, pp -> h b b~ plain aMC@NLO, fixed gridpack afd1d440, sigma_NLO 397.8 fb = official 397.6) for the H+b 4FS/5FS stitching
 # (LHCHWG-2026-007 recipe: >= 1 GEN b-jet from this sample, 0 from the 5FS FxFx HPlusBottom* sets), added 2026-11-16 (user).
 # 496 files = 496 lumis (no duplicates), 1488000 events. Name HPlusBottom4FS_*: NOT matched by is_old_hplusbottom() (own LHE weights are sane).
