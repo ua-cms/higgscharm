@@ -3,10 +3,10 @@
 # Paths are relative to the repository root; md5 sums are checked before scoring (analysis/postprocess/mva_registry.py).
 # The era passed to the scorer selects the c-tagger (PNet 2022/2023, UParTAK4 2024+), the 2D jet-category boundaries
 # (JET_TAG_BOUNDARIES_BY_ERA) and, for models with the is_2024 input, its value. Always use a model with its own config.
-default: null  # becomes n2_noid_dd_both once it is frozen (after the 2022/23 binned cat40 kappa limit)
+default: null  # chain model since 2026-11-16: kf_dd_cjdphi_h128l3_3fs24 (hczz_chain/config.sh HCZZ_MODEL); set here once it is frozen after its 2022/23 limit
 models:
   n2_noid_dd_both:
-    status: candidate  # final choice (user 2026-11-13); frozen after its 2022/23 limit (reference n2_noid_dw4: r < 426.5)
+    status: candidate  # final single-model choice of 2026-11-13; superseded for the cards by the k-fold models (2026-11-14/16)
     description: Final HcZZ MVA. Combined 2022+2023+2024 training, no lepton-ID inputs, no jet multiplicity, both dphi inputs
     config: models/n2_noid_dd_both/hc_zzto4l_mw_training_4class_fsextv2_comb2224_noid_nomult_dd_both.yml
     model: models/n2_noid_dd_both/best_model.pt
@@ -94,7 +94,7 @@ models:
       heldout_S_vs_all_PS: {y2223_mean: 0.761, y2024_mean: 0.779}
       m4l_sculpting_R115_135_ZZ_eff_50_20_10_5pct: {Dkappa: [1.02, 1.00, 1.00, 1.02], PS: [1.03, 1.03, 1.03, 1.05]}
   legacy_2022_2023_101inputs:
-    status: legacy
+    status: old mass-correlated model  # m4l among its inputs: sculpts a 125 GeV peak into qqZZ/ggZZ (2026-10-27); kept for reference only
     description: First 2022/2023 model (101 inputs incl. m4l-correlated and lepton-ID inputs); kept for reference only
     config: models/hc_zzto4l_mw_training_4class_nomass.yml
     model: models/best_model.pt

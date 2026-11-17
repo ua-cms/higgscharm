@@ -17,7 +17,7 @@ export X509_USER_PROXY=${X509_USER_PROXY:-$HOME/private/x509up_u178308}
 HCZZ_RUN=${HCZZ_RUN:-/eos/user/s/snandaku/Analysis/hczz_chain_run}
 
 # --- MVA (models/registry.yaml) and discriminant ---
-HCZZ_MODEL=${HCZZ_MODEL:-kf_dd_cjdphi_h128l3}                                           # registry name; k-fold entries score every event out-of-fold
+HCZZ_MODEL=${HCZZ_MODEL:-kf_dd_cjdphi_h128l3_3fs24}                                         # registry name; k-fold entries score every event out-of-fold
 HCZZ_KAPPA=${HCZZ_KAPPA:-0.40,0.15,0.45}                                               # D = P(S) / (P(S) + k_qq P(qqZZ) + k_gg P(ggZZ) + k_OH P(OH))
 
 # --- Z+X: fake rates of pkatris (opposite-sign method, 2 |eta| bins: e 1.479 / mu 1.2), read in place ---

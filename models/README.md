@@ -15,8 +15,19 @@ Usable models are listed in [`registry.yaml`](registry.yaml) with their files, m
 
 | Name | Status | Eras | Inputs | Notes |
 |------|--------|------|--------|-------|
-| [`n2_noid_dd_both`](n2_noid_dd_both/README.md) | candidate (final choice, frozen after the 2022/23 limit) | 2022-2026 | 63 | combined 2022+2023+2024 training, PNet / UParTAK4 per era |
-| `legacy_2022_2023_101inputs` | legacy | 2022/2023 | 101 | first model, described below |
+| `kf_dd_cjdphi_h128l3_3fs24` | candidate, **used by the chain** (`hczz_chain/config.sh`) | 2022-2026 | 62 | 5-fold cross-application (5 models `kf0`–`kf4`), MLP 128×3, DisCo λ 1.42, 2024 signal stitched (4FS 0c + 3FS ≥1c); held-out D_κ AUC 0.773 / 0.775 (2022/23 / 2024) |
+| `kf_dd_cjdphi_h128l3` | candidate | 2022-2026 | 62 | same 5-fold recipe, 2024 signal = plain 4FS |
+| [`n2_noid_dd_both`](n2_noid_dd_both/README.md) | candidate (single model of 2026-11-13, superseded for the cards by the k-fold models) | 2022-2026 | 63 | combined 2022+2023+2024 training, PNet / UParTAK4 per era |
+| `legacy_2022_2023_101inputs` | old mass-correlated model | 2022/2023 | 101 | first model, m4l-correlated inputs (sculpts a 125 GeV peak into ZZ), described below |
+
+### k-fold models: out-of-fold scoring
+A registry entry with `kfold_models` (5 checkpoints, `kf<k>` = trained without fold k) is scored with
+`analysis/postprocess/kfold.py`: every parquet chunk goes to the model of its fold, `int(md5(chunk file name)) % 5`, the same
+function that split the training rows, so no event is scored by a model that trained on it (the constructor refuses a
+model list whose k-th path does not contain `kf<k>`). The chunk name is identical in all variation directories, so nominal
+and shifted templates of an event use the same model. Z+X events (not chunk-named, not in training) use row index % 5.
+`run_mva_postprocess.py --model-name kf_dd_cjdphi_h128l3_3fs24` and `scripts/run_zx_inference.py --model-name ...` do this
+automatically. Details: `hczz_chain/README.md` ("Out-of-fold scoring").
 
 ### Legacy 2022/2023 model
 

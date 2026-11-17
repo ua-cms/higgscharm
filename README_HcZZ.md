@@ -20,7 +20,8 @@ source /cvmfs/sft.cern.ch/lcg/views/LCG_105/x86_64-el9-gcc13-opt/setup.sh
 
 ## Contents
 
-- [Current state (2026-10-23) — start here](#current-state-2026-10-23--start-here)
+- [Current state (2026-11-17) — start here](#current-state-2026-11-17--start-here)
+- [State of 2026-10-23 (superseded)](#state-of-2026-10-23-superseded)
 - [Pipeline overview (August 2026)](#pipeline-overview-august-2026)
 - [0. Prerequisites](#0-prerequisites)
 - [1. Process NanoAOD → parquet](#1-process-nanoaod--parquet)
@@ -37,7 +38,35 @@ source /cvmfs/sft.cern.ch/lcg/views/LCG_105/x86_64-el9-gcc13-opt/setup.sh
 
 ---
 
-## Current state (2026-10-23) — start here
+## Current state (2026-11-17) — start here
+
+This branch (`HcZZ_full_c26`) is the HcZZ analysis on the ua-cms `coffea-2026` framework, validated against the production
+code (2022 SR/CR/signal/data identical; 2024 only the coffea-2026 pileup change). Everything after this section is the
+chronological log (August → November); where it disagrees with this section, this section is current.
+
+- **Run the analysis with `hczz_chain/`** ([`hczz_chain/README.md`](hczz_chain/README.md)): `config.sh` (every location and
+  choice), `run.sh <stage>` (produce → prodcheck → score → zx → sumw → card2223 / card2024 → combo), `make_dag.sh` (HTCondor DAG).
+- **Production workflows:** `hplusc_mva_4class_ctag2d_final_bkg` (SR: background, data, 2024 signal incl. the 2024 3FS),
+  `..._final_fschad` (2022/23 4FS + 3FS signal with GEN c-hadron columns), `hplusc_mva_4class_CR_merged_final` (Z+X CRs),
+  `..._final_hb` (H+b 5FS FxFx + 4FS with `n_genb10`, for the stitched H+b), `..._final_trainonly` (CJLST 2023 mcfm701 ggZZ,
+  MVA training only, never in a card). Eras 2022preEE–2023postBPix (NanoAODv12), 2024 (v15); 2025/2026 wired, same 2024 MC.
+- **MVA:** `kf_dd_cjdphi_h128l3_3fs24` (registry `models/registry.yaml`, chain default): 5-fold cross-application, 62 inputs,
+  MLP 128×3, DisCo λ 1.42 on ZZ in 105–160 GeV, 2024 signal stitched in training. **Every event is scored by the fold model
+  that did not train on it** (fold = md5(parquet chunk name) % 5, enforced in `analysis/postprocess/kfold.py`; see
+  [`hczz_chain/README.md`](hczz_chain/README.md#out-of-fold-scoring-k-fold-models)). Training code: b-hive branch
+  `HcZZ-mva-2026-10`; training rows: `hczz_chain/training/`. `legacy_2022_2023_101inputs` = old mass-correlated model.
+- **Scoring safety:** `hczz_chain/tools/check_scored.py` fails the score step unless every raw parquet has a complete scored
+  copy (EOS quota errors used to leave silently incomplete scored dirs).
+- **Fit (nominal):** binned 2D (D_κ, m4ℓ), 40 optimised bins, D_κ = P(S)/(P(S) + 0.40 P(qqZZ) + 0.15 P(ggZZ) + 0.45 P(OH)),
+  105 < m4ℓ < 160 GeV, blind expected AsymptoticLimits. Signal: LHCHWG-2026-007 FS stitching (4FS 0 GEN c-jets + 3FS ≥ 1,
+  K₄ 0.76 / K₃ 1.31, σ 73.30 fb), FS uncertainty = unrenormalised stitched scale envelope + `pdf_cH`; 2024 stitched too
+  (`HCZZ_SIGNAL_2024`). Z+X from the pkatris opposite-sign fake rates. ZZ from theory prior (no sideband).
+- **H+b:** default `pooled` (old 5FS samples at the fileset σ); optional `HCZZ_HB_MODE=stitched` = the same FS recipe for
+  H+b (5FS 0 b-jets + 4FS ≥ 1, total 574.8 fb), cards suffixed `_hbst`. 2024 also has the official bbH (JHUGen LO,
+  4FS-like); it overlaps fully with H+b (b-associated production counted ~2× in 2024, < 1% on the limit) — open item.
+- **Older chains:** `hczz_analysis/` keeps the scripts of the 2026-10/11 result chains (README maps results → entry points).
+
+## State of 2026-10-23 (superseded)
 
 The sections after this one are a chronological log (August → October). Where they disagree with this section, this section is current.
 
@@ -123,7 +152,7 @@ python3 -u analysis/postprocess/run_mva_postprocess.py \
 
 ## Pipeline overview (August 2026)
 
-*Historical; see [Current state](#current-state-2026-10-23--start-here).*
+*Historical; see [Current state](#current-state-2026-11-17--start-here).*
 
 **Production** (`hplusc_mva_4class`, historical split path — §4):
 ```
