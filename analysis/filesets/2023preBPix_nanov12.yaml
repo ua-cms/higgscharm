@@ -325,7 +325,7 @@ TTH_Hto2Z:
   query: TTH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.00312
+  xsec: 0.000438 #xsec: 0.5700 x BR: 0.0007689
 VBFHto2Zto4L:
   era: mc
   query: VBFHto2Zto4L_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM

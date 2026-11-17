@@ -445,7 +445,7 @@ TTH_Hto2Z:
   query: TTH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.00312
+  xsec: 0.000438 #xsec: 0.5700 x BR: 0.0007689
 HPlusCharm:
   era: signal
   query: HPlusCharm_4FS_MuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer24NanoAOD-HToZZ-JHUGen-150X_mcRun3_2024_realistic_v2-v2-00000000000000000000000000000000/USER
