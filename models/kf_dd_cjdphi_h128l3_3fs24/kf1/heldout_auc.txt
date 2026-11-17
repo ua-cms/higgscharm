@@ -1,0 +1,2 @@
+held-out fold kf1 events per class [73116, 15827, 99776, 400816]
+AUC P(S): S/qqZZ 0.7550 S/ggZZ 0.8316 S/OH 0.8072 S/all 0.8002

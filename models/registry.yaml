@@ -31,6 +31,32 @@ models:
       test2223: {S_vs_qqZZ: 0.7523, S_vs_ggZZ: 0.7918, S_vs_OtherHiggs: 0.8675}
       test2024: {S_vs_qqZZ: 0.7327, S_vs_ggZZ: 0.7645, S_vs_OtherHiggs: 0.8449}
       m4l_sculpting_R115_135_at_20pct_ZZ_eff: {test2223: 1.109, test2024: 1.029}
+  kf_dd_cjdphi_h128l3_3fs24:
+    status: candidate  # user 2026-11-16: retrained with the 2024 stitched signal (4FS 0c + 3FS >=1c, as 2022/23); used for the cards and limits
+    description: = kf_dd_cjdphi_h128l3 (62 inputs, MLP 128 x 3, DisCo 1.42, same Other Higgs mix) with the 2024 signal stitched like 2022/23 (Stitch3FS_cH_2024 + _ext1_2024 n_genc10 >= 1, 4FS n_genc10 == 0); 2022/23 rows unchanged
+    config: models/kf_dd_cjdphi_h128l3_3fs24/hc_zzto4l_mw_training_4class_fsextv2_comb2224_noid_nomult_dd_cjdphi_kfold.yml
+    model: models/kf_dd_cjdphi_h128l3_3fs24/kf0/best_model.pt
+    kfold_models:
+      - models/kf_dd_cjdphi_h128l3_3fs24/kf0/best_model.pt
+      - models/kf_dd_cjdphi_h128l3_3fs24/kf1/best_model.pt
+      - models/kf_dd_cjdphi_h128l3_3fs24/kf2/best_model.pt
+      - models/kf_dd_cjdphi_h128l3_3fs24/kf3/best_model.pt
+      - models/kf_dd_cjdphi_h128l3_3fs24/kf4/best_model.pt
+    md5:
+      config: d82439e3b54dfc41a61705c8e72d47f0
+      model: ade1177749fa1fe2b6006ec914de9662
+      kfold: [ade1177749fa1fe2b6006ec914de9662, 7f2286c7897409440ef9f33627ee7829, a3e2e8276fe46314c59b980438e11667, e2ec1fd557e670b6fa4fc9987c5f7c23, 1aac0a10931062056379df81c0dabd33]
+    fold: int(md5(parquet chunk file name)) % 5 (analysis/postprocess/kfold.py chunk_fold); Z+X rows by row index % 5
+    architecture: MLP_HcZZ_MW_Deep_4class (HCZZ_MLP_HIDDEN=128, HCZZ_MLP_LAYERS=3 in training)
+    classes: [qqZZ, ggZZ, Signal, Other_Higgs]
+    signal_class: Signal
+    n_inputs: 62
+    eras: [2022preEE, 2022postEE, 2023preBPix, 2023postBPix, 2024, 2025, 2026]
+    tagger: {PNet: [2022preEE, 2022postEE, 2023preBPix, 2023postBPix], UParTAK4: [2024, 2025, 2026]}
+    training:
+      rows: Analysis/kfold_2026_11_16_3fs24 (build_kfold_3fs24.py), datasets hcZZ_kf<k>_3fs24, training_version kf<k>_h128l3_3fs24
+      settings: 40 epochs, lr 5e-4, batch 4096, train/val 0.8, class weighting, DisCo lambda 1.42 on qqZZ+ggZZ in 105 < m4l < 160 GeV
+      date: 2026-11-16
   kf_dd_cjdphi_h128l3:
     status: candidate  # user 2026-11-16: these 5 models for the limit; 2022/23 binned cat40 kappa card pending (64x2 k-fold r < 437.5, single n2_noid_dd_cjdphi r < 418.5)
     description: 5-fold cross-application of the dd_cjdphi recipe (62 inputs = dd_both without kin_dphi_j_4l), MLP 128 x 3 residual blocks (207,620 parameters); model k trained without fold k, every event scored out-of-fold
