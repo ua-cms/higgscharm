@@ -6,7 +6,8 @@ class Paths:
 
     def __init__(self) -> None:
         user = os.environ["USER"]
-        self.root_path = pathlib.Path(f"/eos/user/{user[0]}/{user}/higgscharm_outputs")
+        # HcZZ (2026-11-18): HCZZ_OUTPUTS (hczz_chain/config.sh) sets the outputs base, so a branch production writes where the chain reads (<outputs>/<workflow>/<era>/<dataset>/); default = upstream location
+        self.root_path = pathlib.Path(os.environ.get("HCZZ_OUTPUTS") or f"/eos/user/{user[0]}/{user}/higgscharm_outputs")
 
     def workflow_path(self, workflow: str, year: str, dataset: str) -> pathlib.Path:
         """

@@ -1,0 +1,14 @@
+# copy this .sub + train_kfold_h128l3_3fs24.sh to an AFS dir and submit there (the CERN schedds refuse /eos paths)
+executable = train_kfold_h128l3_3fs24.sh
+arguments = $(k)
+output = train_h128l3_3fs24.kf$(k).$(ClusterId).out
+error = train_h128l3_3fs24.kf$(k).$(ClusterId).err
+log = train_h128l3_3fs24.$(ClusterId).log
+MY.SendCredential = True
+getenv = False
+request_GPUs = 1
+request_CPUs = 8
+request_memory = 32000
+requirements = (TARGET.OpSysAndVer =?= "AlmaLinux9") && (TARGET.GPUs_Capability >= 7.0)
++JobFlavour = "workday"
+queue k in 0,1,2,3,4

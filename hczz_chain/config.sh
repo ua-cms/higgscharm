@@ -4,7 +4,7 @@
 HCZZ_REPO=${HCZZ_REPO:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 
 # --- production (parquets) ---
-export HCZZ_OUTPUTS=${HCZZ_OUTPUTS:-/eos/user/s/snandaku/higgscharm/outputs}             # submit_condor.py --eos writes <outputs>/<workflow>/<era>/<dataset>/
+export HCZZ_OUTPUTS=${HCZZ_OUTPUTS:-/eos/user/s/snandaku/higgscharm/outputs}             # submit_condor.py writes <outputs>/<workflow>/<era>/<dataset>/ (analysis/utils/path_handler.py reads HCZZ_OUTPUTS)
 HCZZ_WF_SR=${HCZZ_WF_SR:-hplusc_mva_4class_ctag2d_final_bkg}                            # SR: backgrounds + data (+ signal for 2024+)
 HCZZ_WF_SIG=${HCZZ_WF_SIG:-hplusc_mva_4class_ctag2d_final_fschad}                      # 2022/23 signal (4FS n_genc10 == 0 + 3FS n_genc10 >= 1)
 HCZZ_WF_CR=${HCZZ_WF_CR:-hplusc_mva_4class_CR_merged_final}                            # Z+X control regions (2P2F, 3P1F, SS)

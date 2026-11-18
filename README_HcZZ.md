@@ -44,6 +44,7 @@ This branch (`HcZZ_full_c26`) is the HcZZ analysis on the ua-cms `coffea-2026` f
 code (2022 SR/CR/signal/data identical; 2024 only the coffea-2026 pileup change). Everything after this section is the
 chronological log (August → November); where it disagrees with this section, this section is current.
 
+- **Every command from a fresh checkout to the limits** (proxy, production, training rows, k-fold training, registration, scoring, Z+X, cards, combination, recovery): [`hczz_chain/README.md` → "End to end"](hczz_chain/README.md#end-to-end-every-command-from-a-fresh-checkout-to-the-limits).
 - **Run the analysis with `hczz_chain/`** ([`hczz_chain/README.md`](hczz_chain/README.md)): `config.sh` (every location and
   choice), `run.sh <stage>` (produce → prodcheck → score → zx → sumw → card2223 / card2024 → combo), `make_dag.sh` (HTCondor DAG).
 - **Production workflows:** `hplusc_mva_4class_ctag2d_final_bkg` (SR: background, data, 2024 signal incl. the 2024 3FS),

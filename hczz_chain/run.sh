@@ -51,7 +51,7 @@ produce)
                cr) W=$HCZZ_WF_CR; DS=$(mc_keys cr $ERA); [ -n "$DS" ] && DS="$DS $(data_keys $ERA)";; esac
     for d in $DS; do
       grep -q "^$W $ERA $d " $HCZZ_RUN/submitted.txt && continue
-      out=$(python3 submit_condor.py -w $W -y $ERA -d $d --nfiles $HCZZ_NFILES --output_format parquet --eos --jobflavor $HCZZ_JOBFLAVOR $SUBMIT 2>&1)
+      out=$(python3 submit_condor.py -w $W -y $ERA -d $d --nfiles $HCZZ_NFILES --output_format parquet --jobflavor $HCZZ_JOBFLAVOR $SUBMIT 2>&1)
       cl=$(echo "$out" | grep -oE "submitted to cluster [0-9]+" | grep -oE "[0-9]+$")
       if [ -n "$SUBMIT" ]; then echo "$W $ERA $d ${cl:-FAILED}" | tee -a $HCZZ_RUN/submitted.txt; else echo "dry run: $W $ERA $d"; fi
     done

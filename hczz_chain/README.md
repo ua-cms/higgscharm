@@ -14,16 +14,97 @@ produce ──> prodcheck ──┬─> score (per era, bkg + sig) ──> sumw 
                         └─> zx 2024 ──────────────────────────────┘   (kappa, plain)
 ```
 
-## Running
+## End to end: every command, from a fresh checkout to the limits
+Everything below is what produced the 2026-11 nominal (2022/23 r < 448.0, model `kf_dd_cjdphi_h128l3_3fs24`). Steps 0–3 and 7
+run on lxplus (AlmaLinux 9); steps 4–6 are HTCondor jobs. Paths are the defaults of `config.sh`; override any `HCZZ_*`
+with `export` before sourcing it (e.g. a new `HCZZ_RUN` for a fresh run directory).
+
+### 0. Checkout, proxy, environments (once per lxplus session)
 ```bash
-cd <repo>; source hczz_chain/config.sh             # optional: inspect / override (export HCZZ_RUN=..., HCZZ_MODEL=...)
-voms-proxy-init -voms cms -valid 192:00 -out ~/private/x509up_u$(id -u)
-hczz_chain/run.sh produce 2022preEE all            # dry run: lists the jobs
-hczz_chain/run.sh produce 2022preEE all --submit   # submits (repeat per era; already-submitted datasets are skipped)
-hczz_chain/make_dag.sh all && cd ~/condor_hczz_chain/$(basename $HCZZ_RUN) && condor_submit_dag chain.dag
+git clone -b HcZZ_full_c26 git@github.com:ua-cms/higgscharm.git && cd higgscharm   # or the existing HcZZ_eossync checkout
+export HCZZ_RUN=/eos/user/${USER:0:1}/$USER/Analysis/hczz_chain_run_<tag>     # new run dir (default .../hczz_chain_run)
+source hczz_chain/config.sh                                                     # all locations + choices; check them
+voms-proxy-init -voms cms -valid 192:00 -out ~/private/x509up_u$(id -u); export X509_USER_PROXY=~/private/x509up_u$(id -u)
+export EOS_MGM_URL=root://eosuser.cern.ch; eos quota | grep -A1 project           # scored copies need ~75 GB (2022/23) + ~200 GB (2024) + 11 GB reserve
+fs lq ~                                                                          # AFS home must not be full (condor logs go there)
 ```
-Every stage can also be run by hand, e.g. `hczz_chain/run.sh card2024 kappa`. Limits are appended to
-`$HCZZ_RUN/cards/<model>_<kappa>/{2223,2024_kappa,2024_plain}/limits.txt` and `$HCZZ_RUN/combo/<...>/limits.txt`.
+Environments used by the stages (set by `run.sh` itself): production `setup.sh` (LCG_110 + rucio), Z+X / Σw / cards
+`$HCZZ_LCG_POST` (LCG_107), scoring + training conda env `b_hive_new` (`$HCZZ_CONDA`), limits `$HCZZ_COMBINE_SRC`
+(CMSSW_14_1_0_pre4 + HiggsAnalysis/CombinedLimit v10.5.0, after `scram b python`).
+
+### 1. Parquet production (coffea-2026, condor)
+```bash
+for e in 2022preEE 2022postEE 2023preBPix 2023postBPix 2024; do
+  hczz_chain/run.sh produce $e all            # dry run: lists every (workflow, era, dataset) job
+  hczz_chain/run.sh produce $e all --submit   # SR (bkg + data, 2024 signal incl. 3FS), sig (2022/23 4FS + 3FS), CR (Z+X), hb (2022/23 H+b)
+done                                          # recorded in $HCZZ_RUN/submitted.txt: a rerun submits only what is missing
+# training-only ggZZ (CJLST 2023 mcfm701 4e/4mu; MVA training only, never in a card; not part of `produce`):
+for e in 2023preBPix 2023postBPix; do for d in GluGlutoContinto2Zto4E_mcfm701 GluGlutoContinto2Zto4Mu_mcfm701; do
+  python3 submit_condor.py -w hplusc_mva_4class_ctag2d_final_trainonly -y $e -d $d --nfiles 15 --output_format parquet --jobflavor workday --submit   # writes to $HCZZ_OUTPUTS (exported by config.sh)
+done; done
+hczz_chain/run.sh prodcheck 2223 2024         # every job wrote its .coffea (add --wait to block until complete)
+```
+Failed jobs (XRootD, AFS proxy race at a start burst, walltime): resubmit the failed partitions of that dataset with
+`submit_condor.py` (same arguments; site-pinned reruns used `--sites`), then rerun `prodcheck`. Outputs:
+`$HCZZ_OUTPUTS/<workflow>/<era>/<dataset>/` (`base/` = nominal, one dir per variation).
+
+### 2. MVA training rows (only to retrain; the nominal model is in `models/`)
+The row builder has its paths at the top (`REPO`, `O` = production outputs, `BH` = b-hive checkout, `OUT` = rows dir);
+edit them for a new run. Run from the conda env `b_hive_new`, as condor jobs (`tomorrow`) for the full extraction:
+```bash
+source $HCZZ_CONDA; conda activate b_hive_new; cd $OUT_DIR   # = OUT of the script (a copy of hczz_chain/training/build_kfold_3fs24.py lives there)
+for e in 2022preEE 2022postEE 2023preBPix 2023postBPix 2024; do python3 -W ignore -u build_kfold_3fs24.py extract $e; done
+python3 -W ignore -u build_kfold_3fs24.py compose   # -> b-hive output/DatasetConstructorTask/<cfg>_kfold/hcZZ_kf<k>_3fs24[_test]
+```
+`extract <era> --limit N` makes a small test set. 2022/23 rows of the nominal model are those of `build_kfold.py` (11-13,
+symlinked); only 2024 was re-extracted for `_3fs24`. Fold = md5(chunk name) % 5 (see "Out-of-fold scoring").
+
+### 3. MVA training (b-hive branch `HcZZ-mva-2026-10`, 5 GPU jobs) and registration
+```bash
+mkdir -p ~/condor_kfold_train && cp hczz_chain/training/train_kfold_h128l3_3fs24.{sh,sub} ~/condor_kfold_train/
+cd ~/condor_kfold_train && condor_submit train_kfold_h128l3_3fs24.sub     # k = 0..4: law TrainingTask 40 epochs, MLP 128x3, DisCo 1.42; held-out inference + auc.txt
+# after all 5: equal-weight held-out AUCs P(S) vs D_kappa + m4l sculpting (LCG_107)
+cd <OUT>; python3 <repo>/hczz_chain/training/heldout_auc_ps_vs_dk.py train_eval_h128l3_3fs24:128x3_3fs24 | tee ps_vs_dk_3fs24.txt
+python3 <repo>/hczz_chain/training/register_3fs24.py   # copies best_model.pt x5 + config into models/<name>/, writes the registry entry with md5s
+```
+For a new model: change the names in the three scripts, register it, set `HCZZ_MODEL=<name>` (or `default:` in
+`models/registry.yaml`), commit `models/<name>/`. The scorer checks the md5s at every use.
+
+### 4. Scoring, Z+X, Σw, cards, limits: one DAG
+```bash
+hczz_chain/make_dag.sh all          # 2223 | 2024 | all -> ~/condor_hczz_chain/$(basename $HCZZ_RUN)/chain.dag
+cd ~/condor_hczz_chain/$(basename $HCZZ_RUN) && condor_submit_dag chain.dag
+```
+`all` = gates (prodcheck --wait) → out-of-fold scoring per era (bkg + sig [+ hb]) → Z+X (merge, estimate, score) → Σw →
+`card2223`, `card2024 kappa|plain` → `combo kappa|plain`. Every node gets the settings of the submitting shell (incl.
+`HCZZ_ELE_SHIFTS HCZZ_JES_REGROUPED HCZZ_ZZ_KFACTOR_WEIGHTS`, which must be 1 as in the production). Watch with
+`condor_q -dag -nobatch`; node logs are next to `chain.dag`.
+
+### 5. The same stages by hand (or to redo one)
+```bash
+for e in 2022preEE 2022postEE 2023preBPix 2023postBPix; do hczz_chain/run.sh score $e bkg; hczz_chain/run.sh score $e sig; done
+hczz_chain/run.sh score 2024 bkg
+hczz_chain/run.sh zx 2223; hczz_chain/run.sh zx 2024
+hczz_chain/run.sh sumw
+hczz_chain/run.sh card2223                     # -> $HCZZ_RUN/cards/<model>_k040_015_045/2223/limits.txt
+hczz_chain/run.sh card2024 kappa; hczz_chain/run.sh card2024 plain
+hczz_chain/run.sh combo kappa
+```
+Optional: stitched H+b (`export HCZZ_HB_MODE=stitched`, then `run.sh score <era> hb` and the cards; outputs `_hbst`).
+
+### 6. Recovery
+- **Scoring node rc 4/5** (per-file errors, e.g. EOS quota `Errno 122`; `check_scored.py` lists the incomplete datasets):
+  free space, then rescore only those datasets: `HCZZ_SCORE_DATASETS=ZZto4L_13 hczz_chain/run.sh score 2022postEE bkg`
+  (no skip-existing: always per dataset, never the whole era). Then rerun Σw and the cards.
+- **DAG node failed**: fix, then `condor_submit_dag chain.dag` again in the same dir (DAGMan runs the rescue file, done nodes
+  are skipped). A node waiting for space can be held by hand (`condor_hold`, released with `condor_release`).
+- **Card stage `missing shift dir .../CMS_scale_j_<year>`** or **`no table sumw for (CMS_scale_j_<source>...)`**: the
+  builder switches were not exported (step 4); rerun `sumw` and the card with them.
+
+### 7. Results
+`$HCZZ_RUN/cards/<model>_<kappa>/{2223,2024_kappa,2024_plain}/limits.txt` (each card dir: `card_b0p1r0p5cat40/`
+datacard + histograms + `limit.log`, `layout_b0p1r0p5cat40.json`, optimiser log) and `$HCZZ_RUN/combo/<...>/limits.txt`.
+Limits: blind expected AsymptoticLimits (`combine -M AsymptoticLimits -m 120 --run blind --rAbsAcc 1e-5 --rRelAcc 1e-5`).
 
 ## Stages
 | stage | what | main code | output |
@@ -42,13 +123,14 @@ Limits: `combine -M AsymptoticLimits -m 120 --run blind --rAbsAcc 1e-5 --rRelAcc
 
 ## Model
 `$HCZZ_MODEL` is a name in `models/registry.yaml` (md5-checked at every use). Default `kf_dd_cjdphi_h128l3_3fs24`
-(2026-11-16): 5-fold cross-application, 62 inputs, MLP 128×3 (207,620 parameters), DisCo λ 1.42 on ZZ in 105–160 GeV, 2024
+(trained 2026-11-16, nominal + registry default since 2026-11-18, 2022/23 r < 448.0): 5-fold cross-application, 62 inputs, MLP 128×3 (207,620 parameters), DisCo λ 1.42 on ZZ in 105–160 GeV, 2024
 signal stitched in training as in the cards (4FS 0c + 3FS ≥1c); held-out equal-weight AUC D_κ 0.773 (2022/23) / 0.775 (2024),
 fold spread ≤ 0.004 (`models/kf_dd_cjdphi_h128l3_3fs24/heldout_equal_weight_auc.txt`). `kf_dd_cjdphi_h128l3` = the same
 recipe with the plain 4FS 2024 signal. Card discriminant D_κ = P(S) / (P(S) + 0.40 P(qqZZ) + 0.15 P(ggZZ) + 0.45 P(OH))
 (`HCZZ_KAPPA`). The training itself runs in b-hive (branch `HcZZ-mva-2026-10`); `training/` has the k-fold row builders
-(`build_kfold.py`, `build_kfold_3fs24.py`, rows from the final production) and the training job **as they ran** (absolute
-paths of the 2026-11 run).
+(`build_kfold.py`, `build_kfold_3fs24.py`, rows from the final production), the training jobs (`train_kfold_h128l3[_3fs24].{sh,sub}`),
+the held-out inference (`infer_heldout.py`), the AUC/sculpting evaluation (`heldout_auc_ps_vs_dk.py`) and the registration
+(`register_3fs24.py`), **as they ran** (absolute paths of the 2026-11 run).
 
 ### Out-of-fold scoring (k-fold models)
 An event may only be scored by a model that did not see it in training:
@@ -76,4 +158,4 @@ External (by path in `config.sh`): fake rates (pkatris), the combine CMSSW area,
 ## Notes
 - The chain scripts take the outputs base from `HCZZ_OUTPUTS` (also read by `scripts/merge_cr_parquets.py`, `estimate_zx_background.py`, `tools/make_sumw_table.py`).
 - 2024 Z+X needs the UParTAK4 jet scores in the Z+X inference (fixed 2026-11-16 in `scripts/run_zx_inference.py`; before, every 2024 Z+X inference failed).
-- Data dataset names follow the coffea-2026 filesets of this repository (`MuonRun2022E`, ...); the Z+X estimate selects data by name prefix and the cards use Asimov data, so the renaming does not change the chain. A full production from this branch has not been run yet (the 2026-11 parquets come from the AFS production checkout, validated against this branch on single files, `docs`/Notes 2026-11-13).
+- Data dataset names follow the coffea-2026 filesets of this repository (`MuonRun2022E`, ...); the Z+X estimate selects data by name prefix and the cards use Asimov data, so the renaming does not change the chain. The branch `submit_condor.py` (upstream) has no `--eos`; since 2026-11-18 `analysis/utils/path_handler.py` takes the outputs base from `HCZZ_OUTPUTS`, so `run.sh produce` writes where the chain reads. A full production from this branch has not been run yet (the 2026-11 parquets come from the AFS production checkout, validated against this branch on single files, `docs`/Notes 2026-11-13).
