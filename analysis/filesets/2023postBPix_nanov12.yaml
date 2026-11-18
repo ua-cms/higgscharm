@@ -250,12 +250,12 @@ GluGluToContinto2Zto2Mu2Tau:
   process: ggToZZ
   key: ggtozz
   xsec: 0.006
-bbH_Hto2Zto4L:
-  era: mc
-  query: bbH_Hto2Zto4L_M-125_TuneCP5_13p6TeV_JHUGenV752-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
-  process: H(125)
-  key: higgs
-  xsec: 0.000144
+#bbH_Hto2Zto4L:
+#  era: mc
+#  query: bbH_Hto2Zto4L_M-125_TuneCP5_13p6TeV_JHUGenV752-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
+#  process: H(125)
+#  key: higgs
+#  xsec: 0.000144
 GluGluHtoZZto4L:
   era: mc
   query: GluGluHtoZZto4L_M-125_TuneCP5_13p6TeV_powheg-jhugen-pythia8/Run3Summer23BPixNanoAODv12-130X_mcRun3_2023_realistic_postBPix_v6-v2/NANOAODSIM
