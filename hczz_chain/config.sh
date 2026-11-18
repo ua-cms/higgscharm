@@ -31,6 +31,10 @@ HCZZ_OPT=${HCZZ_OPT:-"--km 16 --ks 8 --budgets 20,30,40,50 --bmin 0.1 --relmax 0
 HCZZ_SIGNAL_2024=${HCZZ_SIGNAL_2024:-stitched}   # 2024 signal: stitched (4FS 0c + 3FS >=1c, 3FS samples since 2026-11-16) or 4fs
 HCZZ_HB_MODE=${HCZZ_HB_MODE:-pooled}   # H+b background: pooled (old 5FS samples of the SR production at the fileset xsec) or stitched (5FS n_genb10 == 0 + 4FS >= 1, K = NNLO/NLO, sum = bbH NNLO 574.8 fb; combine/scripts/hb_stitch.py; 2024 5FS only); stitched cards/combos get the suffix _hbst
 HCZZ_ALLOW_MISSING_SYST_2024=${HCZZ_ALLOW_MISSING_SYST_2024:-scalevar_muR_bbH,scalevar_muF_bbH}
+# builder switches matching the final production (as exported by models.sh of the 2026-11 production chains; 2026-11-17: missing here
+# made the branch card stage look for the old single-JES shift dirs CMS_scale_j_<year>, "missing shift dir"): electron scale/res shifts
+# CMS_scale_e/res_e, the 11 regrouped JES sources (CMS_scale_j_<source>[_<year>]) + JER per era, ZZ k-factors in weight_nominal
+export HCZZ_ELE_SHIFTS=${HCZZ_ELE_SHIFTS:-1} HCZZ_JES_REGROUPED=${HCZZ_JES_REGROUPED:-1} HCZZ_ZZ_KFACTOR_WEIGHTS=${HCZZ_ZZ_KFACTOR_WEIGHTS:-1}
 
 # --- environments ---
 HCZZ_LCG_PROD=${HCZZ_LCG_PROD:-/cvmfs/sft.cern.ch/lcg/views/LCG_110/x86_64-el9-gcc13-opt/setup.sh}   # coffea-2026 production (setup.sh)

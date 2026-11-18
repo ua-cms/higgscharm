@@ -50,7 +50,7 @@ chronological log (August → November); where it disagrees with this section, t
   `..._final_fschad` (2022/23 4FS + 3FS signal with GEN c-hadron columns), `hplusc_mva_4class_CR_merged_final` (Z+X CRs),
   `..._final_hb` (H+b 5FS FxFx + 4FS with `n_genb10`, for the stitched H+b), `..._final_trainonly` (CJLST 2023 mcfm701 ggZZ,
   MVA training only, never in a card). Eras 2022preEE–2023postBPix (NanoAODv12), 2024 (v15); 2025/2026 wired, same 2024 MC.
-- **MVA:** `kf_dd_cjdphi_h128l3_3fs24` (registry `models/registry.yaml`, chain default): 5-fold cross-application, 62 inputs,
+- **MVA (nominal, frozen 2026-11-18):** `kf_dd_cjdphi_h128l3_3fs24` (registry default in `models/registry.yaml`, chain default; 5 checkpoints `models/kf_dd_cjdphi_h128l3_3fs24/kf<k>/best_model.pt` + config in the repo; 2022/23 r < 448.0): 5-fold cross-application, 62 inputs,
   MLP 128×3, DisCo λ 1.42 on ZZ in 105–160 GeV, 2024 signal stitched in training. **Every event is scored by the fold model
   that did not train on it** (fold = md5(parquet chunk name) % 5, enforced in `analysis/postprocess/kfold.py`; see
   [`hczz_chain/README.md`](hczz_chain/README.md#out-of-fold-scoring-k-fold-models)). Training code: b-hive branch

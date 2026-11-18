@@ -15,8 +15,8 @@ Usable models are listed in [`registry.yaml`](registry.yaml) with their files, m
 
 | Name | Status | Eras | Inputs | Notes |
 |------|--------|------|--------|-------|
-| `kf_dd_cjdphi_h128l3_3fs24` | candidate, **used by the chain** (`hczz_chain/config.sh`) | 2022-2026 | 62 | 5-fold cross-application (5 models `kf0`–`kf4`), MLP 128×3, DisCo λ 1.42, 2024 signal stitched (4FS 0c + 3FS ≥1c); held-out D_κ AUC 0.773 / 0.775 (2022/23 / 2024) |
-| `kf_dd_cjdphi_h128l3` | candidate | 2022-2026 | 62 | same 5-fold recipe, 2024 signal = plain 4FS |
+| `kf_dd_cjdphi_h128l3_3fs24` | **nominal** (registry default, frozen 2026-11-18; chain model `hczz_chain/config.sh`) | 2022-2026 | 62 | 5-fold cross-application (5 models `kf0`–`kf4`), MLP 128×3, DisCo λ 1.42, 2024 signal stitched (4FS 0c + 3FS ≥1c); held-out D_κ AUC 0.773 / 0.775 (2022/23 / 2024); 2022/23 r < 448.0 |
+| `kf_dd_cjdphi_h128l3` | superseded | 2022-2026 | 62 | same 5-fold recipe, 2024 signal = plain 4FS |
 | [`n2_noid_dd_both`](n2_noid_dd_both/README.md) | candidate (single model of 2026-11-13, superseded for the cards by the k-fold models) | 2022-2026 | 63 | combined 2022+2023+2024 training, PNet / UParTAK4 per era |
 | `legacy_2022_2023_101inputs` | old mass-correlated model | 2022/2023 | 101 | first model, m4l-correlated inputs (sculpts a 125 GeV peak into ZZ), described below |
 
