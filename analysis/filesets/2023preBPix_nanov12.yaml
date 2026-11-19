@@ -349,7 +349,7 @@ ZHto2Zto4L:
   query: ZH_Hto2Z_4LFilter_M-125_TuneCP5_13p6TeV_powheg-jhugenv752-pythia8/Run3Summer23NanoAODv12-130X_mcRun3_2023_realistic_v15-v3/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.000775
+  xsec: 0.000706
 HPlusCharm_v1:
   era: signal
   query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer23NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2023_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER

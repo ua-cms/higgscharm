@@ -427,7 +427,7 @@ ZHto2Zto4L:
   query: ZH-Hto2Z_Fil-4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.000775
+  xsec: 0.000706
 WminusH_Hto2Zto4L:
   era: mc
   query: WminusH-Hto2Zto4L_Par-M-125_TuneCP5_13p6TeV_powhegMINLO-jhugen-pythia8/RunIII2024Summer24NanoAODv15-150X_mcRun3_2024_realistic_v2-v2/NANOAODSIM

@@ -403,7 +403,7 @@ ZHto2Zto4L:
   query: ZHto2Zto4L_M125_TuneCP5_13p6TeV_powheg2-minlo-HZJ-JHUGenV752-pythia8/Run3Summer22NanoAODv12-130X_mcRun3_2022_realistic_v5-v2/NANOAODSIM
   process: H(125) 
   key: higgs
-  xsec: 0.000775
+  xsec: 0.000706
 HPlusCharm_v1:
   era: signal
   query: HPlusCharm_4FS_newMuRFScaleDynX0p50_HToZZ_M125_TuneCP5_13p6TeV_amcatnloFXFX-JHUGen-pythia8/snandaku-Run3Summer22NanoAODv13-HToZZ-JHUGen-133X_mcRun3_2022_realistic_ForNanov13_v1-v1-00000000000000000000000000000000/USER
