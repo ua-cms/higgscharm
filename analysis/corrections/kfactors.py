@@ -191,7 +191,7 @@ def _interp(x, xs, ys, fill):
     return out
 
 
-def add_ggzz_kfactor(events, weights_container, year, order=1):
+def add_ggzz_kfactor(events, weights_container, year, shift, order=1):
     """
     order = 1: LO -> NNLO, order = 2: NLO -> NNLO.
     Adds 'kfactor_ggzz' with variations kfactor_ggzz_{pdf,as,qcd}{Up,Down}.
@@ -210,16 +210,22 @@ def add_ggzz_kfactor(events, weights_container, year, order=1):
         "as": _interp(m4l, xs, ys["PDF_aS"], 0.0),
         "qcd": _interp(m4l, xs, ys["QCD_mu"], 0.0),
     }
-    weights_container.add_multivariation(
-        name="kfactor_ggzz",
-        weight=k,
-        modifierNames=list(rel),
-        weightsUp=[k * (1.0 + f) for f in rel.values()],
-        weightsDown=[k * (1.0 - f) for f in rel.values()],
-    )
+    if shift is None:
+        weights_container.add_multivariation(
+            name="kfactor_ggzz",
+            weight=k,
+            modifierNames=list(rel),
+            weightsUp=[k * (1.0 + f) for f in rel.values()],
+            weightsDown=[k * (1.0 - f) for f in rel.values()],
+        )
+    else:
+        weights_container.add(
+            name="kfactor_ggzz",
+            weight=k,
+        )
 
 
-def add_qqzz_kfactor(events, weights_container, year):
+def add_qqzz_kfactor(events, weights_container, year, shift):
     """
     Adds 'kfactor_qqzz' with variations kfactor_qqzz_{qcd,ew,smoothing,as}{Up,Down}.
     QCD up/down are multiplicative factors on top of the nominal k-factor;
@@ -241,23 +247,29 @@ def add_qqzz_kfactor(events, weights_container, year):
                 vals[col][sel] = np.interp(m4l[sel], xs, ys[col])
 
     k = vals["nominal"]
-    weights_container.add_multivariation(
-        name="kfactor_qqzz",
-        weight=k,
-        modifierNames=["qcd", "ew", "smoothing", "as"],
-        weightsUp=[
-            k * vals["QCD_up"],
-            k * (1.0 + vals["EW_factor"]),
-            k * (1.0 + vals["smoothing_factor"]),
-            k * (1.0 + vals["alpha_S_factor"]),
-        ],
-        weightsDown=[
-            k * vals["QCD_dn"],
-            k * (1.0 - vals["EW_factor"]),
-            k * (1.0 - vals["smoothing_factor"]),
-            k * (1.0 - vals["alpha_S_factor"]),
-        ],
-    )
+    if shift is None:
+        weights_container.add_multivariation(
+            name="kfactor_qqzz",
+            weight=k,
+            modifierNames=["qcd", "ew", "smoothing", "as"],
+            weightsUp=[
+                k * vals["QCD_up"],
+                k * (1.0 + vals["EW_factor"]),
+                k * (1.0 + vals["smoothing_factor"]),
+                k * (1.0 + vals["alpha_S_factor"]),
+            ],
+            weightsDown=[
+                k * vals["QCD_dn"],
+                k * (1.0 - vals["EW_factor"]),
+                k * (1.0 - vals["smoothing_factor"]),
+                k * (1.0 - vals["alpha_S_factor"]),
+            ],
+        )
+    else:
+        weights_container.add(
+            name="kfactor_qqzz",
+            weight=k,
+        )
 
 
 def _normalize_config(config):
@@ -275,7 +287,7 @@ def _matches(dataset, prefixes):
     return any(dataset.lower().startswith(p.lower()) for p in prefixes)
 
 
-def add_kfactor_weights(events, weights_container, year, dataset, config):
+def add_kfactor_weights(events, weights_container, year, dataset, config, shift):
     """
     Dispatcher used by weight_manager. `config` is the yaml `kFactorWeight` entry:
 
@@ -292,6 +304,6 @@ def add_kfactor_weights(events, weights_container, year, dataset, config):
     qqzz_datasets = config.get("qqzz_datasets", DEFAULT_QQZZ_DATASETS)
 
     if ggzz_order and _matches(dataset, ggzz_datasets):
-        add_ggzz_kfactor(events, weights_container, year, order=ggzz_order)
+        add_ggzz_kfactor(events, weights_container, year, shift, order=ggzz_order)
     if apply_qqzz and _matches(dataset, qqzz_datasets):
-        add_qqzz_kfactor(events, weights_container, year)
+        add_qqzz_kfactor(events, weights_container, year, shift)

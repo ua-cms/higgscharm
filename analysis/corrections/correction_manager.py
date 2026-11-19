@@ -285,6 +285,7 @@ def weight_manager(pruned_ev, year, dataset, workflow_config, category, shift):
                     year=year,
                     dataset=dataset,
                     config=weights_config["kFactorWeight"],
+                    shift=shift,
                 )
 
         if "ctagging_2d" in weights_config:
